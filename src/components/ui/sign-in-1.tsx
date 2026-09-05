@@ -87,7 +87,12 @@ const AuthForm = React.forwardRef<HTMLDivElement, AuthFormProps>(
           <CardHeader className="text-center">
             {/* Logo rendered from src */}
             <div className="mb-4 flex justify-center ">
-              <img src={logoSrc} alt={logoAlt} className="h-12 w-12 object-contain rounded-[4px]" />
+              <img
+                src={logoSrc}
+                alt={logoAlt}
+                className="h-12 w-12 object-contain rounded-[4px]"
+                style={{ width: 48, height: 48, objectFit: "contain", display: "inline-block" }}
+              />
             </div>
             <CardTitle className="text-2xl font-semibold tracking-tight">{title}</CardTitle>
             {description && <CardDescription>{description}</CardDescription>}
