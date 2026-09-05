@@ -1,0 +1,217 @@
+import type { NextFunction, Request, Response } from "express";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { loadLocalAccount } from "./account.js";
+import { cloudConfigured, fetchCloudAccount, touchDiscordProfile } from "./cloud.js";
+import { runAuthStore, type DiscordIdentity } from "./context.js";
+import { isSecureRequest, requestOrigin } from "./host.js";
+
+const SESSION_COOKIE = "illusions_session";
+const STATE_COOKIE = "illusions_oauth";
+const runtimeSessionSecret = randomBytes(32).toString("hex");
+
+function discordConfigured(): boolean {
+  return Boolean(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET);
+}
+
+function sessionSecret(): string {
+  return process.env.SESSION_SECRET || runtimeSessionSecret;
+}
+
+function readCookies(req: Request): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const part of String(req.headers.cookie || "").split(";")) {
+    const index = part.indexOf("=");
+    if (index < 0) continue;
+    const key = part.slice(0, index).trim();
+    const value = part.slice(index + 1).trim();
+    if (!key) continue;
+    try {
+      out[key] = decodeURIComponent(value);
+    } catch {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
+function cookieBase(req: Request | undefined, maxAge: number): string {
+  return [
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    `Max-Age=${maxAge}`,
+    isSecureRequest(req) ? "Secure" : "",
+  ]
+    .filter(Boolean)
+    .join("; ");
+}
+
+function setCookie(res: Response, name: string, value: string, maxAge: number, req?: Request): void {
+  const line = `${name}=${encodeURIComponent(value)}; ${cookieBase(req, maxAge)}`;
+  const prev = res.getHeader("Set-Cookie");
+  if (!prev) {
+    res.setHeader("Set-Cookie", line);
+    return;
+  }
+  const list = Array.isArray(prev) ? prev : [String(prev)];
+  res.setHeader("Set-Cookie", [...list, line]);
+}
+
+function clearCookie(res: Response, name: string, req?: Request): void {
+  setCookie(res, name, "", 0, req);
+}
+
+function sign(payload: string): string {
+  return createHmac("sha256", sessionSecret()).update(payload).digest("base64url");
+}
+
+function writeSession(res: Response, discord: DiscordIdentity, req?: Request): void {
+  const payload = Buffer.from(
+    JSON.stringify({
+      id: discord.id,
+      name: discord.name,
+      avatar: discord.avatar,
+      exp: Date.now() + 30 * 24 * 60 * 60 * 1000,
+    }),
+    "utf8"
+  ).toString("base64url");
+  setCookie(res, SESSION_COOKIE, `${payload}.${sign(payload)}`, 30 * 24 * 60 * 60, req);
+}
+
+function readSession(req: Request): DiscordIdentity | null {
+  const raw = readCookies(req)[SESSION_COOKIE];
+  if (!raw) return null;
+  const dot = raw.lastIndexOf(".");
+  if (dot < 0) return null;
+  const payload = raw.slice(0, dot);
+  const sig = raw.slice(dot + 1);
+  const expected = sign(payload);
+  const left = Buffer.from(sig);
+  const right = Buffer.from(expected);
+  if (left.length !== right.length || !timingSafeEqual(left, right)) return null;
+  try {
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
+      id?: string;
+      name?: string;
+      avatar?: string | null;
+      exp?: number;
+    };
+    if (!data.id || data.id === "103546492591035464" || !data.exp || data.exp < Date.now()) return null;
+    return {
+      id: data.id,
+      name: data.name || "discord",
+      avatar: data.avatar || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function isCloudAuth(): boolean {
+  return discordConfigured();
+}
+
+export function authStatus(req: Request) {
+  return {
+    discordEnabled: discordConfigured(),
+    discord: readSession(req),
+  };
+}
+
+export async function authContext(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const discord = readSession(req);
+    if (!cloudConfigured()) {
+      runAuthStore({ discord, account: loadLocalAccount() }, () => next());
+      return;
+    }
+    const account = discord ? await fetchCloudAccount(discord.id) : null;
+    runAuthStore({ discord, account }, () => next());
+  } catch (error) {
+    next(error);
+  }
+}
+
+export function startDiscordLogin(req: Request, res: Response): void {
+  const origin = requestOrigin(req);
+  if (!discordConfigured()) {
+    res.redirect(`${origin}/painel/conta?discord=not-configured`);
+    return;
+  }
+  const state = randomBytes(16).toString("hex");
+  setCookie(res, STATE_COOKIE, state, 600, req);
+  const url = new URL("https://discord.com/api/oauth2/authorize");
+  url.searchParams.set("client_id", process.env.DISCORD_CLIENT_ID || "");
+  url.searchParams.set("redirect_uri", `${origin}/api/auth/discord/callback`);
+  url.searchParams.set("response_type", "code");
+  url.searchParams.set("scope", "identify");
+  url.searchParams.set("state", state);
+  res.redirect(url.toString());
+}
+
+export async function finishDiscordLogin(req: Request, res: Response): Promise<void> {
+  const origin = requestOrigin(req);
+  const fallback = `${origin}/painel/conta`;
+  if (!isCloudAuth()) {
+    res.redirect(fallback);
+    return;
+  }
+  const cookies = readCookies(req);
+  const expectedState = cookies[STATE_COOKIE];
+  const state = String(req.query.state || "");
+  const code = String(req.query.code || "");
+  clearCookie(res, STATE_COOKIE, req);
+  if (!code || !expectedState || expectedState !== state) {
+    res.redirect(`${fallback}?discord=denied`);
+    return;
+  }
+  try {
+    const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: process.env.DISCORD_CLIENT_ID || "",
+        client_secret: process.env.DISCORD_CLIENT_SECRET || "",
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: `${origin}/api/auth/discord/callback`,
+      }),
+    });
+    const token = (await tokenRes.json()) as { access_token?: string };
+    if (!token.access_token) throw new Error("Discord did not return a token.");
+    const meRes = await fetch("https://discord.com/api/users/@me", {
+      headers: { Authorization: `Bearer ${token.access_token}` },
+    });
+    const me = (await meRes.json()) as {
+      id?: string;
+      username?: string;
+      global_name?: string;
+      avatar?: string | null;
+    };
+    if (!me.id) throw new Error("Discord did not return a user.");
+    const discord: DiscordIdentity = {
+      id: me.id,
+      name: me.global_name || me.username || "discord",
+      avatar: me.avatar
+        ? `https://cdn.discordapp.com/avatars/${me.id}/${me.avatar}.png`
+        : null,
+    };
+    writeSession(res, discord, req);
+    if (cloudConfigured()) {
+      try {
+        await touchDiscordProfile(discord);
+      } catch (err) {
+        console.error("Supabase profile sync error:", err);
+      }
+    }
+    res.redirect(`${origin}/painel/dashboard`);
+  } catch {
+    res.redirect(`${fallback}?discord=error`);
+  }
+}
+
+export function logoutSession(req: Request, res: Response): void {
+  clearCookie(res, SESSION_COOKIE, req);
+  clearCookie(res, STATE_COOKIE, req);
+  res.json({ ok: true, connected: false, discordEnabled: isCloudAuth(), discord: null });
+}
