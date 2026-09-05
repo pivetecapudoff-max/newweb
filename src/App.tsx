@@ -20,7 +20,7 @@ export function App() {
   return (
     <div className="relative min-h-screen w-full bg-[#02010A] text-white">
       <SilkShaderBackground fixed={true} />
-      <div className="relative z-10 w-full h-full">
+      <div className="relative z-10 w-full h-full" style={{ position: "relative", zIndex: 10 }}>
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<LoginPage />} />
