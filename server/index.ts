@@ -568,7 +568,7 @@ app.post("/api/account", async (req, res) => {
     const user = await validateCookie(cookie);
     const previous = publicAccount();
     await saveAccount({
-      cookie,
+      cookie: user.normalizedCookie || cookie,
       userId: user.id,
       username: user.name,
       displayName: user.displayName || user.name,

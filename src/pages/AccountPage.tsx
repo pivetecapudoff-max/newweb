@@ -610,7 +610,52 @@ export function AccountPage() {
                 placeholder="_|WARNING:-DO-NOT-SHARE-THIS.--..."
                 className="w-full bg-[#121212] focus:bg-[#161616] text-white placeholder-white/20 text-xs font-mono rounded-2xl p-4 focus:outline-none transition-all"
               />
+
+              {cookie.trim() && (
+                <div className="mt-2 text-[11px]">
+                  {cookie.trim().length >= 500 ? (
+                    <span className="text-emerald-400 flex items-center gap-1 font-medium">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Tamanho compatível ({cookie.trim().length} caracteres)
+                    </span>
+                  ) : (
+                    <span className="text-amber-400 flex items-center gap-1 font-medium">
+                      ⚠️ Tamanho curto ({cookie.trim().length} caracteres). Certifique-se de copiar todo o valor com Ctrl+A.
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
+
+            {/* Step-by-Step Instructions Box */}
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-2 text-[11px] text-white/60 leading-relaxed">
+              <div className="flex items-center gap-2 font-semibold text-white/80">
+                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                <span>Como copiar seu cookie sem truncar:</span>
+              </div>
+              <ol className="list-decimal list-inside space-y-1 pl-1 text-white/50">
+                <li>Abra o <strong className="text-white/80">roblox.com</strong> logado na sua conta.</li>
+                <li>Pressione <strong className="text-white/80">F12</strong> &gt; aba <strong className="text-white/80">Application</strong> (ou Armazenamento) &gt; <strong className="text-white/80">Cookies</strong> &gt; <code className="text-purple-300">https://www.roblox.com</code>.</li>
+                <li>Dê <strong className="text-white/80">dois cliques</strong> no valor de <strong className="text-white/80">.ROBLOSECURITY</strong>.</li>
+                <li>Pressione <strong className="text-white/80">Ctrl + A</strong> (para selecionar tudo sem cortar) e <strong className="text-white/80">Ctrl + C</strong>.</li>
+                <li>O valor deve começar com <code className="text-purple-300">_|WARNING:-DO-NOT-SHARE-THIS...</code> e ter mais de 800 caracteres.</li>
+              </ol>
+            </div>
+
+            {account?.hosted && (
+              <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-300/80 leading-relaxed">
+                💡 <strong>Dica de Conexão:</strong> Caso sua conta Roblox tenha bloqueio de IP por região, você também pode abrir o Illusions direto no seu computador em{" "}
+                <a
+                  href="http://127.0.0.1:5174/painel/account"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-200 underline font-semibold"
+                >
+                  http://127.0.0.1:5174
+                </a>
+                , onde a conexão usa seu IP residencial direto.
+              </div>
+            )}
 
             <DotButton
               type="submit"
@@ -633,7 +678,7 @@ export function AccountPage() {
           </form>
 
           {error && (
-            <div className="p-4 rounded-2xl bg-rose-500/15 text-rose-300 text-xs font-medium">
+            <div className="p-4 rounded-2xl bg-rose-500/15 text-rose-300 text-xs font-medium leading-relaxed">
               {error}
             </div>
           )}

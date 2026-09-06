@@ -24,10 +24,12 @@ const EMPTY_OPS: StoredOps = {
 
 export function sanitizeCookie(raw: string): string {
   let value = String(raw || "").trim();
+  value = value.replace(/^["']+|["']+$/g, "").trim();
   value = value.replace(/^Cookie:\s*/i, "");
   const embedded = value.match(/\.ROBLOSECURITY\s*=\s*([^;]+)/i);
   if (embedded) value = embedded[1];
   value = value.replace(/^\.ROBLOSECURITY\s*=\s*/i, "").trim();
+  value = value.replace(/^["']+|["';]+$/g, "").trim();
   return value;
 }
 

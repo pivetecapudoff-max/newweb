@@ -19,6 +19,7 @@ interface AuthUser {
   id: number;
   name: string;
   displayName?: string;
+  normalizedCookie?: string;
 }
 
 interface SaleRow {
@@ -133,18 +134,71 @@ export async function robloxGet(url: string, cookie: string): Promise<{ status: 
   return { status: 429, json: null };
 }
 
-export async function validateCookie(cookie: string): Promise<AuthUser> {
-  const res = await robloxGet("https://users.roblox.com/v1/users/authenticated", cookie);
-  const body = res.json as AuthUser | { errors?: { message?: string }[] } | null;
-  if (res.status !== 200 || !body || !("id" in body) || !body.id) {
-    if (isHosted()) {
+export async function validateCookie(rawCookie: string): Promise<AuthUser> {
+  const cookie = rawCookie.trim();
+  if (!cookie || cookie.length < 20) {
+    throw new Error("Cole o valor do cookie .ROBLOSECURITY.");
+  }
+
+  // Build candidate cookies to test
+  const candidates: string[] = [];
+  candidates.push(cookie);
+
+  // If missing the required security warning prefix, test official Roblox prefixes automatically
+  if (!cookie.startsWith("_|WARNING")) {
+    candidates.push(
+      `_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-into-your-account-and-to-steal-your-ROBUX-and-items.|_${cookie}`
+    );
+    candidates.push(
+      `_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|_${cookie}`
+    );
+  }
+
+  let lastStatus = 0;
+  let lastErrors: { message?: string; code?: number; subcode?: number }[] = [];
+
+  for (const candidate of candidates) {
+    const res = await robloxGet("https://users.roblox.com/v1/users/authenticated", candidate);
+    lastStatus = res.status;
+    const body = res.json as AuthUser | { errors?: { message?: string; code?: number; subcode?: number }[] } | null;
+    if (res.status === 200 && body && "id" in body && body.id) {
+      return {
+        id: body.id,
+        name: body.name,
+        displayName: body.displayName || body.name,
+        normalizedCookie: candidate,
+      };
+    }
+    if (body && "errors" in body && Array.isArray(body.errors)) {
+      lastErrors = body.errors;
+    }
+  }
+
+  // Diagnostics if all candidates failed
+  const mainError = lastErrors[0];
+  const subcode = mainError?.subcode;
+
+  if (cookie.length < 250) {
+    throw new Error(
+      `Cookie do Roblox incompleto (${cookie.length} caracteres). Um cookie válido possui mais de 800 caracteres e inicia com _|WARNING... Copie o valor completo no DevTools (F12 > Application > Cookies).`
+    );
+  }
+
+  if (lastStatus === 401 || lastStatus === 403) {
+    if (subcode === 1 || subcode === 3) {
       throw new Error(
-        "Roblox rejected this session from the hosted server. A cookie copied on your PC is tied to your home IP — a VPS/datacenter IP usually fails. Run Illusions on your computer to connect."
+        "Sessão não autenticada no Roblox. O cookie informado expirou, foi deslogado ou é inválido. Gere um novo cookie no roblox.com e copie-o por completo."
       );
     }
-    throw new Error("Roblox did not accept that cookie. Use your own .ROBLOSECURITY value.");
+    if (isHosted()) {
+      throw new Error(
+        "O Roblox recusou esta sessão no servidor em nuvem (Render). A proteção de sessão por IP do Roblox pode bloquear conexões de datacenters. Você também pode rodar o Illusions no seu computador (http://127.0.0.1:5174) onde o IP residencial é aceito sem bloqueio."
+      );
+    }
   }
-  return { id: body.id, name: body.name, displayName: body.displayName };
+
+  const errText = mainError?.message || "Roblox não aceitou esse cookie.";
+  throw new Error(`${errText} Certifique-se de copiar o valor completo do .ROBLOSECURITY.`);
 }
 
 async function fetchAvatar(userId: number): Promise<string | null> {

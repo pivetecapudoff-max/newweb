@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { fetchAccount, logoutSession } from "../lib/api";
 import { clearSession, writeSession } from "../lib/session";
+import { OnboardingModal } from "../components/OnboardingModal";
 import { motion, AnimatePresence } from "motion/react";
 import {
   LayoutGrid,
@@ -19,6 +20,8 @@ import {
   MessageSquare,
   Copy,
   Gamepad2,
+  Sparkles,
+  HelpCircle,
 } from "lucide-react";
 
 // Adminly 3-dot cluster logo mark
@@ -39,6 +42,8 @@ export function AppShell() {
   const [name, setName] = useState("Conta Roblox");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [discordUser, setDiscordUser] = useState<{ id: string; name: string; avatar: string | null } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -48,6 +53,14 @@ export function AppShell() {
         setConnected(account.connected);
         if (account.discord?.avatar) {
           setAvatarUrl(account.discord.avatar);
+        }
+        if (account.discord) {
+          setDiscordUser(account.discord);
+          // Automatically trigger onboarding modal for Discord users if not dismissed
+          const dismissed = localStorage.getItem("illusions_onboarding_dismissed");
+          if (!dismissed) {
+            setShowOnboarding(true);
+          }
         }
         if (account.connected) {
           const label = account.displayName || account.username || account.discord?.name || "Conta Roblox";
@@ -162,8 +175,18 @@ export function AppShell() {
             </nav>
           </div>
 
-          {/* Bottom Sleek Logout Button */}
-          <div className="pt-4">
+          {/* Bottom Actions */}
+          <div className="pt-4 space-y-2">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowOnboarding(true)}
+              className="w-full py-2.5 px-4 rounded-full font-semibold text-xs text-purple-300 hover:text-white bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 backdrop-blur-md transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <span>Guia da Plataforma</span>
+            </motion.button>
+
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -194,8 +217,18 @@ export function AppShell() {
               />
             </div>
 
-            {/* Right Icons: Notification Bell & User Avatar */}
+            {/* Right Icons: Help Guide, Notification Bell & User Avatar */}
             <div className="flex items-center gap-3">
+              {/* Help & Guide Icon */}
+              <button
+                type="button"
+                onClick={() => setShowOnboarding(true)}
+                className="w-9 h-9 rounded-full bg-white/5 border border-white/[0.08] backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer"
+                title="Guia da Plataforma"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
+
               {/* Notification Bell with Badge */}
               <button
                 type="button"
@@ -227,6 +260,15 @@ export function AppShell() {
             <Outlet />
           </main>
         </div>
+
+      {/* Onboarding & Instructions Modal for Discord Users */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        discordName={discordUser?.name}
+        discordAvatar={discordUser?.avatar}
+        isRobloxConnected={connected}
+      />
     </div>
   );
 }
