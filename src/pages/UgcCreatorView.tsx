@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Sparkles,
@@ -61,7 +62,15 @@ export function UgcCreatorView() {
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [account, setAccount] = useState<AccountPublic | null>(null);
+  const [searchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const p = searchParams.get("prompt");
+    if (p) {
+      setInputVal(p);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchAccount()

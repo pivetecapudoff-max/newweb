@@ -23,6 +23,7 @@ import {
   Sparkles,
   HelpCircle,
   Wand2,
+  Radar,
 } from "lucide-react";
 
 // Adminly 3-dot cluster logo mark
@@ -169,9 +170,20 @@ export function AppShell() {
                 <span>Gamepass</span>
               </NavLink>
 
-              <NavLink to="/painel/feed" className={() => navItemClass("/painel/feed", true)}>
-                <FileText className="w-4 h-4" />
-                <span>Reports</span>
+              <NavLink
+                to="/painel/market-scanner"
+                className={() =>
+                  navItemClass(
+                    location.pathname.startsWith("/painel/market-scanner") ||
+                      location.pathname.startsWith("/painel/feed")
+                      ? location.pathname
+                      : "/painel/market-scanner",
+                    true
+                  )
+                }
+              >
+                <Radar className="w-4 h-4 text-emerald-400" />
+                <span>Market Scanner</span>
               </NavLink>
 
               <NavLink to="/painel/ajustes" className={() => navItemClass("/painel/ajustes", true)}>

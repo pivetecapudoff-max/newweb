@@ -638,3 +638,57 @@ export function createUgcWithAi(payload: CreateUgcPayload): Promise<UgcDesignRes
     body: JSON.stringify(payload),
   }).then((res) => readJson<UgcDesignResponse>(res));
 }
+
+export interface MarketScanParams {
+  strategy?: "bestselling" | "favorited" | "recent" | "sales" | "price_asc";
+  timePeriod?: "all" | "day" | "week" | "month";
+  keywords?: string;
+  groupId?: string | number;
+  scanMode?: "fixed" | "rotation";
+  limit?: number;
+  assetType?: "both" | "shirts" | "pants" | "tshirts" | "ugc";
+  shirtPantsRatio?: number;
+  rotationKeywords?: string[];
+}
+
+export interface ScannedMarketItem {
+  id: number;
+  itemType: string;
+  assetType: number | null;
+  name: string;
+  description: string;
+  creatorId: number;
+  creatorName: string;
+  creatorType: string;
+  createdAt: string | null;
+  favoriteCount: number;
+  price: number | null;
+  thumbnailUrl: string | null;
+  category: string;
+  assetTypeName: string;
+  collectibleItemId?: string | null;
+}
+
+export interface MarketScanResult {
+  ok: boolean;
+  items: ScannedMarketItem[];
+  total: number;
+  summary: {
+    avgPrice: number;
+    totalFavorites: number;
+    shirtCount: number;
+    pantsCount: number;
+    ugcCount: number;
+    topKeywords: string[];
+  };
+  options: MarketScanParams;
+}
+
+export function scanMarketCatalog(params: MarketScanParams): Promise<MarketScanResult> {
+  return api("/api/market-scanner/scan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  }).then((res) => readJson<MarketScanResult>(res));
+}
+

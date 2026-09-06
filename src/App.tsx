@@ -42,6 +42,8 @@ export function App() {
               <Route path="consultoria" element={<AnalyticsPage />} />
               <Route path="copy" element={<CopyPage />} />
               <Route path="gamepass" element={<GamepassAutoPage />} />
+              <Route path="market-scanner" element={<Feed />} />
+              <Route path="scanner" element={<Feed />} />
               <Route path="feed" element={<Feed />} />
               <Route path="upload" element={<UploadPage />} />
               <Route path="tema/:id" element={<ClusterPage />} />

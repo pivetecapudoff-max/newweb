@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Download,
   LoaderCircle,
@@ -22,6 +23,13 @@ import {
   Lightbulb,
   Users,
   ChevronUp,
+  Wand2,
+  CheckCircle2,
+  SlidersHorizontal,
+  Shirt,
+  Sparkle,
+  ShoppingBag,
+  Eye,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { DotButton } from "../components/ui/DotButton";
@@ -35,12 +43,18 @@ import {
   startScan,
   generateAiMarketReport,
   searchLiveGroups,
+  scanMarketCatalog,
+  fetchUploads,
   type AssetLook,
   type FeedQuery,
   type FeedResponse,
   type GroupStore,
   type ExecutiveReportResponse,
   type LiveGroupItem,
+  type MarketScanParams,
+  type MarketScanResult,
+  type ScannedMarketItem,
+  type UploadGroup,
 } from "../lib/api";
 import { BADGE_LABEL, CATEGORY_LABEL, VERDICT_LABEL } from "../lib/labels";
 
@@ -92,13 +106,43 @@ function formatWhen(value: string | null): string {
 }
 
 export function Feed() {
+  const navigate = useNavigate();
+
+  // Market Scanner specific states (Matching uploaded UI screenshot)
+  const [scanStrategy, setScanStrategy] = useState<"bestselling" | "favorited" | "recent" | "sales" | "price_asc">("bestselling");
+  const [timePeriod, setTimePeriod] = useState<"all" | "day" | "week" | "month">("all");
+  const [keywords, setKeywords] = useState("y2k");
+  const [groupId, setGroupId] = useState("");
+  const [scanMode, setScanMode] = useState<"fixed" | "rotation">("fixed");
+  const [totalItems, setTotalItems] = useState(10);
+  const [rotationKeywords, setRotationKeywords] = useState("y2k, grunge, anime, streetwear, gothic, cyber");
+  const [showAdvanced, setShowAdvanced] = useState(true);
+  const [assetType, setAssetType] = useState<"both" | "shirts" | "pants" | "tshirts" | "ugc">("both");
+  const [shirtPantsRatio, setShirtPantsRatio] = useState(50);
+  const [isScanningMarket, setIsScanningMarket] = useState(false);
+  const [marketScanResult, setMarketScanResult] = useState<MarketScanResult | null>(null);
+  const [marketScanError, setMarketScanError] = useState<string | null>(null);
+
+  // Group Select Modal states
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [userGroups, setUserGroups] = useState<UploadGroup[]>([]);
+  const [modalSearchTerm, setModalSearchTerm] = useState("");
+  const [modalSearchResults, setModalSearchResults] = useState<LiveGroupItem[]>([]);
+  const [modalSearching, setModalSearching] = useState(false);
+
+  // Copied item toast
+  const [copiedItemId, setCopiedItemId] = useState<number | null>(null);
+
+  // View switch: "scanner" (primary) vs other analytical tabs
+  const [scannerView, setScannerView] = useState<"results" | "clusters" | "groups" | "blueprints">("results");
+
+  // Legacy Feed Query & Engine states
   const [query, setQuery] = useState<FeedQuery>(emptyQuery);
   const [draft, setDraft] = useState("");
   const [data, setData] = useState<FeedResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [now, setNow] = useState(Date.now());
-  const [activeTab, setActiveTab] = useState<"clusters" | "groups" | "blueprints">("clusters");
 
   // Executive AI Report states
   const [reportData, setReportData] = useState<ExecutiveReportResponse | null>(null);
@@ -125,6 +169,13 @@ export function Feed() {
   const [copied, setCopied] = useState(false);
   const [copiedBlueprintTags, setCopiedBlueprintTags] = useState<string | null>(null);
 
+  // Load user account to populate connected groups
+  useEffect(() => {
+    fetchUploads()
+      .then((board) => setUserGroups(board.groups || []))
+      .catch(() => {});
+  }, []);
+
   const load = async (next = query) => {
     setError(null);
     try {
@@ -144,14 +195,56 @@ export function Feed() {
     };
   }, [query]);
 
+  // Execute Market Scan
+  const handleMarketScan = async () => {
+    setIsScanningMarket(true);
+    setMarketScanError(null);
+    try {
+      const rotKeywords = rotationKeywords
+        .split(",")
+        .map((k) => k.trim())
+        .filter(Boolean);
+
+      const params: MarketScanParams = {
+        strategy: scanStrategy,
+        timePeriod,
+        keywords: keywords.trim(),
+        groupId: groupId.trim() || undefined,
+        scanMode,
+        limit: totalItems,
+        assetType,
+        shirtPantsRatio,
+        rotationKeywords: rotKeywords,
+      };
+
+      const result = await scanMarketCatalog(params);
+      setMarketScanResult(result);
+      setScannerView("results");
+    } catch (err: any) {
+      setMarketScanError(err?.message || "Falha ao escanear catálogo.");
+    } finally {
+      setIsScanningMarket(false);
+    }
+  };
+
+  // Perform initial scan on component mount
   useEffect(() => {
-    const handle = window.setTimeout(() => {
-      if (draft === (query.q || "")) return;
-      const next = { ...query, q: draft };
-      setQuery(next);
-    }, 280);
-    return () => window.clearTimeout(handle);
-  }, [draft, query]);
+    handleMarketScan();
+  }, []);
+
+  // Search live groups for modal
+  const handleModalSearchGroups = async (term: string) => {
+    if (!term.trim()) return;
+    setModalSearching(true);
+    try {
+      const res = await searchLiveGroups(term, 10);
+      setModalSearchResults(res.groups || []);
+    } catch {
+      // ignore
+    } finally {
+      setModalSearching(false);
+    }
+  };
 
   // Handle generating executive market report with AI
   const handleGenerateReport = async () => {
@@ -181,10 +274,10 @@ export function Feed() {
   };
 
   useEffect(() => {
-    if (activeTab === "groups" && groupSearchResults.length === 0) {
+    if (scannerView === "groups" && groupSearchResults.length === 0) {
       handleSearchGroups(groupSearchQuery);
     }
-  }, [activeTab]);
+  }, [scannerView]);
 
   async function scan() {
     setScanning(true);
@@ -233,58 +326,14 @@ export function Feed() {
     }
   }
 
-  async function copyGroupLinks() {
-    if (!groupStore?.items.length) return;
-    const text = groupStore.items
-      .map((item) => `${item.id}\t${item.assetType}\t${item.name}\t${item.storeUrl}`)
-      .join("\n");
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
-  }
-
-  const copyReportText = async () => {
-    if (!reportData?.report) return;
-    await navigator.clipboard.writeText(reportData.report);
-    setReportCopied(true);
-    setTimeout(() => setReportCopied(false), 2000);
-  };
-
-  const copyTags = async (tags: string[], id: string) => {
-    await navigator.clipboard.writeText(tags.join(" "));
-    setCopiedBlueprintTags(id);
-    setTimeout(() => setCopiedBlueprintTags(null), 1800);
-  };
-
-  function applyFilters(event: FormEvent) {
-    event.preventDefault();
-    const next = { ...query, q: draft };
-    setQuery(next);
-    load(next);
-  }
-
-  function patch(partial: Partial<FeedQuery>) {
-    const next = { ...query, ...partial };
-    setQuery(next);
-    load(next);
+  async function copyItemId(id: number) {
+    await navigator.clipboard.writeText(String(id));
+    setCopiedItemId(id);
+    window.setTimeout(() => setCopiedItemId(null), 1500);
   }
 
   const clusters = data?.cycle?.clusters || [];
   const csv = useMemo(() => exportHref(query), [query]);
-  const nextMs = data?.health.nextRunAt
-    ? new Date(data.health.nextRunAt).getTime() - now
-    : null;
-  const nextLabel = data?.health.scanning
-    ? "escaneando agora"
-    : nextMs == null
-    ? data?.settings.autoScan
-      ? "a qualquer instante"
-      : "pausado"
-    : nextMs <= 0
-    ? "a qualquer instante"
-    : `${Math.floor(nextMs / 60000)}m ${Math.floor((nextMs % 60000) / 1000)
-        .toString()
-        .padStart(2, "0")}s`;
 
   const defaultBlueprints = [
     {
@@ -326,8 +375,8 @@ export function Feed() {
   ];
 
   return (
-    <div className="h-full overflow-y-auto p-6 md:p-8 space-y-6 pb-24 text-white select-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      {/* 1. Top Header Bar */}
+    <div className="h-full overflow-y-auto p-5 sm:p-7 md:p-8 space-y-6 pb-24 text-white select-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* 1. Header Bar with Serif Italic Title */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -335,11 +384,11 @@ export function Feed() {
         className="flex flex-col md:flex-row md:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-            Relatórios &amp; Tendências de Mercado
+          <h1 className="text-3xl sm:text-4xl font-serif italic tracking-wide text-white/95">
+            Market Scanner
           </h1>
           <p className="text-xs text-white/40 mt-1 font-medium">
-            Dados em tempo real do catálogo, análise de concorrentes e oportunidades de mercado.
+            Roblox Catalog Deep Intelligence &bull; Filtre concorrentes, descubra peças vencedoras e copie padrões de alta demanda.
           </p>
         </div>
 
@@ -366,637 +415,543 @@ export function Feed() {
             <Download className="w-3.5 h-3.5" />
             <span>CSV</span>
           </DotButton>
-
-          <DotButton
-            type="button"
-            onClick={scan}
-            disabled={scanning || data?.health.scanning}
-            className="px-5 py-2.5 rounded-full font-semibold text-xs text-black bg-white hover:bg-white/90 gap-2 shadow-sm cursor-pointer"
-            title="Escanear catálogo agora"
-          >
-            {scanning || data?.health.scanning ? (
-              <LoaderCircle className="w-3.5 h-3.5 animate-spin text-black" />
-            ) : (
-              <Radar className="w-3.5 h-3.5 text-black" />
-            )}
-            <span>{scanning || data?.health.scanning ? "Escaneando..." : "Escanear Agora"}</span>
-          </DotButton>
         </div>
       </motion.div>
 
-      {/* 2. Executive AI Market Intelligence Card */}
+      {/* 2. Authentic Market Scanner Control Panel (Matching User Uploaded UI) */}
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45 }}
-        className="rounded-[24px] bg-gradient-to-b from-blue-950/20 via-[#0a0a0a] to-[#0a0a0a] border border-blue-500/20 p-5 sm:p-6 shadow-[0_12px_36px_rgba(0,0,0,0.5)] space-y-5"
+        className="rounded-2xl bg-[#0a0a0a] border border-white/[0.08] p-5 sm:p-6 md:p-7 space-y-5 shadow-2xl relative"
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white tracking-tight">
-                  Análise de Mercado
-                </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/25">
-                  Tempo Real
-                </span>
-              </div>
-              <p className="text-xs text-white/50 mt-0.5">
-                Tendências do catálogo, oportunidades de 5 R$ vs 3D e melhores horários de lançamento.
-              </p>
-            </div>
+        {/* Row 1: Scan Strategy & Time Period */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
+              SCAN STRATEGY
+            </label>
+            <select
+              value={scanStrategy}
+              onChange={(e) => setScanStrategy(e.target.value as any)}
+              className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/20 transition-all cursor-pointer"
+            >
+              <option value="bestselling">Bestselling (Trending)</option>
+              <option value="favorited">Most Favorited</option>
+              <option value="recent">Recently Updated / New Releases</option>
+              <option value="sales">High Velocity (Sales Spike)</option>
+              <option value="price_asc">Price Ascending / 5 Robux Gems</option>
+            </select>
           </div>
 
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
+              TIME PERIOD
+            </label>
+            <select
+              value={timePeriod}
+              onChange={(e) => setTimePeriod(e.target.value as any)}
+              className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/20 transition-all cursor-pointer"
+            >
+              <option value="all">All Time</option>
+              <option value="day">Past Day</option>
+              <option value="week">Past Week</option>
+              <option value="month">Past Month</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Row 2: Keywords */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40">
+              KEYWORDS
+            </label>
+            <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
+              {["y2k", "grunge", "streetwear", "cyber", "baggy", "gothic", "anime"].map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setKeywords(tag)}
+                  className={`text-[10px] px-2 py-0.5 rounded-full transition-all cursor-pointer ${
+                    keywords.toLowerCase() === tag
+                      ? "bg-white text-black font-bold"
+                      : "bg-white/[0.04] text-white/50 hover:text-white"
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+          <input
+            type="text"
+            value={keywords}
+            onChange={(e) => setKeywords(e.target.value)}
+            placeholder="e.g. y2k, vintage, techwear, anime hoodie..."
+            className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-all"
+          />
+        </div>
+
+        {/* Row 3: Group ID & Select Group Button */}
+        <div>
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
+            GROUP ID
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              value={groupId}
+              onChange={(e) => setGroupId(e.target.value)}
+              placeholder="Digite o ID do grupo (ex: 12556581) ou deixe vazio para escanear todo o catálogo"
+              className="flex-1 bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-all font-mono"
+            />
+            <button
+              type="button"
+              onClick={() => setShowGroupModal(true)}
+              className="px-4 py-3 bg-[#181818] hover:bg-[#222222] border border-white/[0.1] rounded-xl text-xs font-semibold text-white/80 hover:text-white flex items-center gap-2 transition-all cursor-pointer shrink-0 active:scale-95"
+            >
+              <Users className="w-4 h-4 text-white/60" />
+              <span>SELECT GROUP</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Row 4: Scan Mode Tabs */}
+        <div>
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
+            SCAN MODE
+          </label>
+          <div className="grid grid-cols-2 border-b border-white/[0.08]">
+            <button
+              type="button"
+              onClick={() => setScanMode("fixed")}
+              className={`py-3 text-xs font-bold uppercase tracking-wider transition-all relative cursor-pointer ${
+                scanMode === "fixed" ? "text-white" : "text-white/40 hover:text-white/70"
+              }`}
+            >
+              FIXED AMOUNT
+              {scanMode === "fixed" && (
+                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#e07a5f]" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setScanMode("rotation")}
+              className={`py-3 text-xs font-bold uppercase tracking-wider transition-all relative cursor-pointer ${
+                scanMode === "rotation" ? "text-white" : "text-white/40 hover:text-white/70"
+              }`}
+            >
+              KEYWORD ROTATION
+              {scanMode === "rotation" && (
+                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#e07a5f]" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Row 5: Total Items or Rotation Input */}
+        {scanMode === "fixed" ? (
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
+              TOTAL ITEMS TO FETCH
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={totalItems}
+              onChange={(e) => setTotalItems(Math.max(1, Math.min(100, Number(e.target.value) || 10)))}
+              className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/20 transition-all font-mono"
+            />
+          </div>
+        ) : (
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
+              KEYWORDS TO ROTATE (SEPARATED BY COMMA)
+            </label>
+            <input
+              type="text"
+              value={rotationKeywords}
+              onChange={(e) => setRotationKeywords(e.target.value)}
+              placeholder="e.g. y2k, cyber, goth, grunge, anime, streetwear"
+              className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/20 transition-all font-mono"
+            />
+          </div>
+        )}
+
+        {/* Row 6: Advanced Options (Collapsible) */}
+        <div className="border-t border-white/[0.06] pt-4">
           <button
             type="button"
-            onClick={handleGenerateReport}
-            disabled={generatingReport}
-            className="px-5 py-2.5 rounded-full font-bold text-xs bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 disabled:opacity-50 shrink-0"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="flex items-center gap-2 text-xs font-bold tracking-wider uppercase text-white/50 hover:text-white transition-colors cursor-pointer"
           >
-            {generatingReport ? (
-              <>
-                <LoaderCircle className="w-4 h-4 animate-spin" />
-                <span>Gerando Relatório...</span>
-              </>
-            ) : (
-              <>
-                <TrendingUp className="w-4 h-4 text-blue-200" />
-                <span>Gerar Relatório de Mercado</span>
-              </>
-            )}
+            <span>{showAdvanced ? "▲" : "▼"}</span>
+            <span>ADVANCED OPTIONS</span>
           </button>
-        </div>
 
-        {/* 4 Key Intelligence Signals */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
-          <div className="p-3.5 rounded-xl bg-white/[0.025] border border-white/[0.06] flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
-              <Flame className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-[10px] uppercase font-semibold text-white/40 tracking-wider">Top Nicho</div>
-              <div className="text-xs font-bold text-white truncate mt-0.5">
-                {clusters[0]?.label || "Y2K / Aesthetic"}
-              </div>
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-white/[0.025] border border-white/[0.06] flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
-              <Compass className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-[10px] uppercase font-semibold text-white/40 tracking-wider">Oceano Azul</div>
-              <div className="text-xs font-bold text-white truncate mt-0.5">
-                {clusters[1]?.label || "Coquette / Duo Fit"}
-              </div>
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-white/[0.025] border border-white/[0.06] flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-purple-500/15 text-purple-400 flex items-center justify-center shrink-0">
-              <Tag className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-[10px] uppercase font-semibold text-white/40 tracking-wider">Preço Ideal</div>
-              <div className="text-xs font-bold text-white truncate mt-0.5">5 R$ (2D) &bull; 65-85 R$ (3D)</div>
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-white/[0.025] border border-white/[0.06] flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-[10px] uppercase font-semibold text-white/40 tracking-wider">Volume Rastreado</div>
-              <div className="text-xs font-bold text-white truncate mt-0.5">
-                {data ? `${data.health.lastItemCount || data.cycle?.itemCount || 0} peças` : "Conectado"}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Expandable Executive Report View */}
-        <AnimatePresence>
-          {showFullReport && reportData && (
+          {showAdvanced && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.35 }}
-              className="mt-4 pt-4 border-t border-white/[0.08] space-y-4"
+              className="mt-4 space-y-4 pt-2"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs text-white/50">
-                  <Clock className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Gerado em: {new Date(reportData.generatedAt).toLocaleTimeString("pt-BR")}</span>
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
+                  ASSET TYPE
+                </label>
+                <select
+                  value={assetType}
+                  onChange={(e) => setAssetType(e.target.value as any)}
+                  className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/20 transition-all cursor-pointer"
+                >
+                  <option value="both">Shirts + Pants</option>
+                  <option value="shirts">Shirts Only</option>
+                  <option value="pants">Pants Only</option>
+                  <option value="tshirts">T-Shirts</option>
+                  <option value="ugc">UGC 3D Accessories</option>
+                </select>
+              </div>
+
+              {assetType === "both" && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40">
+                      SHIRT / PANTS RATIO
+                    </label>
+                    <span className="text-xs font-mono text-white/60">
+                      {shirtPantsRatio}% Shirts / {100 - shirtPantsRatio}% Pants
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={shirtPantsRatio}
+                    onChange={(e) => setShirtPantsRatio(Number(e.target.value))}
+                    className="w-full h-1.5 bg-[#222222] rounded-lg appearance-none cursor-pointer accent-[#e07a5f]"
+                  />
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={copyReportText}
-                    className="px-3 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-white/70 hover:text-white text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer"
-                  >
-                    {reportCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{reportCopied ? "Copiado!" : "Copiar Relatório"}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowFullReport(false)}
-                    className="p-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-white/50 hover:text-white transition-colors cursor-pointer"
-                    title="Recolher"
-                  >
-                    <ChevronUp className="w-4 h-4" />
-                  </button>
+              )}
+            </motion.div>
+          )}
+        </div>
+
+        {/* Row 7: START SCAN Button */}
+        <button
+          type="button"
+          onClick={handleMarketScan}
+          disabled={isScanningMarket}
+          className="w-full py-4 rounded-xl bg-[#F4EFE6] hover:bg-[#FAF6EE] text-black font-extrabold text-sm tracking-widest uppercase shadow-xl transition-all active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3 cursor-pointer"
+        >
+          {isScanningMarket ? (
+            <>
+              <LoaderCircle className="w-4 h-4 animate-spin text-black" />
+              <span>SCANNING ROBLOX CATALOG...</span>
+            </>
+          ) : (
+            <>
+              <Radar className="w-4 h-4 text-black" />
+              <span>START SCAN</span>
+            </>
+          )}
+        </button>
+
+        {marketScanError && (
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300">
+            {marketScanError}
+          </div>
+        )}
+      </motion.div>
+
+      {/* 3. Navigation View Switcher (Results vs Market Analysis) */}
+      <div className="flex items-center justify-between border-b border-white/[0.08] pb-3 pt-2">
+        <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none]">
+          <button
+            type="button"
+            onClick={() => setScannerView("results")}
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              scannerView === "results"
+                ? "bg-white text-black shadow-md"
+                : "bg-white/[0.04] text-white/50 hover:text-white"
+            }`}
+          >
+            <ShoppingBag className="w-3.5 h-3.5" />
+            <span>Itens Escaneados ({marketScanResult?.total || 0})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setScannerView("clusters")}
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              scannerView === "clusters"
+                ? "bg-white text-black shadow-md"
+                : "bg-white/[0.04] text-white/50 hover:text-white"
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5" />
+            <span>Clusters &amp; Oportunidades</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setScannerView("groups")}
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              scannerView === "groups"
+                ? "bg-white text-black shadow-md"
+                : "bg-white/[0.04] text-white/50 hover:text-white"
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Radar de Concorrentes</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setScannerView("blueprints")}
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              scannerView === "blueprints"
+                ? "bg-white text-black shadow-md"
+                : "bg-white/[0.04] text-white/50 hover:text-white"
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Sugestões de Lançamento</span>
+          </button>
+        </div>
+
+        <span className="text-[11px] text-white/40 hidden sm:inline">
+          {data?.cycle?.finishedAt ? `Atualizado ${formatWhen(data.cycle.finishedAt)}` : "Online"}
+        </span>
+      </div>
+
+      {/* 4. VIEW 1: SCANNED ITEMS RESULTS (Primary View) */}
+      {scannerView === "results" && (
+        <div className="space-y-5">
+          {marketScanResult && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="p-4 sm:p-5 rounded-2xl bg-[#0a0a0a] border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">
+                    {marketScanResult.total} Itens Identificados
+                  </h3>
+                  <p className="text-xs text-white/50">
+                    Estratégia: <span className="text-white/80 capitalize">{marketScanResult.options.strategy}</span> &bull; Termo: <span className="text-white/80 font-mono">"{marketScanResult.options.keywords || 'todos'}"</span>
+                  </p>
                 </div>
               </div>
 
-              <div className="p-5 rounded-2xl bg-black/60 border border-white/[0.08] text-xs leading-relaxed text-white/90 whitespace-pre-wrap font-sans space-y-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-h-[460px] overflow-y-auto">
-                {reportData.report}
+              <div className="flex items-center gap-3 text-xs overflow-x-auto [scrollbar-width:none]">
+                <div className="px-3.5 py-2 rounded-xl bg-white/[0.025] border border-white/[0.06] text-center shrink-0">
+                  <span className="text-white/40 block text-[10px] uppercase font-semibold">Preço Médio</span>
+                  <span className="font-bold text-emerald-400 font-mono">{marketScanResult.summary.avgPrice} R$</span>
+                </div>
+                <div className="px-3.5 py-2 rounded-xl bg-white/[0.025] border border-white/[0.06] text-center shrink-0">
+                  <span className="text-white/40 block text-[10px] uppercase font-semibold">Total Favoritos</span>
+                  <span className="font-bold text-amber-400 font-mono">★ {marketScanResult.summary.totalFavorites.toLocaleString()}</span>
+                </div>
+                <div className="px-3.5 py-2 rounded-xl bg-white/[0.025] border border-white/[0.06] text-center shrink-0">
+                  <span className="text-white/40 block text-[10px] uppercase font-semibold">Distribuição</span>
+                  <span className="font-bold text-white/90 font-mono">{marketScanResult.summary.shirtCount} Camisas / {marketScanResult.summary.pantsCount} Calças</span>
+                </div>
               </div>
             </motion.div>
           )}
-        </AnimatePresence>
-      </motion.div>
 
-      {/* 3. Tab Selector Buttons */}
-      <div className="flex items-center gap-2 border-b border-white/[0.06] pb-3">
-        <button
-          type="button"
-          onClick={() => setActiveTab("clusters")}
-          className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            activeTab === "clusters"
-              ? "bg-white text-black shadow-sm"
-              : "bg-[#141414] text-white/60 hover:text-white"
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>Tendências &amp; Clusters ({clusters.length})</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("groups")}
-          className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            activeTab === "groups"
-              ? "bg-white text-black shadow-sm"
-              : "bg-[#141414] text-white/60 hover:text-white"
-          }`}
-        >
-          <Users className="w-3.5 h-3.5" />
-          <span>Radar de Grupos Concorrentes</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("blueprints")}
-          className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            activeTab === "blueprints"
-              ? "bg-white text-black shadow-sm"
-              : "bg-[#141414] text-white/60 hover:text-white"
-          }`}
-        >
-          <Lightbulb className="w-3.5 h-3.5" />
-          <span>Sugestões de Lançamento</span>
-        </button>
-      </div>
-
-      {/* 4. Quick Inspector Tool (Asset & Group Lookup) */}
-      <AnimatePresence>
-        {showInspector && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-            className="rounded-[24px] bg-[#0a0a0a] p-5 sm:p-6 shadow-[0_12px_36px_rgba(0,0,0,0.45)] space-y-4 overflow-hidden border border-white/[0.08]"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setInspectorTab("asset")}
-                  className={`px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    inspectorTab === "asset"
-                      ? "bg-white text-black shadow-sm"
-                      : "bg-[#141414] text-white/60 hover:text-white"
-                  }`}
-                >
-                  Inspecionar Roupa (ID ou Link)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setInspectorTab("group")}
-                  className={`px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    inspectorTab === "group"
-                      ? "bg-white text-black shadow-sm"
-                      : "bg-[#141414] text-white/60 hover:text-white"
-                  }`}
-                >
-                  Buscar Roupas de Grupo
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowInspector(false)}
-                className="p-1.5 rounded-full hover:bg-white/10 text-white/40 hover:text-white transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+          {isScanningMarket && !marketScanResult && (
+            <div className="py-20 text-center space-y-3 rounded-2xl bg-[#0a0a0a] border border-white/[0.06]">
+              <LoaderCircle className="w-7 h-7 animate-spin text-white/50 mx-auto" />
+              <p className="text-xs text-white/40 uppercase tracking-wider font-semibold">
+                Consultando dados do catálogo Roblox ao vivo...
+              </p>
             </div>
+          )}
 
-            {inspectorTab === "asset" ? (
-              <form onSubmit={lookup} className="flex gap-2.5">
-                <div className="relative flex-1">
-                  <Search className="w-4 h-4 text-white/30 absolute left-4 top-1/2 -translate-y-1/2" />
-                  <input
-                    value={idDraft}
-                    onChange={(event) => setIdDraft(event.target.value)}
-                    placeholder="Cole o ID da peça ou link create.roblox.com/store/asset/..."
-                    className="w-full bg-[#121212] focus:bg-[#161616] text-white placeholder-white/30 text-xs rounded-full pl-11 pr-4 py-3 focus:outline-none transition-all"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={looking}
-                  className="px-6 py-3 rounded-full text-xs font-semibold bg-white text-black hover:bg-white/90 cursor-pointer transition-all active:scale-95 disabled:opacity-50 shrink-0 shadow-sm"
-                >
-                  {looking ? "Consultando..." : "Inspecionar"}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={(e) => lookupGroup(e)} className="flex gap-2.5">
-                <div className="relative flex-1">
-                  <Building2 className="w-4 h-4 text-white/30 absolute left-4 top-1/2 -translate-y-1/2" />
-                  <input
-                    value={groupDraft}
-                    onChange={(event) => setGroupDraft(event.target.value)}
-                    placeholder="Cole o link ou ID do grupo (ex: roblox.com/groups/338505510)"
-                    className="w-full bg-[#121212] focus:bg-[#161616] text-white placeholder-white/30 text-xs rounded-full pl-11 pr-4 py-3 focus:outline-none transition-all"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={groupBusy}
-                  className="px-6 py-3 rounded-full text-xs font-semibold bg-white text-black hover:bg-white/90 cursor-pointer transition-all active:scale-95 disabled:opacity-50 shrink-0 shadow-sm"
-                >
-                  {groupBusy ? "Lendo grupo..." : "Buscar Roupas"}
-                </button>
-                {groupStore ? (
-                  <button
-                    type="button"
-                    onClick={copyGroupLinks}
-                    className="px-4 py-3 rounded-full text-xs font-semibold bg-[#1a1a1a] hover:bg-[#252525] text-white cursor-pointer transition-all shrink-0 flex items-center gap-1.5"
-                  >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copied ? "IDs Copiados!" : "Copiar IDs"}</span>
-                  </button>
-                ) : null}
-              </form>
-            )}
+          {marketScanResult && marketScanResult.items.length === 0 && (
+            <div className="py-16 text-center text-xs text-white/40 rounded-2xl bg-[#0a0a0a] border border-white/[0.06]">
+              Nenhum item encontrado com esses filtros. Tente alterar a palavra-chave ou o tipo de asset.
+            </div>
+          )}
 
-            {/* Asset Lookup Result */}
-            {lookError && <p className="text-xs text-rose-400 bg-rose-500/10 p-3 rounded-xl">{lookError}</p>}
-            {look && (
-              <div className="p-4 rounded-2xl bg-[#141414] flex items-center gap-4">
-                <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#1a1a1a] shrink-0">
-                  <ItemThumb url={look.thumbnailUrl} name={look.name} className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-[10px] text-white/50 uppercase font-semibold">
-                    <span>{look.assetType}</span>
-                    <span>&bull;</span>
-                    <span>ID: {look.id}</span>
+          {marketScanResult && marketScanResult.items.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+              {marketScanResult.items.map((item) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="rounded-2xl bg-[#0a0a0a] border border-white/[0.08] hover:border-purple-500/40 p-3 flex flex-col justify-between gap-2.5 transition-all group relative overflow-hidden"
+                >
+                  {/* Top Thumbnail with Type Badge */}
+                  <div className="relative aspect-square w-full rounded-xl bg-black/60 overflow-hidden flex items-center justify-center border border-white/[0.04]">
+                    {item.thumbnailUrl ? (
+                      <img
+                        src={item.thumbnailUrl}
+                        alt={item.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <Shirt className="w-10 h-10 text-white/20" />
+                    )}
+
+                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-md text-[9px] font-bold tracking-wider uppercase text-white/80 border border-white/10">
+                      {item.assetTypeName}
+                    </div>
+
+                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-emerald-950/80 backdrop-blur-md text-[10px] font-bold text-emerald-400 border border-emerald-500/30">
+                      {item.price != null ? `${item.price} R$` : "Grátis"}
+                    </div>
                   </div>
-                  <h4 className="text-sm font-bold text-white truncate mt-0.5">{look.name}</h4>
-                  <p className="text-xs text-white/40 mt-0.5 font-medium">
-                    {look.creatorName ? `${look.creatorName}` : "Criador público"}
-                    {look.price != null ? ` &bull; ${look.price} R$` : ""}
-                    {look.sales != null ? ` &bull; ${look.sales} vendas` : ""}
-                    {look.favorites != null ? ` &bull; ${look.favorites} favs` : ""}
+
+                  {/* Item Metadata */}
+                  <div className="space-y-1">
+                    <h4
+                      className="text-xs font-semibold text-white/90 line-clamp-2 leading-tight group-hover:text-purple-300 transition-colors"
+                      title={item.name}
+                    >
+                      {item.name}
+                    </h4>
+
+                    <div className="flex items-center justify-between text-[10px] text-white/40 pt-1">
+                      <span className="truncate max-w-[100px] font-medium" title={item.creatorName}>
+                        {item.creatorName}
+                      </span>
+                      <span className="text-amber-400/90 font-mono shrink-0">
+                        ★ {item.favoriteCount >= 1000 ? `${(item.favoriteCount / 1000).toFixed(1)}k` : item.favoriteCount}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions Bar */}
+                  <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between gap-1">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        navigate(
+                          `/painel/ugc-creator?prompt=${encodeURIComponent(
+                            `Crie uma versão alternativa e de alta demanda estilo ${item.name}`
+                          )}`
+                        )
+                      }
+                      title="Criar com UGC AI"
+                      className="p-2 rounded-lg bg-purple-500/10 hover:bg-purple-500/25 text-purple-300 hover:text-white transition-all cursor-pointer flex-1 flex items-center justify-center gap-1 text-[10px] font-bold"
+                    >
+                      <Wand2 className="w-3 h-3 text-purple-400" />
+                      <span>UGC AI</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => copyItemId(item.id)}
+                      title="Copiar ID"
+                      className="p-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-white transition-all cursor-pointer"
+                    >
+                      {copiedItemId === item.id ? (
+                        <Check className="w-3 h-3 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                    </button>
+
+                    <a
+                      href={`https://www.roblox.com/catalog/${item.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Abrir no Roblox"
+                      className="p-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-white transition-all cursor-pointer"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 5. VIEW 2: CLUSTERS & OPORTUNIDADES (Preserved Market Intelligence) */}
+      {scannerView === "clusters" && (
+        <div className="space-y-5">
+          {/* Executive AI Market Intelligence Card */}
+          <div className="rounded-2xl bg-gradient-to-b from-blue-950/20 via-[#0a0a0a] to-[#0a0a0a] border border-blue-500/20 p-5 sm:p-6 shadow-2xl space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-white tracking-tight">
+                      Análise de Mercado
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/25">
+                      Tempo Real
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/50 mt-0.5">
+                    Tendências do catálogo, oportunidades de 5 R$ vs 3D e melhores horários de lançamento.
                   </p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <a
-                    href={look.storeUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-medium text-white transition-all flex items-center gap-1"
-                  >
-                    <span>Store</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                  <a
-                    href={look.catalogUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-medium text-white transition-all flex items-center gap-1"
-                  >
-                    <span>Catálogo</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              </div>
-            )}
-
-            {/* Group Store Lookup Result */}
-            {groupError && <p className="text-xs text-rose-400 bg-rose-500/10 p-3 rounded-xl">{groupError}</p>}
-            {groupStore && (
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between text-xs text-white/60">
-                  <span>
-                    Grupo: <strong className="text-white">{groupStore.groupName}</strong> ({groupStore.itemCount} roupas públicas)
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 max-h-60 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {groupStore.items.map((item) => (
-                    <div key={item.id} className="p-2.5 rounded-xl bg-[#141414] flex flex-col gap-2 group">
-                      <div className="aspect-square rounded-lg overflow-hidden bg-[#1a1a1a]">
-                        <ItemThumb url={item.thumbnailUrl} name={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-all" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-semibold text-white truncate">{item.name}</p>
-                        <div className="flex items-center justify-between text-[10px] text-white/50 mt-0.5">
-                          <span>{item.assetType}</span>
-                          {item.sales != null && item.sales > 0 ? (
-                            <span className="text-emerald-400 font-bold">{item.sales} vendas</span>
-                          ) : item.favorites != null && item.favorites > 0 ? (
-                            <span className="text-pink-400 font-medium flex items-center gap-0.5">
-                              <Heart className="w-2.5 h-2.5 fill-pink-400/20" />
-                              <span>{item.favorites >= 1000 ? `${(item.favorites / 1000).toFixed(1)}k` : item.favorites}</span>
-                            </span>
-                          ) : item.price != null ? (
-                            <span className="text-amber-400 font-medium">{item.price} R$</span>
-                          ) : null}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 5. TAB 1: CLUSTERS & NICHES */}
-      {activeTab === "clusters" && (
-        <div className="space-y-6">
-          {/* Live Telemetry Bar */}
-          <div className="rounded-[22px] bg-[#0a0a0a] p-4 sm:p-5 shadow-[0_10px_30px_rgba(0,0,0,0.35)] flex flex-wrap items-center justify-between gap-4 border border-white/[0.06]">
-            <div className="flex items-center gap-3">
-              <span className="relative flex h-2.5 w-2.5">
-                <span
-                  className={`animate-ping absolute inline-flex h-full w-full rounded-full ${
-                    data?.health.scanning ? "bg-blue-500" : "bg-emerald-400"
-                  } opacity-75`}
-                />
-                <span
-                  className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                    data?.health.scanning ? "bg-blue-600" : "bg-emerald-500"
-                  }`}
-                />
-              </span>
-
-              <div className="text-xs">
-                <span className="font-semibold text-white">
-                  {data?.health.scanning
-                    ? "Varredura do Catálogo em Andamento"
-                    : data?.settings.autoScan
-                    ? "Varredura Automática Ativa"
-                    : "Varredura Pausada"}
-                </span>
-                <span className="text-white/40 ml-2 font-medium">
-                  Próxima em: <strong className="text-white/80">{nextLabel}</strong>
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 text-[11px] text-white/60">
-              <div className="px-3 py-1.5 rounded-full bg-[#141414] flex items-center gap-1.5 font-medium">
-                <Layers className="w-3 h-3 text-white/40" />
-                <span>{data ? `${data.health.lastItemCount || data.cycle?.itemCount || 0} itens` : "Aguardando dados"}</span>
-              </div>
-
-              {data?.demand ? (
-                <div className="px-3 py-1.5 rounded-full bg-[#141414] flex items-center gap-1.5 font-medium">
-                  <Heart className="w-3 h-3 text-pink-400" />
-                  <span>{data.demand.favoritesTotal.toLocaleString("pt-BR")} favoritos</span>
-                </div>
-              ) : null}
-
-              <div className="px-3 py-1.5 rounded-full bg-[#141414] flex items-center gap-1.5 font-medium text-white/40">
-                <Clock className="w-3 h-3 text-white/30" />
-                <span>Última: {formatWhen(data?.health.lastSuccessAt || null)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Filter & Search Controls */}
-          <div className="rounded-[24px] bg-[#0a0a0a] p-5 sm:p-6 shadow-[0_10px_30px_rgba(0,0,0,0.35)] space-y-4 border border-white/[0.06]">
-            {/* Search Input */}
-            <form onSubmit={applyFilters} className="relative flex items-center">
-              <Search className="w-4 h-4 text-white/40 absolute left-4 pointer-events-none" />
-              <input
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                placeholder="Buscar por nicho viral (ex: y2k, anime, gothic, cute, grunge, dark academia)..."
-                className="w-full bg-[#121212] focus:bg-[#161616] text-white placeholder-white/30 text-xs rounded-full pl-11 pr-24 py-3 focus:outline-none transition-all"
-                aria-label="Buscar temas virais"
-              />
-              {draft && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDraft("");
-                    patch({ q: "" });
-                  }}
-                  className="absolute right-20 text-white/40 hover:text-white p-1"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-              <DotButton
-                type="submit"
-                wrapperClassName="absolute right-1"
-                className="px-4 py-1.5 rounded-full font-semibold text-xs text-black bg-white hover:bg-white/90 shadow-sm"
-              >
-                Buscar
-              </DotButton>
-            </form>
-
-            {/* Dropdowns Row */}
-            <div className="flex flex-wrap items-center gap-2.5 pt-1">
-              <div className="relative inline-flex items-center">
-                <select
-                  value={query.minSales === "" || query.minSales == null ? "" : String(query.minSales)}
-                  onChange={(event) =>
-                    patch({ minSales: event.target.value === "" ? "" : Number(event.target.value) })
-                  }
-                  className="bg-[#141414] hover:bg-[#1c1c1c] text-white text-xs font-medium rounded-full px-3.5 py-2 pr-7 focus:outline-none cursor-pointer appearance-none transition-colors"
-                >
-                  {SALES_MIN.map(([val, label]) => (
-                    <option key={val || "any"} value={val} className="bg-[#121212] text-white">
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-3 h-3 text-white/40 absolute right-2.5 pointer-events-none" />
-              </div>
-
-              <div className="relative inline-flex items-center">
-                <select
-                  value={query.maxSales === "" || query.maxSales == null ? "" : String(query.maxSales)}
-                  onChange={(event) =>
-                    patch({ maxSales: event.target.value === "" ? "" : Number(event.target.value) })
-                  }
-                  className="bg-[#141414] hover:bg-[#1c1c1c] text-white text-xs font-medium rounded-full px-3.5 py-2 pr-7 focus:outline-none cursor-pointer appearance-none transition-colors"
-                >
-                  {SALES_MAX.map(([val, label]) => (
-                    <option key={val || "any"} value={val} className="bg-[#121212] text-white">
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-3 h-3 text-white/40 absolute right-2.5 pointer-events-none" />
-              </div>
-
-              <div className="relative inline-flex items-center">
-                <select
-                  value={query.minFavorites === "" || query.minFavorites == null ? "" : String(query.minFavorites)}
-                  onChange={(event) =>
-                    patch({ minFavorites: event.target.value === "" ? "" : Number(event.target.value) })
-                  }
-                  className="bg-[#141414] hover:bg-[#1c1c1c] text-white text-xs font-medium rounded-full px-3.5 py-2 pr-7 focus:outline-none cursor-pointer appearance-none transition-colors"
-                >
-                  {FAV_MIN.map(([val, label]) => (
-                    <option key={val || "any-fav"} value={val} className="bg-[#121212] text-white">
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-3 h-3 text-white/40 absolute right-2.5 pointer-events-none" />
-              </div>
-
-              <div className="relative inline-flex items-center">
-                <select
-                  value={query.verdict}
-                  onChange={(event) => patch({ verdict: event.target.value })}
-                  className="bg-[#141414] hover:bg-[#1c1c1c] text-white text-xs font-medium rounded-full px-3.5 py-2 pr-7 focus:outline-none cursor-pointer appearance-none transition-colors"
-                >
-                  <option value="" className="bg-[#121212] text-white">Todos os vereditos</option>
-                  {Object.entries(VERDICT_LABEL).map(([key, label]) => (
-                    <option key={key} value={key} className="bg-[#121212] text-white">
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-3 h-3 text-white/40 absolute right-2.5 pointer-events-none" />
-              </div>
-
-              <div className="relative inline-flex items-center">
-                <select
-                  value={query.category}
-                  onChange={(event) => patch({ category: event.target.value })}
-                  className="bg-[#141414] hover:bg-[#1c1c1c] text-white text-xs font-medium rounded-full px-3.5 py-2 pr-7 focus:outline-none cursor-pointer appearance-none transition-colors"
-                >
-                  <option value="" className="bg-[#121212] text-white">Todas as categorias</option>
-                  {Object.entries(CATEGORY_LABEL).map(([key, label]) => (
-                    <option key={key} value={key} className="bg-[#121212] text-white">
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-3 h-3 text-white/40 absolute right-2.5 pointer-events-none" />
-              </div>
-
-              <div className="relative inline-flex items-center">
-                <select
-                  value={query.sort}
-                  onChange={(event) => patch({ sort: event.target.value })}
-                  className="bg-[#141414] hover:bg-[#1c1c1c] text-white text-xs font-medium rounded-full px-3.5 py-2 pr-7 focus:outline-none cursor-pointer appearance-none transition-colors"
-                >
-                  <option value="oportunidade" className="bg-[#121212] text-white">Ordenar: Oportunidade</option>
-                  <option value="tamanho" className="bg-[#121212] text-white">Ordenar: Tamanho</option>
-                  <option value="velocidade" className="bg-[#121212] text-white">Ordenar: Velocidade</option>
-                  <option value="aceleracao" className="bg-[#121212] text-white">Ordenar: Aceleração</option>
-                  <option value="pureza" className="bg-[#121212] text-white">Ordenar: Pureza</option>
-                  <option value="criadores" className="bg-[#121212] text-white">Ordenar: Criadores</option>
-                  <option value="vendas" className="bg-[#121212] text-white">Ordenar: Vendas</option>
-                </select>
-                <ChevronDown className="w-3 h-3 text-white/40 absolute right-2.5 pointer-events-none" />
               </div>
 
               <button
                 type="button"
-                onClick={() => patch({ flagged: !query.flagged })}
-                className={`px-3.5 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  query.flagged
-                    ? "bg-rose-500/20 text-rose-300"
-                    : "bg-[#141414] hover:bg-[#1c1c1c] text-white/60 hover:text-white"
-                }`}
+                onClick={handleGenerateReport}
+                disabled={generatingReport}
+                className="px-5 py-2.5 rounded-full font-bold text-xs bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 disabled:opacity-50 shrink-0"
               >
-                Apenas Alertas
+                {generatingReport ? (
+                  <>
+                    <LoaderCircle className="w-4 h-4 animate-spin" />
+                    <span>Gerando Relatório...</span>
+                  </>
+                ) : (
+                  <>
+                    <TrendingUp className="w-4 h-4 text-blue-200" />
+                    <span>Gerar Relatório de Mercado</span>
+                  </>
+                )}
               </button>
-            </div>
-
-            {/* Quick Filter Badges */}
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <span className="text-[11px] text-white/40 font-medium mr-1">Sinais:</span>
-              <button
-                type="button"
-                onClick={() => {
-                  const isHalloween = (draft || "").toLowerCase() === "halloween";
-                  setDraft(isHalloween ? "" : "halloween");
-                  patch({ q: isHalloween ? "" : "halloween" });
-                }}
-                className={`px-3.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  (draft || "").toLowerCase() === "halloween"
-                    ? "bg-orange-500 text-black font-bold shadow-sm"
-                    : "bg-orange-500/15 hover:bg-orange-500/25 text-orange-400"
-                }`}
-              >
-                <span>🎃 Radar Halloween 2026</span>
-              </button>
-
-              {Object.entries(BADGE_LABEL).map(([key, label]) => {
-                const active = query.badge === key;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => patch({ badge: active ? "" : key })}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${
-                      active
-                        ? "bg-white text-black shadow-sm font-semibold"
-                        : "bg-[#161616] hover:bg-[#202020] text-white/60 hover:text-white"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
             </div>
           </div>
 
           {/* Clusters Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
-            {clusters.map((cluster) => (
-              <ClusterCard key={cluster.id} cluster={cluster} />
-            ))}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white">Clusters de Alta Demanda</h3>
+              <span className="text-xs text-white/40">{clusters.length} nichos mapeados</span>
+            </div>
+
+            {clusters.length === 0 ? (
+              <div className="py-12 text-center text-xs text-white/40 rounded-2xl bg-[#0a0a0a] border border-white/[0.06]">
+                Nenhum cluster ativo no momento. Execute uma varredura para calibrar.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {clusters.map((cluster) => (
+                  <ClusterCard key={cluster.id} cluster={cluster} />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* 6. TAB 2: LIVE GROUPS RADAR */}
-      {activeTab === "groups" && (
+      {/* 6. VIEW 3: RADAR DE CONCORRENTES */}
+      {scannerView === "groups" && (
         <div className="space-y-5">
-          <div className="rounded-[24px] bg-[#0a0a0a] p-5 sm:p-6 border border-white/[0.08] space-y-4">
+          <div className="rounded-2xl bg-[#0a0a0a] p-5 sm:p-6 border border-white/[0.08] space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h3 className="text-sm font-bold text-white">Radar de Grupos Concorrentes &amp; Referência</h3>
@@ -1005,7 +960,7 @@ export function Feed() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none]">
                 {["clothing aesthetic", "y2k clothing", "goth", "streetwear", "ugc accessories"].map((term) => (
                   <button
                     key={term}
@@ -1014,7 +969,7 @@ export function Feed() {
                       setGroupSearchQuery(term);
                       handleSearchGroups(term);
                     }}
-                    className="px-3 py-1 rounded-full text-[11px] font-medium bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-white transition-colors cursor-pointer"
+                    className="px-3 py-1 rounded-full text-[11px] font-medium bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-white transition-colors cursor-pointer shrink-0"
                   >
                     {term}
                   </button>
@@ -1108,10 +1063,10 @@ export function Feed() {
         </div>
       )}
 
-      {/* 7. TAB 3: BLUEPRINTS DE DROPS (IA) */}
-      {activeTab === "blueprints" && (
+      {/* 7. VIEW 4: BLUEPRINTS DE DROPS */}
+      {scannerView === "blueprints" && (
         <div className="space-y-5">
-          <div className="rounded-[24px] bg-[#0a0a0a] p-5 sm:p-6 border border-white/[0.08] flex items-center justify-between">
+          <div className="rounded-2xl bg-[#0a0a0a] p-5 sm:p-6 border border-white/[0.08] flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-white">Ideias e Sugestões de Lançamento (Próximas 48h)</h3>
               <p className="text-xs text-white/40 mt-0.5">
@@ -1142,7 +1097,6 @@ export function Feed() {
                   <h4 className="text-sm font-bold text-white">{bp.name}</h4>
                   <p className="text-xs text-white/60 leading-relaxed">{bp.strategy}</p>
 
-                  {/* Tags */}
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {bp.tags.map((tag) => (
                       <span
@@ -1159,7 +1113,11 @@ export function Feed() {
                   <span className="text-[11px] text-white/40">Pronto para upload</span>
                   <button
                     type="button"
-                    onClick={() => copyTags(bp.tags, bp.id)}
+                    onClick={() => {
+                      navigator.clipboard.writeText(bp.tags.join(" "));
+                      setCopiedBlueprintTags(bp.id);
+                      setTimeout(() => setCopiedBlueprintTags(null), 1800);
+                    }}
                     className="px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-white text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     {copiedBlueprintTags === bp.id ? (
@@ -1180,6 +1138,135 @@ export function Feed() {
           </div>
         </div>
       )}
+
+      {/* 8. Modal de Seleção de Grupo (Connected Groups & Live Search) */}
+      <AnimatePresence>
+        {showGroupModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg rounded-2xl bg-[#0a0a0a] border border-white/[0.1] p-6 space-y-5 shadow-2xl"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-white">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Selecionar Grupo Roblox</h3>
+                    <p className="text-[11px] text-white/40">Selecione um de seus grupos conectados ou pesquise</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGroupModal(false)}
+                  className="p-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-white/60 hover:text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Connected Groups from Account */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">
+                  Seus Grupos Vinculados
+                </span>
+                {userGroups && userGroups.length > 0 ? (
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto [scrollbar-width:none]">
+                    {userGroups.map((grp) => (
+                      <button
+                        key={grp.id}
+                        type="button"
+                        onClick={() => {
+                          setGroupId(String(grp.id));
+                          setShowGroupModal(false);
+                        }}
+                        className={`w-full p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                          groupId === String(grp.id)
+                            ? "bg-white/10 border-white/20 text-white"
+                            : "bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05] text-white/80"
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold truncate">{grp.name}</div>
+                          <div className="text-[10px] text-white/40 font-mono">ID: {grp.id}</div>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full bg-white/[0.05] text-[10px] text-purple-300 shrink-0">
+                          {grp.reason === "Owner" || grp.rank === 255 ? "Dono" : grp.role || "Membro"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs text-white/40 text-center">
+                    Nenhum grupo vinculado na conta conectada.
+                  </div>
+                )}
+              </div>
+
+              {/* Search any Roblox group */}
+              <div className="space-y-2 pt-2 border-t border-white/[0.08]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">
+                  Pesquisar Outro Grupo no Roblox
+                </span>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={modalSearchTerm}
+                    onChange={(e) => setModalSearchTerm(e.target.value)}
+                    placeholder="Nome do grupo concorrente..."
+                    className="flex-1 bg-[#141414] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-white/25 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleModalSearchGroups(modalSearchTerm)}
+                    disabled={modalSearching}
+                    className="px-4 py-2.5 rounded-xl bg-white text-black font-bold text-xs hover:bg-white/90 cursor-pointer disabled:opacity-50"
+                  >
+                    {modalSearching ? "..." : "Buscar"}
+                  </button>
+                </div>
+
+                {modalSearchResults.length > 0 && (
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto [scrollbar-width:none] pt-1">
+                    {modalSearchResults.map((res) => (
+                      <button
+                        key={res.id}
+                        type="button"
+                        onClick={() => {
+                          setGroupId(String(res.id));
+                          setShowGroupModal(false);
+                        }}
+                        className="w-full p-2.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.06] text-left transition-all flex items-center justify-between cursor-pointer"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-xs font-semibold truncate text-white">{res.name}</div>
+                          <div className="text-[10px] text-white/40 font-mono">ID: {res.id}</div>
+                        </div>
+                        <span className="text-[10px] text-emerald-400 font-mono">
+                          {res.memberCount.toLocaleString()} membros
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowGroupModal(false)}
+                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-xs font-semibold text-white/70 hover:text-white cursor-pointer"
+                >
+                  Fechar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -58,6 +58,7 @@ import {
   pingDiscordWebhook,
 } from "./discord.js";
 import { applySchedule, bootScheduler, runScan } from "./engine.js";
+import { scanMarketCatalog } from "./scanner.js";
 import { opportunity } from "./score.js";
 import {
   expandQuery,
@@ -557,6 +558,18 @@ app.post("/api/scan", requireAuth, async (_req, res) => {
       color: 0xb45555,
     });
     res.status(500).json({ error: state.health.lastError });
+  }
+});
+
+app.post("/api/market-scanner/scan", async (req, res) => {
+  try {
+    const options = req.body || {};
+    const result = await scanMarketCatalog(options);
+    res.json(result);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("[MarketScanner] Error running scan:", error);
+    res.status(500).json({ ok: false, error: msg });
   }
 });
 
