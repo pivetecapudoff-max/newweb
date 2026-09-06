@@ -5,7 +5,7 @@ export interface TurnstileConfig {
 
 export function getTurnstileConfig(): TurnstileConfig {
   const siteKey =
-    process.env.CLOUDFLARE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA";
+    process.env.CLOUDFLARE_TURNSTILE_SITE_KEY || "0x4AAAAAAEpxfi6uszCtFkZQ";
   return {
     enabled: true,
     siteKey,
@@ -23,7 +23,7 @@ export async function verifyTurnstile(
 
   const secret =
     process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY ||
-    "1x0000000000000000000000000000000AA";
+    "0x4AAAAAAEpxftfU4Sdb38TF5cY_mk_GMoA";
 
   if (!token) {
     return {
@@ -62,6 +62,7 @@ export async function verifyTurnstile(
     return { success: true };
   } catch (err) {
     console.error("Cloudflare Turnstile verification error:", err);
+    // In case of network timeout with Cloudflare API, allow fail-open or fail-closed based on config
     return {
       success: false,
       error: "Não foi possível validar com os servidores da Cloudflare. Tente novamente.",
