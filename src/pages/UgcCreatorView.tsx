@@ -319,11 +319,13 @@ export function UgcCreatorView() {
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1.5 mb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1.5 mb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex flex-col">
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+            className={`w-full flex gap-3 ${
+              msg.role === "user" ? "justify-end" : "justify-center"
+            } ${messages.length <= 1 ? "my-auto py-6" : ""}`}
           >
             {msg.role === "assistant" && (
               <div className="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0 mt-1">
@@ -331,13 +333,13 @@ export function UgcCreatorView() {
               </div>
             )}
 
-            <div className={`max-w-2xl space-y-3 ${msg.role === "user" ? "items-end" : "items-start"}`}>
+            <div className={`max-w-2xl w-full space-y-3 flex flex-col ${msg.role === "user" ? "items-end" : "items-center"}`}>
               {/* Message bubble */}
               <div
                 className={`p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
                   msg.role === "user"
                     ? "bg-purple-600/20 border border-purple-500/30 text-white rounded-tr-none ml-auto"
-                    : "bg-[#0a0a0a] border border-white/[0.08] text-white/90 rounded-tl-none"
+                    : "bg-[#0a0a0a] border border-white/[0.08] text-white/90 rounded-2xl shadow-xl w-full text-left"
                 }`}
               >
                 <div className="whitespace-pre-wrap">{msg.text}</div>
@@ -475,9 +477,11 @@ export function UgcCreatorView() {
         ))}
 
         {loading && (
-          <div className="flex gap-3 items-center text-xs text-purple-300 bg-[#0a0a0a] border border-purple-500/20 p-4 rounded-2xl w-fit">
-            <RefreshCw className="w-4 h-4 animate-spin text-purple-400" />
-            <span>Consultando modelo e arquitetando o molde 2D do Roblox...</span>
+          <div className="w-full flex justify-center py-2">
+            <div className="flex gap-3 items-center text-xs text-purple-300 bg-[#0a0a0a] border border-purple-500/20 p-4 rounded-2xl shadow-xl">
+              <RefreshCw className="w-4 h-4 animate-spin text-purple-400" />
+              <span>Consultando modelo e arquitetando o molde 2D do Roblox...</span>
+            </div>
           </div>
         )}
 
