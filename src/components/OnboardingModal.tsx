@@ -47,7 +47,7 @@ export function OnboardingModal({
 
   const handleGoToAccount = () => {
     handleFinish();
-    navigate("/painel/account");
+    navigate("/painel/conta");
   };
 
   const steps = [

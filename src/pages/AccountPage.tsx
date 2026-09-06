@@ -646,7 +646,7 @@ export function AccountPage() {
               <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-300/80 leading-relaxed">
                 💡 <strong>Dica de Conexão:</strong> Caso sua conta Roblox tenha bloqueio de IP por região, você também pode abrir o Illusions direto no seu computador em{" "}
                 <a
-                  href="http://127.0.0.1:5174/painel/account"
+                  href="http://127.0.0.1:5174/painel/conta"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-200 underline font-semibold"

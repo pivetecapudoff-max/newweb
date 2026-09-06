@@ -41,6 +41,7 @@ export function App() {
               <Route path="tema/:id" element={<ClusterPage />} />
               <Route path="ajustes" element={<SettingsPage />} />
               <Route path="conta" element={<AccountPage />} />
+              <Route path="account" element={<AccountPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
