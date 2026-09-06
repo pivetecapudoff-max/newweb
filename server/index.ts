@@ -98,51 +98,68 @@ const rootDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
+
+const configuredPublicUrl = String(process.env.APP_PUBLIC_URL || "").replace(/\/$/, "");
+let configuredHost = "";
+try {
+  if (configuredPublicUrl) configuredHost = new URL(configuredPublicUrl).hostname.toLowerCase();
+} catch {}
+
+const allowedOriginsList = [
+  "http://127.0.0.1:5174",
+  "http://localhost:5174",
+  "http://127.0.0.1:8788",
+  "http://127.0.0.1:4174",
+  configuredPublicUrl,
+  "https://newweb.pivetecapudoff.workers.dev",
+].filter(Boolean);
+
 app.use(
   cors({
-    origin(origin, next) {
-      const allowed = new Set(
-        [
-          "http://127.0.0.1:5174",
-          "http://localhost:5174",
-          "http://127.0.0.1:8788",
-          "http://127.0.0.1:4174",
-          String(process.env.APP_PUBLIC_URL || "").replace(/\/$/, ""),
-        ].filter(Boolean)
-      );
-      if (!origin || allowed.has(origin) || isHosted()) {
-        next(null, true);
-        return;
-      }
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
+      const allowed = new Set(allowedOriginsList);
+      if (allowed.has(origin)) return callback(null, true);
+
       try {
         const incoming = new URL(origin);
-        const configured = process.env.APP_PUBLIC_URL
-          ? new URL(process.env.APP_PUBLIC_URL)
-          : null;
+        const incomingHost = incoming.hostname.toLowerCase();
         if (
-          configured &&
-          incoming.hostname.replace(/^www\./, "") ===
-            configured.hostname.replace(/^www\./, "")
+          configuredHost &&
+          (incomingHost === configuredHost ||
+            incomingHost === `www.${configuredHost}` ||
+            (incomingHost.endsWith(".onrender.com") &&
+              configuredHost.endsWith(".onrender.com") &&
+              incomingHost === configuredHost))
         ) {
-          next(null, true);
-          return;
+          return callback(null, true);
         }
-      } catch {
-        // ignore bad origin
-      }
-      next(null, false);
+      } catch {}
+
+      return callback(null, false);
     },
     credentials: true,
   })
 );
+
 app.use(express.json({ limit: "16mb" }));
 app.use(authContext);
+
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "no-referrer");
   res.setHeader("X-Robots-Tag", "noindex, nofollow");
   res.setHeader("Permissions-Policy", "camera=(), microphone=(self), geolocation=()");
+
+  if (isSecureRequest(req) || isHosted()) {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  }
+
+  const connectSrc = isHosted()
+    ? "connect-src 'self' https:"
+    : "connect-src 'self' http://127.0.0.1:8788 http://127.0.0.1:5174 ws://127.0.0.1:5174";
+
   res.setHeader(
     "Content-Security-Policy",
     [
@@ -151,7 +168,7 @@ app.use((req, res, next) => {
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "media-src 'self' https:",
-      "connect-src 'self' http://127.0.0.1:8788 http://127.0.0.1:5174 ws://127.0.0.1:5174",
+      connectSrc,
       "font-src 'self'",
       "object-src 'none'",
       "base-uri 'self'",
@@ -159,6 +176,7 @@ app.use((req, res, next) => {
       "frame-ancestors 'none'",
     ].join("; ")
   );
+
   const blocked = req.path.match(
     /^\/(data|server|src|node_modules|\.git|vite\.config|tsconfig)\b/i
   );
@@ -169,6 +187,19 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Authentication & Protection Middleware
+function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction): void {
+  const account = publicAccount();
+  if ((account.discordEnabled || isHosted()) && !account.discord) {
+    res.status(401).json({ error: "Unauthorized. Sign in with Discord first." });
+    return;
+  }
+  next();
+}
+
+let lastManualScanTime = 0;
+const settingsUpdatesMap = new Map<string, { count: number; resetAt: number }>();
 
 function csvEscape(value: string | number | boolean | null | undefined): string {
   const text = value == null ? "" : String(value);
@@ -283,7 +314,7 @@ app.get("/api/status", (_req, res) => {
 });
 
 // --- AI Chatbot & Execution Logs Endpoints ---
-app.post("/api/ai/chat", async (req, res) => {
+app.post("/api/ai/chat", requireAuth, async (req, res) => {
   try {
     const message = String(req.body?.message || "").trim();
     const effort = ["Rápida", "Detalhada", "Profunda"].includes(req.body?.effort)
@@ -310,16 +341,16 @@ app.post("/api/ai/chat", async (req, res) => {
   }
 });
 
-app.get("/api/ai/logs", (_req, res) => {
+app.get("/api/ai/logs", requireAuth, (_req, res) => {
   res.json({ logs: getLogs() });
 });
 
-app.delete("/api/ai/logs", (_req, res) => {
+app.delete("/api/ai/logs", requireAuth, (_req, res) => {
   clearLogs();
   res.json({ success: true, logs: getLogs() });
 });
 
-app.post("/api/ai/optimize", async (req, res) => {
+app.post("/api/ai/optimize", requireAuth, async (req, res) => {
   try {
     const groupId = req.body?.groupId ? Number(req.body.groupId) : undefined;
     const result = await optimizeGroupCatalog(groupId);
@@ -329,7 +360,7 @@ app.post("/api/ai/optimize", async (req, res) => {
   }
 });
 
-app.post("/api/ai/report", async (req, res) => {
+app.post("/api/ai/report", requireAuth, async (req, res) => {
   try {
     const customPrompt = req.body?.prompt ? String(req.body.prompt) : undefined;
     const reportData = await generateExecutiveMarketReport(customPrompt);
@@ -339,7 +370,7 @@ app.post("/api/ai/report", async (req, res) => {
   }
 });
 
-app.post("/api/ai/describe", async (req, res) => {
+app.post("/api/ai/describe", requireAuth, async (req, res) => {
   try {
     const title = String(req.body?.title || "").trim();
     const assetType = req.body?.assetType;
@@ -355,7 +386,7 @@ app.post("/api/ai/describe", async (req, res) => {
   }
 });
 
-app.get("/api/groups/live-search", async (req, res) => {
+app.get("/api/groups/live-search", requireAuth, async (req, res) => {
   try {
     const q = String(req.query.q || req.query.keyword || "clothing aesthetic").trim();
     const limit = req.query.limit ? Number(req.query.limit) : 10;
@@ -474,7 +505,14 @@ app.get("/api/clusters/:id", (req, res) => {
   });
 });
 
-app.post("/api/scan", async (_req, res) => {
+app.post("/api/scan", requireAuth, async (_req, res) => {
+  const now = Date.now();
+  if (now - lastManualScanTime < 60_000) {
+    const remaining = Math.ceil((60_000 - (now - lastManualScanTime)) / 1000);
+    res.status(429).json({ error: `Rate limit: aguarde ${remaining}s para executar um novo scan.` });
+    return;
+  }
+  lastManualScanTime = now;
   try {
     const cycle = await runScan("manual");
     const state = loadState();
@@ -557,7 +595,7 @@ app.post("/api/account", async (req, res) => {
   }
 });
 
-app.delete("/api/account", async (_req, res) => {
+app.delete("/api/account", requireAuth, async (_req, res) => {
   const previous = publicAccount();
   await clearAccount();
   bustDashboardCache();
@@ -571,7 +609,7 @@ app.delete("/api/account", async (_req, res) => {
   res.json(publicAccount());
 });
 
-app.get("/api/uploads", async (_req, res) => {
+app.get("/api/uploads", requireAuth, async (_req, res) => {
   try {
     const groups = await listUploadGroups();
     res.json({
@@ -589,7 +627,7 @@ app.get("/api/uploads", async (_req, res) => {
   }
 });
 
-app.post("/api/uploads", async (req, res) => {
+app.post("/api/uploads", requireAuth, async (req, res) => {
   try {
     const groupId = req.body?.groupId ? Number(req.body.groupId) : null;
     if (groupId) {
@@ -635,7 +673,7 @@ app.post("/api/uploads", async (req, res) => {
   }
 });
 
-app.get("/api/uploads/:id/file", (req, res) => {
+app.get("/api/uploads/:id/file", requireAuth, (req, res) => {
   const job = getJob(req.params.id);
   if (!job) {
     res.status(404).type("text/plain").send("Upload not found.");
@@ -713,7 +751,7 @@ app.get("/api/items/:id/preview", async (req, res) => {
   }
 });
 
-app.post("/api/uploads/:id/retry", (req, res) => {
+app.post("/api/uploads/:id/retry", requireAuth, (req, res) => {
   try {
     const job = retryJob(req.params.id);
     void notifyDiscord({ title: "Upload retry", body: job.name });
@@ -725,19 +763,19 @@ app.post("/api/uploads/:id/retry", (req, res) => {
   }
 });
 
-app.delete("/api/uploads/:id", (req, res) => {
+app.delete("/api/uploads/:id", requireAuth, (req, res) => {
   const job = getJob(req.params.id);
   removeJob(req.params.id);
   void notifyDiscord({ title: "Upload removed", body: job?.name || req.params.id });
   res.json({ ok: true });
 });
 
-app.post("/api/uploads/pump", (_req, res) => {
+app.post("/api/uploads/pump", requireAuth, (_req, res) => {
   void pumpQueue();
   res.json({ ok: true });
 });
 
-app.get("/api/dashboard", async (req, res) => {
+app.get("/api/dashboard", requireAuth, async (req, res) => {
   try {
     const data = await buildDashboard(String(req.query.groupId || ""));
     res.json(data);
@@ -760,7 +798,7 @@ app.get("/api/dashboard", async (req, res) => {
   }
 });
 
-app.get("/api/analytics", async (req, res) => {
+app.get("/api/analytics", requireAuth, async (req, res) => {
   try {
     const data = await buildAnalytics(String(req.query.groupId || ""));
     res.json(data);
@@ -771,11 +809,24 @@ app.get("/api/analytics", async (req, res) => {
   }
 });
 
-app.get("/api/settings", (_req, res) => {
+app.get("/api/settings", requireAuth, (_req, res) => {
   res.json(publicSettings());
 });
 
-app.put("/api/settings", async (req, res) => {
+app.put("/api/settings", requireAuth, async (req, res) => {
+  const clientIp = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "client");
+  const now = Date.now();
+  const rate = settingsUpdatesMap.get(clientIp) || { count: 0, resetAt: now + 60_000 };
+  if (now > rate.resetAt) {
+    rate.count = 0;
+    rate.resetAt = now + 60_000;
+  }
+  rate.count++;
+  settingsUpdatesMap.set(clientIp, rate);
+  if (rate.count > 10) {
+    res.status(429).json({ error: "Muitas alterações em pouco tempo. Aguarde 1 minuto." });
+    return;
+  }
   const state = loadState();
   const previousHook = state.settings.discordWebhook;
   const settings = patchSettings(state, req.body || {});
@@ -869,25 +920,30 @@ app.get("/api/export.csv", (req, res) => {
 const downloadsDir = path.join(rootDir, "public", "downloads");
 app.use("/downloads", express.static(downloadsDir));
 
-app.post("/api/copy/download", async (req, res) => {
+app.post("/api/copy/download", requireAuth, async (req, res) => {
   try {
-    const input = req.body?.urlOrId || req.body?.url || req.body?.assetId;
-    const cookie = req.body?.cookie;
+    const input = String(req.body?.urlOrId || req.body?.url || req.body?.assetId || "").trim();
+    const cookie = req.body?.cookie ? String(req.body.cookie).trim() : undefined;
     if (!input) {
       res.status(400).json({ error: "URL ou Asset ID é obrigatório." });
       return;
     }
-    const result = await ripUgcAsset({ urlOrId: String(input), cookie });
+    if (input.length > 250 || !/^(https?:\/\/(www\.)?roblox\.com\/[^\s]+|\d{4,18})$/i.test(input)) {
+      res.status(400).json({ error: "URL ou Asset ID do catálogo Roblox inválido." });
+      return;
+    }
+    const result = await ripUgcAsset({ urlOrId: input, cookie });
     res.json(result);
   } catch (error) {
+    console.error("[Copy] Rip UGC asset error:", error);
     res.status(500).json({
-      error: error instanceof Error ? error.message : "Erro ao ripar item UGC.",
+      error: "Falha ao processar e extrair o modelo 3D deste item. Verifique se o ID existe e tente novamente.",
     });
   }
 });
 
 // Gamepass Auto Endpoints
-app.get("/api/gamepass/account", async (_req, res) => {
+app.get("/api/gamepass/account", requireAuth, async (_req, res) => {
   try {
     const data = await fetchGamepassAccount();
     res.json(data);
@@ -898,7 +954,7 @@ app.get("/api/gamepass/account", async (_req, res) => {
   }
 });
 
-app.post("/api/gamepass/preview", async (req, res) => {
+app.post("/api/gamepass/preview", requireAuth, async (req, res) => {
   try {
     const links: string[] = Array.isArray(req.body?.links)
       ? req.body.links
@@ -942,7 +998,7 @@ app.post("/api/gamepass/preview", async (req, res) => {
   }
 });
 
-app.get("/api/gamepass/jobs", (_req, res) => {
+app.get("/api/gamepass/jobs", requireAuth, (_req, res) => {
   try {
     const jobs = loadGamepassJobs();
     res.json({ jobs });
@@ -953,7 +1009,7 @@ app.get("/api/gamepass/jobs", (_req, res) => {
   }
 });
 
-app.post("/api/gamepass/start", async (req, res) => {
+app.post("/api/gamepass/start", requireAuth, async (req, res) => {
   try {
     const { links, payRegional, delayBetweenSeconds } = req.body || {};
     const parsedLinks = Array.isArray(links)
@@ -982,7 +1038,7 @@ app.post("/api/gamepass/start", async (req, res) => {
   }
 });
 
-app.delete("/api/gamepass/jobs/:id", async (req, res) => {
+app.delete("/api/gamepass/jobs/:id", requireAuth, async (req, res) => {
   try {
     await deleteGamepassJob(req.params.id);
     res.json({ success: true });

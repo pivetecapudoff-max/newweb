@@ -138,7 +138,7 @@ export function DashboardPage() {
   // Fetch logs from backend
   const fetchLogs = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8788/api/ai/logs");
+      const res = await fetch("/api/ai/logs");
       if (res.ok) {
         const json = await res.json();
         if (json.logs && Array.isArray(json.logs)) {
@@ -198,7 +198,7 @@ export function DashboardPage() {
         setOptimizeStatus("⚠️ Nenhum grupo com permissão de upload está selecionado.");
         return;
       }
-      const res = await fetch("http://127.0.0.1:8788/api/ai/optimize", {
+      const res = await fetch("/api/ai/optimize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ groupId: gidToUse }),

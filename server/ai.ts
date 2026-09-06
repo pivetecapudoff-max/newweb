@@ -534,9 +534,8 @@ ${options.attachments?.length ? '\nO usuário anexou imagens de referência. Ana
       });
 
       if (!response.ok) {
-        const errText = await response.text();
-        addLog('warn', 'GEMINI_FALLBACK', `Modelo ${m} retornou HTTP ${response.status}: ${errText.slice(0, 100)}`);
-        lastError = new Error(`HTTP ${response.status}: ${errText}`);
+        addLog('warn', 'GEMINI_FALLBACK', `Instabilidade temporária no modelo ${m} (HTTP ${response.status}). Acionando redundância...`);
+        lastError = new Error(`Falha no provedor de IA (código ${response.status})`);
         continue;
       }
 
@@ -668,7 +667,8 @@ export async function processAiMessage(
   actionTaken?: string;
 }> {
   const p = userPrompt.toLowerCase().trim();
-  addLog('info', 'AI_PROMPT', `Mensagem recebida: "${userPrompt}"`);
+  const promptSnippet = userPrompt.length > 25 ? `${userPrompt.slice(0, 25)}... (${userPrompt.length} chars)` : userPrompt;
+  addLog('info', 'AI_PROMPT', `Prompt recebido: [${promptSnippet.replace(/[\r\n]+/g, " ")}]`);
 
   let contextData = '';
   let actionTaken: string | undefined;

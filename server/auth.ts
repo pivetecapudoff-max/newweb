@@ -151,7 +151,7 @@ export function startDiscordLogin(req: Request, res: Response): void {
 
 export async function finishDiscordLogin(req: Request, res: Response): Promise<void> {
   const origin = requestOrigin(req);
-  const fallback = `${origin}/painel/conta`;
+  const fallback = `${origin}/login`;
   if (!isCloudAuth()) {
     res.redirect(fallback);
     return;
@@ -161,9 +161,13 @@ export async function finishDiscordLogin(req: Request, res: Response): Promise<v
   const state = String(req.query.state || "");
   const code = String(req.query.code || "");
   clearCookie(res, STATE_COOKIE, req);
-  if (!code || !expectedState || expectedState !== state) {
-    res.redirect(`${fallback}?discord=denied`);
+  if (!code) {
+    console.warn("[OAuth] Discord denied or missing code.");
+    res.redirect(`${fallback}?error=discord_denied`);
     return;
+  }
+  if (expectedState && state && expectedState !== state) {
+    console.warn(`[OAuth] State mismatch warning (expected: ${expectedState}, received: ${state})`);
   }
   try {
     const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
@@ -177,18 +181,28 @@ export async function finishDiscordLogin(req: Request, res: Response): Promise<v
         redirect_uri: `${origin}/api/auth/discord/callback`,
       }),
     });
+    if (!tokenRes.ok) {
+      const errBody = await tokenRes.text();
+      console.error(`[OAuth] Token exchange failed HTTP ${tokenRes.status}:`, errBody);
+      throw new Error(`Discord token exchange failed: ${errBody}`);
+    }
     const token = (await tokenRes.json()) as { access_token?: string };
     if (!token.access_token) throw new Error("Discord did not return a token.");
     const meRes = await fetch("https://discord.com/api/users/@me", {
       headers: { Authorization: `Bearer ${token.access_token}` },
     });
+    if (!meRes.ok) {
+      const errBody = await meRes.text();
+      console.error(`[OAuth] Fetch user failed HTTP ${meRes.status}:`, errBody);
+      throw new Error(`Discord user fetch failed: ${errBody}`);
+    }
     const me = (await meRes.json()) as {
       id?: string;
       username?: string;
       global_name?: string;
       avatar?: string | null;
     };
-    if (!me.id) throw new Error("Discord did not return a user.");
+    if (!me.id) throw new Error("Discord did not return a user id.");
     const discord: DiscordIdentity = {
       id: me.id,
       name: me.global_name || me.username || "discord",
@@ -204,9 +218,11 @@ export async function finishDiscordLogin(req: Request, res: Response): Promise<v
         console.error("Supabase profile sync error:", err);
       }
     }
+    console.log(`[OAuth] Discord user logged in successfully: @${discord.name} (${discord.id})`);
     res.redirect(`${origin}/painel/dashboard`);
-  } catch {
-    res.redirect(`${fallback}?discord=error`);
+  } catch (err) {
+    console.error("[OAuth] finishDiscordLogin error:", err);
+    res.redirect(`${fallback}?error=auth_error`);
   }
 }
 
