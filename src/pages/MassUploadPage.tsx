@@ -238,15 +238,15 @@ export function MassUploadPage() {
             </div>
 
             <div className="grid min-w-full grid-cols-3 gap-2 sm:min-w-[430px]">
-              <div className="rounded-2xl border border-white/[0.07] bg-white/[0.04] px-4 py-3">
+              <div className="rounded-2xl border border-black bg-black/60 px-4 py-3">
                 <div className="text-[10px] uppercase tracking-wider text-white/35">Selecionadas</div>
                 <div className="mt-1 text-xl font-semibold text-white">{selected.size}/{MAX_BATCH}</div>
               </div>
-              <div className="rounded-2xl border border-white/[0.07] bg-white/[0.04] px-4 py-3">
+              <div className="rounded-2xl border border-black bg-black/60 px-4 py-3">
                 <div className="text-[10px] uppercase tracking-wider text-white/35">Taxa estimada</div>
                 <div className="mt-1 text-xl font-semibold text-white">{estimatedFee} R$</div>
               </div>
-              <div className="rounded-2xl border border-white/[0.07] bg-white/[0.04] px-4 py-3">
+              <div className="rounded-2xl border border-black bg-black/60 px-4 py-3">
                 <div className="text-[10px] uppercase tracking-wider text-white/35">Fonte</div>
                 <div className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-emerald-300">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> ao vivo
@@ -257,8 +257,8 @@ export function MassUploadPage() {
         </section>
 
         <section className="mt-5 flex flex-col lg:flex-row gap-5 items-start">
-          <div className="flex-1 min-w-0 w-full rounded-[24px] border border-white/[0.08] bg-black/20 backdrop-blur-xl">
-            <div className="flex flex-col gap-4 border-b border-white/[0.07] p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex-1 min-w-0 w-full rounded-[24px] border border-black bg-black/80 backdrop-blur-xl">
+            <div className="flex flex-col gap-4 border-b border-black p-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="flex items-center gap-2 text-sm font-semibold text-white">
                   <TrendingUp className="h-4 w-4 text-emerald-400" />
@@ -277,7 +277,7 @@ export function MassUploadPage() {
                     setFilter(value);
                     void refreshTrends(value);
                   }}
-                  className="rounded-xl border border-white/[0.08] bg-[#0b0b10] px-3 py-2 text-xs text-white/75 outline-none focus:border-blue-400/40"
+                  className="rounded-xl border border-black bg-[#08080c] px-3 py-2 text-xs text-white/75 outline-none focus:border-blue-400/60"
                 >
                   {FILTERS.map((entry) => <option key={entry.value} value={entry.value}>{entry.label}</option>)}
                 </select>
@@ -285,7 +285,7 @@ export function MassUploadPage() {
                   type="button"
                   disabled={loading || running}
                   onClick={() => void refreshTrends()}
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 py-2 text-xs font-medium text-white/70 transition hover:bg-white/[0.09] disabled:opacity-40"
+                  className="inline-flex items-center gap-2 rounded-xl border border-black bg-black/80 px-3 py-2 text-xs font-medium text-white/70 transition hover:bg-black disabled:opacity-40"
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
                   Atualizar
@@ -318,7 +318,7 @@ export function MassUploadPage() {
             >
               {loading
                 ? Array.from({ length: 12 }).map((_, index) => (
-                    <div key={index} className="h-64 animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.035]" />
+                    <div key={index} className="h-64 animate-pulse rounded-2xl border border-black bg-black/50" />
                   ))
                 : items.map((item, index) => {
                     const checked = selected.has(item.id);
@@ -330,11 +330,11 @@ export function MassUploadPage() {
                         onClick={() => toggleItem(item.id)}
                         className={`group flex flex-col overflow-hidden rounded-2xl border text-left transition w-full ${
                           checked
-                            ? "border-blue-400/50 bg-blue-500/[0.08] shadow-[0_0_0_1px_rgba(96,165,250,0.15)]"
-                            : "border-white/[0.07] bg-white/[0.025] hover:border-white/[0.14] hover:bg-white/[0.045]"
+                            ? "border-blue-500 bg-blue-500/[0.08] shadow-[0_0_0_1px_#000000]"
+                            : "border-black bg-[#08080c] hover:border-black hover:bg-[#0e0e14]"
                         }`}
                       >
-                        <div className="relative aspect-square w-full max-h-48 overflow-hidden rounded-t-2xl bg-black/40 p-2 flex items-center justify-center">
+                        <div className="relative aspect-square w-full max-h-48 overflow-hidden rounded-t-2xl border-b border-black bg-black/80 p-2 flex items-center justify-center">
                           {item.thumbnailUrl ? (
                             <img
                               src={item.thumbnailUrl}
@@ -347,10 +347,10 @@ export function MassUploadPage() {
                               <Layers3 className="h-8 w-8" />
                             </div>
                           )}
-                          <div className="absolute left-2.5 top-2.5 rounded-md bg-black/75 px-1.5 py-0.5 text-[9px] font-bold text-white/80 backdrop-blur-md">
+                          <div className="absolute left-2.5 top-2.5 rounded-md border border-black bg-black/90 px-1.5 py-0.5 text-[9px] font-bold text-white/80">
                             #{index + 1}
                           </div>
-                          <div className={`absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full border backdrop-blur-md transition ${checked ? "border-blue-300/60 bg-blue-500 text-white" : "border-white/20 bg-black/50 text-transparent"}`}>
+                          <div className={`absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full border transition ${checked ? "border-blue-400 bg-blue-500 text-white" : "border-black bg-black/90 text-transparent"}`}>
                             <Check className="h-3.5 w-3.5" />
                           </div>
                         </div>
@@ -359,7 +359,7 @@ export function MassUploadPage() {
                             <div className="line-clamp-1 text-xs font-semibold text-white/90" title={item.name}>{item.name}</div>
                             <div className="mt-0.5 line-clamp-1 text-[11px] text-white/40">por {item.creatorName}</div>
                           </div>
-                          <div className="mt-3 flex items-center justify-between border-t border-white/[0.06] pt-2">
+                          <div className="mt-3 flex items-center justify-between border-t border-black pt-2">
                             <div>
                               <div className="text-xs font-bold text-emerald-400">{item.price ?? 5} R$</div>
                               <div className="text-[9px] uppercase tracking-wider text-white/30">{item.assetTypeName}</div>
@@ -370,7 +370,7 @@ export function MassUploadPage() {
                             </div>
                           </div>
                           {status && (
-                            <div className={`mt-2 flex items-center gap-1.5 rounded-lg px-2 py-1 text-[10px] ${status.state === "queued" ? "bg-emerald-400/10 text-emerald-300" : status.state === "failed" ? "bg-rose-400/10 text-rose-300" : "bg-blue-400/10 text-blue-200"}`}>
+                            <div className={`mt-2 flex items-center gap-1.5 rounded-lg border border-black px-2 py-1 text-[10px] ${status.state === "queued" ? "bg-emerald-400/10 text-emerald-300" : status.state === "failed" ? "bg-rose-400/10 text-rose-300" : "bg-blue-400/10 text-blue-200"}`}>
                               {statusIcon(status)}
                               <span className="line-clamp-1">{status.message}</span>
                             </div>
@@ -382,7 +382,7 @@ export function MassUploadPage() {
             </div>
           </div>
 
-          <aside className="w-full lg:w-[340px] shrink-0 h-fit rounded-[24px] border border-white/[0.08] bg-black/25 p-5 backdrop-blur-xl lg:sticky lg:top-4">
+          <aside className="w-full lg:w-[340px] shrink-0 h-fit rounded-[24px] border border-black bg-black/80 p-5 backdrop-blur-xl lg:sticky lg:top-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-white">
               <UploadCloud className="h-4 w-4 text-blue-400" />
               Configurar publicação
@@ -393,14 +393,14 @@ export function MassUploadPage() {
               value={groupId ?? ""}
               disabled={running || !connected}
               onChange={(event) => setGroupId(event.target.value ? Number(event.target.value) : null)}
-              className="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#0b0b10] px-3 py-3 text-sm text-white/80 outline-none focus:border-blue-400/40 disabled:opacity-50"
+              className="mt-2 w-full rounded-xl border border-black bg-[#08080c] px-3 py-3 text-sm text-white/80 outline-none focus:border-blue-400/60 disabled:opacity-50"
             >
               <option value="">Selecione um grupo</option>
               {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
             </select>
 
             <label className="mt-5 block text-[11px] font-medium uppercase tracking-wider text-white/35">Preço por peça</label>
-            <div className="mt-2 flex items-center rounded-xl border border-white/[0.08] bg-white/[0.035] px-3">
+            <div className="mt-2 flex items-center rounded-xl border border-black bg-[#08080c] px-3">
               <input
                 type="number"
                 min={5}
@@ -417,9 +417,9 @@ export function MassUploadPage() {
               type="button"
               disabled={running}
               onClick={() => setAntiBan((value) => !value)}
-              className="mt-5 flex w-full items-start gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3 text-left transition hover:bg-white/[0.05]"
+              className="mt-5 flex w-full items-start gap-3 rounded-2xl border border-black bg-[#08080c] p-3 text-left transition hover:bg-black"
             >
-              <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${antiBan ? "border-emerald-300/60 bg-emerald-400 text-black" : "border-white/20 bg-black/20 text-transparent"}`}>
+              <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${antiBan ? "border-emerald-300/60 bg-emerald-400 text-black" : "border-black bg-black/60 text-transparent"}`}>
                 <Check className="h-3.5 w-3.5" />
               </span>
               <span>
@@ -433,7 +433,7 @@ export function MassUploadPage() {
               </span>
             </button>
 
-            <div className="mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[0.06] p-3">
+            <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-3">
               <div className="flex items-center gap-2 text-xs font-medium text-amber-200">
                 <ShieldCheck className="h-4 w-4" />
                 Antes de publicar
@@ -460,7 +460,7 @@ export function MassUploadPage() {
             )}
 
             {(queuedCount > 0 || failedCount > 0) && (
-              <div className="mt-4 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3 text-xs text-white/55">
+              <div className="mt-4 rounded-2xl border border-black bg-[#08080c] p-3 text-xs text-white/55">
                 <div className="font-medium text-white/80">Lote processado</div>
                 <div className="mt-2 flex gap-4">
                   <span className="text-emerald-300">{queuedCount} na fila</span>
