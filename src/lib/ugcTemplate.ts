@@ -144,18 +144,62 @@ function drawShirtDetails(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
   // Torso Front (231, 138, 128, 128)
   const tx = 231;
   const ty = 138;
+  const t = (spec.title || "").toLowerCase();
+  const d = spec.details || [];
 
-  // Neckline Collar
-  ctx.fillStyle = "#09090b";
-  ctx.beginPath();
-  ctx.ellipse(tx + 64, ty + 12, 28, 14, 0, 0, Math.PI);
-  ctx.fill();
-  ctx.strokeStyle = spec.accentColor || "#a855f7";
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
+  const isOffShoulder = d.some((item) => item.includes("shoulder")) || t.includes("off shoulder") || t.includes("off-shoulder");
+  const hasBow = d.some((item) => item.includes("bow") || item.includes("ribbon") || item.includes("୨୧")) || t.includes("bow") || spec.theme === "moe" || spec.theme === "jiraikei" || spec.theme === "coquette";
+  const hasLace = d.some((item) => item.includes("lace") || item.includes("ruffles")) || spec.theme === "jiraikei" || spec.theme === "vkei";
+  const hasArmWarmers = d.some((item) => item.includes("warmers") || item.includes("sleeve")) || t.includes("arm") || spec.theme === "vkei" || spec.theme === "emogirl";
+  const isCat = t.includes("cat") || t.includes("gatinho") || d.some((item) => item.includes("cat"));
 
-  // Center zipper or buttons
-  if (spec.details?.some((d) => d.includes("zipper") || d.includes("jacket") || d.includes("puffer"))) {
+  // Neckline & Shoulders
+  if (isOffShoulder) {
+    // Off-shoulder cut: low horizontal neckline exposing shoulders
+    ctx.fillStyle = "#050508";
+    ctx.beginPath();
+    ctx.ellipse(tx + 64, ty + 18, 48, 14, 0, 0, Math.PI);
+    ctx.fill();
+
+    // Delicate spaghetti straps
+    ctx.strokeStyle = spec.accentColor || "#f4f4f5";
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(tx + 32, ty);
+    ctx.lineTo(tx + 36, ty + 24);
+    ctx.moveTo(tx + 96, ty);
+    ctx.lineTo(tx + 92, ty + 24);
+    ctx.stroke();
+
+    // Choker / Collar
+    ctx.fillStyle = spec.secondaryColor || "#09090b";
+    ctx.fillRect(tx + 44, ty + 4, 40, 6);
+    ctx.strokeStyle = spec.accentColor || "#a855f7";
+    ctx.strokeRect(tx + 44, ty + 4, 40, 6);
+  } else {
+    // Standard Collar
+    ctx.fillStyle = "#09090b";
+    ctx.beginPath();
+    ctx.ellipse(tx + 64, ty + 12, 28, 14, 0, 0, Math.PI);
+    ctx.fill();
+    ctx.strokeStyle = spec.accentColor || "#a855f7";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // Scalloped Lace Trim
+  if (hasLace) {
+    ctx.fillStyle = spec.accentColor || "#ffffff";
+    const laceY = isOffShoulder ? ty + 22 : ty + 14;
+    for (let lx = tx + 24; lx <= tx + 104; lx += 8) {
+      ctx.beginPath();
+      ctx.arc(lx, laceY, 2.5, 0, Math.PI);
+      ctx.fill();
+    }
+  }
+
+  // Center zipper or jacket cut
+  if (d.some((item) => item.includes("zipper") || item.includes("jacket") || item.includes("puffer"))) {
     ctx.strokeStyle = "#71717a";
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -163,40 +207,67 @@ function drawShirtDetails(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
     ctx.lineTo(tx + 64, ty + 128);
     ctx.stroke();
 
-    // Zipper pull
     ctx.fillStyle = spec.accentColor || "#e4e4e7";
     ctx.fillRect(tx + 62, ty + 40, 4, 6);
   }
 
+  // Syn night shop signature Bow Ribbon
+  if (hasBow) {
+    drawRibbonBow(ctx, tx + 64, isOffShoulder ? ty + 30 : ty + 24, spec.accentColor || "#f472b6");
+  }
+
   // Chest Graphic / Logo / Aesthetic Emblem
-  ctx.fillStyle = spec.accentColor || "#38bdf8";
-  ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = 1;
+  if (isCat) {
+    drawCatChestGraphic(ctx, tx + 64, ty + 64, spec.accentColor || "#ffffff");
+  } else {
+    drawAestheticChestEmblem(ctx, tx + 64, ty + 64, spec.accentColor || "#c084fc");
+  }
 
-  // Draw central Y2K / Cyber aesthetic icon on chest
-  drawAestheticChestEmblem(ctx, tx + 64, ty + 64, spec.accentColor || "#c084fc");
+  // Arm Warmers / Sleeves
+  if (hasArmWarmers) {
+    // Striped gothic/emo arm warmers on lower arms
+    const drawArmWarmerStripes = (lx: number, ly: number) => {
+      ctx.fillStyle = spec.secondaryColor || "#000000";
+      ctx.fillRect(lx, ly + 50, 64, 78);
+      ctx.strokeStyle = `${spec.accentColor || "#ffffff"}55`;
+      ctx.lineWidth = 3;
+      for (let sy = ly + 56; sy < ly + 120; sy += 12) {
+        ctx.beginPath();
+        ctx.moveTo(lx, sy);
+        ctx.lineTo(lx + 64, sy);
+        ctx.stroke();
+      }
+    };
+    drawArmWarmerStripes(85, 406);
+    drawArmWarmerStripes(341, 406);
+    drawArmWarmerStripes(21, 406);
+    drawArmWarmerStripes(277, 406);
+  } else {
+    // Normal Sleeve cuffs
+    ctx.fillStyle = spec.secondaryColor || "#000000";
+    ctx.fillRect(85, 406 + 118, 64, 10);
+    ctx.fillRect(341, 406 + 118, 64, 10);
+    ctx.fillRect(21, 406 + 118, 64, 10);
+    ctx.fillRect(277, 406 + 118, 64, 10);
 
-  // Sleeve cuffs (Right Arm: 85, 406; Left Arm: 341, 406)
-  ctx.fillStyle = spec.secondaryColor || "#000000";
-  ctx.fillRect(85, 406 + 118, 64, 10);
-  ctx.fillRect(341, 406 + 118, 64, 10);
-  ctx.fillRect(21, 406 + 118, 64, 10);
-  ctx.fillRect(277, 406 + 118, 64, 10);
-
-  // Cuff accent line
-  ctx.strokeStyle = spec.accentColor || "#c084fc";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(85, 406 + 118);
-  ctx.lineTo(85 + 64, 406 + 118);
-  ctx.moveTo(341, 406 + 118);
-  ctx.lineTo(341 + 64, 406 + 118);
-  ctx.stroke();
+    ctx.strokeStyle = spec.accentColor || "#c084fc";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(85, 406 + 118);
+    ctx.lineTo(85 + 64, 406 + 118);
+    ctx.moveTo(341, 406 + 118);
+    ctx.lineTo(341 + 64, 406 + 118);
+    ctx.stroke();
+  }
 }
 
 function drawPantsDetails(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
   const tx = 231;
   const ty = 138;
+  const t = (spec.title || "").toLowerCase();
+  const d = spec.details || [];
+  const isSkirt = d.some((item) => item.includes("skirt") || item.includes("pleated")) || t.includes("skirt") || t.includes("saia");
+  const isPjs = d.some((item) => item.includes("pj") || item.includes("pajama")) || t.includes("pj") || t.includes("pajama");
 
   // Waistband & Belt
   ctx.fillStyle = "#09090b";
@@ -211,28 +282,54 @@ function drawPantsDetails(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
   ctx.fillStyle = "#09090b";
   ctx.fillRect(tx + 60, ty + 4, 8, 6);
 
-  // Cargo Pockets on Thighs (R_Front: 85, 406; L_Front: 341, 406)
-  const drawCargoPocket = (px: number, py: number) => {
-    ctx.fillStyle = spec.secondaryColor || "#18181b";
-    ctx.fillRect(px + 12, py + 35, 40, 48);
-    ctx.strokeStyle = `${spec.accentColor}66`;
-    ctx.lineWidth = 1.2;
-    ctx.strokeRect(px + 12, py + 35, 40, 48);
-
-    // Pocket flap
-    ctx.fillStyle = "#09090b";
-    ctx.fillRect(px + 10, py + 32, 44, 10);
-    ctx.strokeRect(px + 10, py + 32, 44, 10);
-
-    // Button on flap
-    ctx.fillStyle = spec.accentColor || "#e4e4e7";
+  if (isSkirt) {
+    // Pleated Jirai Kei / Emo Skirt Lines
+    ctx.strokeStyle = `${spec.secondaryColor || "#000000"}cc`;
+    ctx.lineWidth = 2;
+    for (let px = tx + 12; px < tx + 116; px += 10) {
+      ctx.beginPath();
+      ctx.moveTo(px, ty + 14);
+      ctx.lineTo(px, ty + 110);
+      ctx.stroke();
+    }
+    // Safety pin accent
+    ctx.strokeStyle = "#e4e4e7";
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(px + 32, py + 37, 2.5, 0, Math.PI * 2);
-    ctx.fill();
-  };
+    ctx.moveTo(tx + 28, ty + 40);
+    ctx.lineTo(tx + 40, ty + 36);
+    ctx.lineTo(tx + 30, ty + 48);
+    ctx.stroke();
+  } else if (isPjs) {
+    // Cozy cute repeating stars/bats for PJs
+    ctx.fillStyle = `${spec.accentColor}44`;
+    for (const [lx, ly] of [[85, 406], [341, 406]]) {
+      for (let i = 0; i < 5; i++) {
+        drawStar(ctx, lx + 15 + (i % 2) * 28, ly + 20 + i * 20, 4, 4, 2);
+      }
+    }
+  } else {
+    // Cargo Pockets on Thighs
+    const drawCargoPocket = (px: number, py: number) => {
+      ctx.fillStyle = spec.secondaryColor || "#18181b";
+      ctx.fillRect(px + 12, py + 35, 40, 48);
+      ctx.strokeStyle = `${spec.accentColor}66`;
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(px + 12, py + 35, 40, 48);
 
-  drawCargoPocket(85, 406);
-  drawCargoPocket(341, 406);
+      ctx.fillStyle = "#09090b";
+      ctx.fillRect(px + 10, py + 32, 44, 10);
+      ctx.strokeRect(px + 10, py + 32, 44, 10);
+
+      ctx.fillStyle = spec.accentColor || "#e4e4e7";
+      ctx.beginPath();
+      ctx.arc(px + 32, py + 37, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    drawCargoPocket(85, 406);
+    drawCargoPocket(341, 406);
+  }
 
   // Chain detail hanging from belt
   ctx.strokeStyle = spec.accentColor || "#e4e4e7";
@@ -242,10 +339,100 @@ function drawPantsDetails(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
   ctx.bezierCurveTo(tx + 45, ty + 45, tx + 75, ty + 48, tx + 95, ty + 12);
   ctx.stroke();
 
-  // Shoe cuffs at bottom (85, 478 and 341, 478)
+  // Shoe cuffs at bottom
   ctx.fillStyle = "#09090b";
   ctx.fillRect(85, 406 + 120, 64, 8);
   ctx.fillRect(341, 406 + 120, 64, 8);
+}
+
+function drawRibbonBow(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  color: string
+) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.strokeStyle = "#ffffff66";
+  ctx.lineWidth = 1;
+
+  // Left loop
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.bezierCurveTo(cx - 14, cy - 10, cx - 14, cy + 10, cx, cy);
+  ctx.fill();
+  ctx.stroke();
+
+  // Right loop
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.bezierCurveTo(cx + 14, cy - 10, cx + 14, cy + 10, cx, cy);
+  ctx.fill();
+  ctx.stroke();
+
+  // Center knot
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Hanging ribbons
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx - 2, cy + 2);
+  ctx.lineTo(cx - 8, cy + 14);
+  ctx.moveTo(cx + 2, cy + 2);
+  ctx.lineTo(cx + 8, cy + 14);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawCatChestGraphic(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  color: string
+) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.2;
+
+  // Cat Head
+  ctx.beginPath();
+  ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Ears
+  ctx.beginPath();
+  ctx.moveTo(cx - 12, cy - 8);
+  ctx.lineTo(cx - 16, cy - 22);
+  ctx.lineTo(cx - 2, cy - 13);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(cx + 12, cy - 8);
+  ctx.lineTo(cx + 16, cy - 22);
+  ctx.lineTo(cx + 2, cy - 13);
+  ctx.fill();
+
+  // Whiskers
+  ctx.strokeStyle = "#09090b";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx - 5, cy + 1);
+  ctx.lineTo(cx - 20, cy);
+  ctx.moveTo(cx - 5, cy + 4);
+  ctx.lineTo(cx - 19, cy + 6);
+  ctx.moveTo(cx + 5, cy + 1);
+  ctx.lineTo(cx + 20, cy);
+  ctx.moveTo(cx + 5, cy + 4);
+  ctx.lineTo(cx + 19, cy + 6);
+  ctx.stroke();
+
+  ctx.restore();
 }
 
 function drawAestheticChestEmblem(

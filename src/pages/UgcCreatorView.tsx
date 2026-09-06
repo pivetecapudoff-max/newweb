@@ -57,7 +57,7 @@ export function UgcCreatorView() {
     {
       id: "welcome",
       role: "assistant",
-      text: "Olá! Eu sou o seu **Designer de Moda & UGC com IA** do Roblox. Descreva em linguagem natural a peça que deseja criar (ex: *calça cargo baggy Y2K preta com correntes* ou *jaqueta puffer cyberpunk com chamas*) ou anexe uma foto de referência do Pinterest ou Discord. Eu desenvolvo o design, gero o molde oficial do Roblox e posso publicar automaticamente no seu grupo!",
+      text: "Olá! Eu sou o seu **Designer de Moda & UGC com IA** do Roblox, especializado na estética da **Syn night shop** (Moe, Jirai Kei, Emo Alt, Coquette, Couple Matching e cortes Off-Shoulder a 5 Robux).\n\nDescreva a peça desejada em linguagem natural, selecione uma das sugestões rápidas abaixo ou anexe uma imagem de referência. Eu desenho o molde 2D oficial do Roblox, configuro o SEO viral e posso publicar automaticamente no seu grupo!",
       timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -321,14 +321,17 @@ export function UgcCreatorView() {
             <Wand2 className="w-5 h-5 animate-pulse" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-white flex items-center gap-2">
+            <h1 className="text-base font-bold text-white flex items-center gap-2 flex-wrap">
               <span>Criador UGC com IA</span>
               <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/35 text-purple-300 backdrop-blur-md shadow-sm">
                 Roblox 3D/2D Studio
               </span>
+              <span className="text-[10px] font-semibold tracking-wider px-2 py-0.5 rounded-full bg-pink-500/15 border border-pink-500/30 text-pink-300 backdrop-blur-md shadow-sm flex items-center gap-1">
+                <span>🎀 Estilo: Syn night shop</span>
+              </span>
             </h1>
             <p className="text-xs text-white/60">
-              Descreva a peça ou anexe foto de referência. A IA desenvolve o design e publica automaticamente no Roblox.
+              Treinado no estilo Moe, Jirai Kei, Emo Alt & Matching Outfits da <strong>Syn night shop</strong> (5 R$). Crie designs virais e publique direto no grupo!
             </p>
           </div>
         </div>
@@ -752,6 +755,34 @@ export function UgcCreatorView() {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Quick Inspiration Chips (Syn night shop catalog inspirations) */}
+      <div className="shrink-0 flex items-center gap-1.5 overflow-x-auto py-1 px-0.5 mb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <span className="text-[10px] uppercase font-bold text-pink-400/80 tracking-wider flex items-center gap-1 shrink-0">
+          <Sparkles className="w-3 h-3 text-pink-400" />
+          <span>Syn night shop:</span>
+        </span>
+        {[
+          { label: "🎀 Off-Shoulder Bow Top", prompt: "uwu off shoulder top white com laço delicado e decote ombro a ombro estilo Syn night shop" },
+          { label: "🕷️ Misa Alt Matching", prompt: "death note misa black off shoulder match com aquecedores de braço listrados e choker" },
+          { label: "🐾 Cat Shirt Match (g)", prompt: "cutesy cat shirt match (g) 🎀 estampa de gatinho e laço fofo Moe Jirai Kei" },
+          { label: "⭐ Batman PJs Da Hood", prompt: "batman pjs pajamas da hood y2k (girl) com padrão de estrelas aconchegante" },
+          { label: "🖤 Saia Plissada com Pins", prompt: "saia plissada preta estilo Jirai Kei com alfinete de segurança e cinto Y2K" },
+        ].map((chip, idx) => (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => {
+              setInputVal(chip.prompt);
+              handleSendPrompt(chip.prompt);
+            }}
+            disabled={loading}
+            className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-purple-500/15 border border-white/[0.08] hover:border-purple-500/30 text-white/70 hover:text-purple-200 transition-all cursor-pointer backdrop-blur-sm shadow-sm active:scale-95 disabled:opacity-50"
+          >
+            {chip.label}
+          </button>
+        ))}
+      </div>
+
       {/* Input Component (Exact from Photo 2, pinned cleanly at bottom) */}
       <div className="shrink-0 pt-1 pb-1">
         <PromptInput
@@ -759,7 +790,7 @@ export function UgcCreatorView() {
           onChange={(val) => setInputVal(val)}
           onSubmit={(val, meta) => handleSendPrompt(val, meta)}
           loading={loading}
-          placeholder="Descreva a roupa ou item UGC que deseja criar (ex: calça cargo baggy Y2K preta com correntes)..."
+          placeholder="Descreva a roupa ou item UGC no estilo Syn night shop (ex: uwu off shoulder top ou cat shirt match)..."
           className="w-full"
         />
       </div>

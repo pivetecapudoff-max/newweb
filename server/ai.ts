@@ -189,7 +189,7 @@ export async function searchLiveRobloxGroups(
   }
 }
 
-// Enhanced Algorithmic Fallback Description Generator (High-Converting English SEO)
+// Enhanced Algorithmic Fallback Description Generator (High-Converting English SEO - Syn night shop Style)
 export function generateEnhancedSeoDescription(title: string, assetType?: number | string): string {
   const t = title.toLowerCase();
   const isUgc =
@@ -199,24 +199,48 @@ export function generateEnhancedSeoDescription(title: string, assetType?: number
     t.includes('hat') ||
     t.includes('beanie');
 
-  let header = `— ⚡ ${title} ⚡ —`;
-  let intro = 'High quality aesthetic fit with clean custom shading and realistic details.';
-  let tagList = ['aesthetic', 'trendy', 'outfit', 'drip', 'style', 'clean', 'catalogavatarcreator', 'roblox'];
+  let header = `⋆ ˚｡⋆୨୧˚ ${title} ˚୨୧⋆｡˚ ⋆`;
+  let intro = 'High quality aesthetic fit with clean custom shading, delicate ribbon bows and off-shoulder styling.';
+  let tagList = [
+    'aesthetic',
+    'trendy',
+    'outfit',
+    'drip',
+    'style',
+    'clean',
+    'catalogavatarcreator',
+    'roblox',
+    'synnightshop',
+    'moe',
+    'jiraikei',
+    'vkei',
+    'darkkawaii',
+    'gothdoll',
+    'altoutfit',
+    'matching',
+    'cutefit',
+    '5robux',
+    'cheap',
+  ];
 
-  if (t.includes('goth') || t.includes('vamp') || t.includes('emo') || t.includes('dark') || t.includes('skull') || t.includes('opium')) {
-    header = `— 🕷️ ${title} 🕷️ —`;
-    intro = 'Premium dark gothic aesthetic with high-fidelity shading. Designed for clean misterious fits.';
-    tagList.push('goth', 'gothic', 'vamp', 'vampire', 'emo', 'grunge', 'drain', 'opium', 'alt', 'darkaesthetic', 'cyber', 'punk');
-  } else if (t.includes('cute') || t.includes('coquette') || t.includes('pink') || t.includes('sanrio') || t.includes('kawaii') || t.includes('bow')) {
-    header = `— ୨୧ ${title} ୨୧ —`;
-    intro = 'Super cute and delicate aesthetic with soft details. Perfect for dreamy and pastel avatar fits.';
-    tagList.push('coquette', 'cute', 'kawaii', 'pastel', 'cutecore', 'softgirl', 'sanrio', 'ribbon', 'girly', 'preppy', 'fairy');
+  if (t.includes('goth') || t.includes('vamp') || t.includes('emo') || t.includes('dark') || t.includes('skull') || t.includes('opium') || t.includes('misa') || t.includes('death note')) {
+    header = `⋆ ˚｡⋆୨୧˚ ${title} ˚୨୧⋆｡˚ ⋆`;
+    intro = 'Premium dark gothic aesthetic with high-fidelity shading, lace straps, choker and arm warmers.';
+    tagList.push('goth', 'gothic', 'vamp', 'vampire', 'emo', 'grunge', 'drain', 'opium', 'alt', 'darkaesthetic', 'cyber', 'punk', 'emogirl', 'misa', 'deathnote');
+  } else if (t.includes('cute') || t.includes('coquette') || t.includes('pink') || t.includes('sanrio') || t.includes('kawaii') || t.includes('bow') || t.includes('uwu') || t.includes('cat')) {
+    header = `⋆ ˚｡⋆୨୧˚ ${title} ˚୨୧⋆｡˚ ⋆`;
+    intro = 'Super cute and delicate aesthetic with soft details, ribbon bow ୨୧ and off-shoulder neckline.';
+    tagList.push('coquette', 'cute', 'kawaii', 'pastel', 'cutecore', 'softgirl', 'sanrio', 'ribbon', 'girly', 'preppy', 'fairy', 'cat', 'uwu', 'offshoulder');
+  } else if (t.includes('pj') || t.includes('pajama') || t.includes('batman') || t.includes('spiderman')) {
+    header = `⋆ ˚｡⋆୨୧˚ ${title} ˚୨୧⋆｡˚ ⋆`;
+    intro = 'Comfy cozy cute pajama fit for Da Hood and hangouts. Perfect matching couple aesthetic.';
+    tagList.push('pjs', 'pajamas', 'dahood', 'da hood', 'cozy', 'sleepwear', 'matching', 'couple', 'couplefit');
   } else if (t.includes('cargo') || t.includes('baggy') || t.includes('jeans') || t.includes('streetwear') || t.includes('hoodie')) {
-    header = `— 🔥 ${title} 🔥 —`;
+    header = `─── ⋆⋅☆⋅⋆ ── ${title} ── ⋆⋅☆⋅⋆ ───`;
     intro = 'Modern baggy streetwear fit with realistic wrinkles. The essential drip for your avatar wardrobe.';
     tagList.push('streetwear', 'baggy', 'cargopants', 'hoodie', 'drip', 'oversized', 'urban', 'vintage', 'skate', 'thrift');
   } else if (t.includes('cyber') || t.includes('y2k') || t.includes('star') || t.includes('retro')) {
-    header = `— ⭐ ${title} ⭐ —`;
+    header = `⭐ ⋆ ˚｡⋆ ${title} ⋆ ˚｡⋆ ⭐`;
     intro = 'Authentic 2000s Y2K nostalgia with clean cyber accents. Stands out in any Roblox experience.';
     tagList.push('y2k', 'cyberpunk', '2000s', 'mcbling', 'star', 'vintage', 'retro', 'y2koutfit', 'futuristic');
   } else {
@@ -226,16 +250,18 @@ export function generateEnhancedSeoDescription(title: string, assetType?: number
   if (isUgc) {
     tagList.push('ugc', 'robloxugc', '3daccessory', 'ugcitem');
   } else {
-    tagList.push('5robux', 'cheap', 'classic');
+    tagList.push('5robux', 'cheap', 'classic', 'shirt', 'pants');
   }
 
-  const uniqueTags = Array.from(new Set(tagList)).slice(0, 20);
+  const uniqueTags = Array.from(new Set(tagList)).slice(0, 24);
 
   return `${header}
 
+♡ Welcome to Syn night shop !
+♡ Buy 5+ clothes for the 'angel' rank in our group!
+♡ Matching outfits & daily aesthetic drops.
 ★ ${intro}
-★ Looks great with matching outfits & accessories! Try it on in Catalog Avatar Creator (CAC).
-★ Join our group for more high-quality aesthetic clothing drops!
+★ Try it on in Catalog Avatar Creator (CAC)!
 
 tags: ${uniqueTags.join(' ')}`;
 }
@@ -1283,34 +1309,68 @@ export async function generateUgcDesignData(
   attachments?: AiImageAttachment[],
   effort: string = 'Detalhada'
 ): Promise<GeneratedUgcDesign> {
-  const prompt = `Você é o designer-chefe de moda UGC no Roblox e especialista em tendências da plataforma.
-O usuário quer criar uma peça de roupa/UGC para o Roblox:
+  const prompt = `Você é o diretor criativo e designer-chefe oficial da marca "Syn night shop" (Roblox Group ID: 35320581), famosa por liderar o catálogo do Roblox em roupas estéticas, virais e de alta conversão.
+
+O usuário quer criar uma peça com base no seguinte pedido:
 "${userPrompt}"
-${attachments?.length ? 'O usuário anexou fotos de referência. Analise minuciosamente as cores, corte e estética da imagem.' : ''}
+${attachments?.length ? 'O usuário anexou fotos de referência. Analise minuciosamente os cortes, cores, laços, rendas e caimento da imagem.' : ''}
 
-SUA TAREFA:
-1. Definir o Título Comercial viral da peça (em inglês, com símbolos estéticos como ⚡, ★, ✦, ୨୧).
-2. Determinar o tipo: "shirt" (camisa/jaqueta/hoodie/top), "pants" (calça/short/saia/cargo) ou "tshirt" (estampa).
-3. Preço: 5 Robux (padrão de roupas clássicas para maximizar vendas).
-4. Cores em Hexadecimal (primaryColor, secondaryColor, accentColor).
-5. Padrão de textura (pattern: "solid", "stripes", "camo", "plaid", "grunge", "acid_wash", "stars").
-6. Lista de detalhes de acabamento (ex: ["chains", "pockets", "zipper", "distressed"]).
-7. Descrição & Tags SEO: DEVE SER 100% EM INGLÊS, seguindo o padrão viral de top criadores (Header, 2 frases de apelo estético, chamada para o Catalog Avatar Creator, e bloco de tags em minúsculo sem '#').
-8. Mensagem de Resposta ao Usuário (reply): Em português, explicando de forma estilosa o conceito da peça, o caimento e por que ela tem alto potencial de vendas no catálogo do Roblox.
+DIRETRIZES DE ESTILO DA MARCA "SYN NIGHT SHOP":
+1. MICRO-GÊNEROS PRINCIPAIS:
+   - Moe, Jirai Kei (地雷系), Ryousangata (量産型), Visual Kei (V-Kei)
+   - Emo Alt / Scene / Dark Kawaii / Goth Doll / Coquette Goth
+   - Peças de Casal Matching: indicadas com "(g) 🎀" (girl) e "(b) 💙" (boy)
+   - PJs fofos (Pajamas Y2K / Da Hood com estampas de gatinho, morcego ou estrelas)
+   - Death Note Misa gothic off-shoulder fits
 
-RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto antes ou depois):
+2. CORTES E ELEMENTOS VISUAIS CARACTERÍSTICOS:
+   - Tops/camisas com decote "off-shoulder" (ombro caído com alças finas ou choker)
+   - Laço de fita delicado ("ribbon-bow" ou "୨୧") no peito
+   - Rendas e babados ("lace-ruffles") no decote
+   - Mangas/aquecedores de braço listrados ("arm-warmers") no estilo gothic emo
+   - Saias plissadas ("pleated-skirt") com alfinetes ("safety-pins") para calças/shorts
+   - Estampas sutis de gatinho ("cat-graphic") ou emblemas estéticos
+
+3. CONVENÇÃO DE TÍTULOS DA SYN NIGHT SHOP:
+   - Para itens fofos/jirai/emo: "⋆ ˚｡⋆୨୧˚ [Nome da Peça] ˚୨୧⋆｡˚ ⋆"
+   - Para pares matching: "[Nome] match (g) 🎀" ou "[Nome] match (b) 💙"
+   - Para tops clássicos: "[Nome] off shoulder top [cor]"
+   - Para Y2K/alt: "─── ⋆⋅☆⋅⋆ ── [Nome] ── ⋆⋅☆⋅⋆ ───"
+
+4. PREÇO:
+   - ESTRITAMENTE 5 Robux (preço padrão oficial de roupas clássicas para estimular a compra de 5+ peças e rank 'angel').
+
+5. DESCRIÇÃO E SEO (PADRÃO OFICIAL SYN NIGHT SHOP):
+   - Deve ser em INGLÊS no formato exato:
+     ⋆ ˚｡⋆୨୧˚ [Nome da Peça] ˚୨୧⋆｡˚ ⋆
+
+     ♡ Welcome to Syn night shop !
+     ♡ Buy 5+ clothes for the 'angel' rank in our group!
+     ♡ Matching outfits & daily aesthetic drops.
+     ★ High quality aesthetic fit with custom shading & delicate details.
+     ★ Try it on in Catalog Avatar Creator (CAC)!
+
+     tags: [palavras-chave em minúsculo separadas por espaço incluindo synnightshop, aesthetic, y2k, cheap, 5robux, cutefit, emogirl, moe, jiraikei, vkei, matching, etc.]
+
+6. RESPOSTA AO USUÁRIO (reply):
+   - Em português, explicando de forma estilosa o conceito da peça no padrão Syn night shop (destacando o decote off-shoulder, laços ୨୧, estilo Jirai/Emo e o apelo de vendas no catálogo do Roblox).
+
+DETALHES RECONHECIDOS PELO MOTOR DE RENDERIZAÇÃO 2D (inclua no array 'details' os que se aplicam):
+"off-shoulder", "ribbon-bow", "lace-ruffles", "arm-warmers", "choker", "cat-graphic", "pleated-skirt", "safety-pins", "chains", "zipper", "pockets", "straps"
+
+RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fora do JSON):
 {
-  "title": "string",
+  "title": "⋆ ˚｡⋆୨୧˚ uwu off shoulder top black ˚୨୧⋆｡˚ ⋆",
   "kind": "shirt" | "pants" | "tshirt",
   "price": 5,
-  "theme": "y2k" | "streetwear" | "grunge" | "goth" | "cyberpunk" | "coquette" | "vintage",
+  "theme": "jiraikei" | "moe" | "vkei" | "emogirl" | "coquette" | "y2k" | "grunge" | "goth" | "matching" | "pjs",
   "primaryColor": "#18181b",
   "secondaryColor": "#09090b",
-  "accentColor": "#a855f7",
-  "pattern": "grunge",
-  "details": ["chains", "zipper"],
-  "description": "— ⚡ Title ⚡ —\n\n★ High quality aesthetic fit...\n\ntags: aesthetic y2k ...",
-  "reply": "Explicação em português da criação para o usuário..."
+  "accentColor": "#f472b6",
+  "pattern": "solid" | "stripes" | "grunge" | "stars" | "acid_wash",
+  "details": ["off-shoulder", "ribbon-bow", "lace-ruffles"],
+  "description": "⋆ ˚｡⋆୨୧˚ ...",
+  "reply": "Explicação em português com a vibe Syn night shop..."
 }`;
 
   try {
@@ -1322,41 +1382,85 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto antes ou dep
         return {
           title: parsed.title,
           kind: ['shirt', 'pants', 'tshirt'].includes(parsed.kind) ? parsed.kind : 'shirt',
-          price: Number(parsed.price) || 5,
-          theme: parsed.theme || 'streetwear',
+          price: 5, // Strictly 5 Robux
+          theme: parsed.theme || 'jiraikei',
           primaryColor: parsed.primaryColor || '#18181b',
           secondaryColor: parsed.secondaryColor || '#09090b',
-          accentColor: parsed.accentColor || '#a855f7',
+          accentColor: parsed.accentColor || '#f472b6',
           pattern: parsed.pattern || 'solid',
-          details: Array.isArray(parsed.details) ? parsed.details : ['custom fit'],
+          details: Array.isArray(parsed.details) ? parsed.details : ['off-shoulder', 'ribbon-bow'],
           description: parsed.description || generateEnhancedSeoDescription(parsed.title),
-          reply: parsed.reply || `Criei o design de **${parsed.title}** com base no seu pedido.`,
+          reply: parsed.reply || `Criei o design de **${parsed.title}** seguindo a estética autêntica da **Syn night shop**!`,
         };
       }
     }
   } catch (err: any) {
-    addLog('warn', 'AI_UGC_CREATE', `Gemini fallback para criação UGC: ${err.message}`);
+    addLog('warn', 'AI_UGC_CREATE', `Gemini fallback para criação UGC (Syn night shop): ${err.message}`);
   }
 
-  const kind = userPrompt.toLowerCase().includes('calça') || userPrompt.toLowerCase().includes('pants') || userPrompt.toLowerCase().includes('cargo')
-    ? 'pants'
-    : userPrompt.toLowerCase().includes('tshirt') || userPrompt.toLowerCase().includes('estampa')
-    ? 'tshirt'
-    : 'shirt';
+  // High-fidelity algorithmic fallback tuned for Syn night shop
+  const p = userPrompt.toLowerCase();
+  const isPants = p.includes('calça') || p.includes('pants') || p.includes('cargo') || p.includes('saia') || p.includes('skirt');
+  const isTshirt = p.includes('tshirt') || p.includes('estampa') || p.includes('decal');
+  const kind = isPants ? 'pants' : isTshirt ? 'tshirt' : 'shirt';
 
-  const cleanName = userPrompt.replace(/cria|fazer|roupa|calça|camisa|uma|pra mim/gi, '').trim() || 'Aesthetic Drop';
-  const title = `[Y2K] ${cleanName.slice(0, 30)} ⚡`;
+  let title = `⋆ ˚｡⋆୨୧˚ off shoulder top black ˚୨୧⋆｡˚ ⋆`;
+  let theme = 'jiraikei';
+  let details = ['off-shoulder', 'ribbon-bow', 'lace-ruffles'];
+  let primaryColor = '#18181b';
+  let secondaryColor = '#09090b';
+  let accentColor = '#f472b6';
+  let pattern: 'solid' | 'stripes' | 'camo' | 'plaid' | 'grunge' | 'acid_wash' | 'stars' = 'solid';
+
+  if (p.includes('cat') || p.includes('gato') || p.includes('gatinho')) {
+    title = `⋆ ˚｡⋆୨୧˚ cutesy cat match (g) 🎀 ˚୨୧⋆｡˚ ⋆`;
+    theme = 'moe';
+    details = ['cat-graphic', 'ribbon-bow', 'off-shoulder'];
+    accentColor = '#ffffff';
+  } else if (p.includes('misa') || p.includes('death note') || p.includes('vkei') || p.includes('goth')) {
+    title = `death note misa black off shoulder match`;
+    theme = 'vkei';
+    details = ['off-shoulder', 'choker', 'arm-warmers', 'straps'];
+    accentColor = '#e4e4e7';
+    pattern = 'stripes';
+  } else if (p.includes('pj') || p.includes('pajama') || p.includes('pijama') || p.includes('batman')) {
+    title = `batman pjs pajamas da hood y2k (girl)`;
+    theme = 'pjs';
+    details = ['pjs', 'stars'];
+    primaryColor = '#1e1b4b';
+    secondaryColor = '#0f172a';
+    accentColor = '#facc15';
+    pattern = 'stars';
+  } else if (isPants) {
+    if (p.includes('saia') || p.includes('skirt')) {
+      title = `⋆ ˚｡⋆୨୧˚ pleated skirt with pins ˚୨୧⋆｡˚ ⋆`;
+      theme = 'jiraikei';
+      details = ['pleated-skirt', 'safety-pins'];
+      accentColor = '#e4e4e7';
+    } else {
+      title = `─── ⋆⋅☆⋅⋆ ── baggy cargo alt pants ── ⋆⋅☆⋅⋆ ───`;
+      theme = 'y2k';
+      details = ['pockets', 'chains'];
+      accentColor = '#d4d4d8';
+    }
+  }
+
+  const cleanInput = userPrompt.replace(/cria|fazer|roupa|calça|camisa|uma|pra mim|no estilo syn night shop/gi, '').trim();
+  if (cleanInput.length > 2 && !cleanInput.includes('http')) {
+    title = `⋆ ˚｡⋆୨୧˚ ${cleanInput.slice(0, 32)} ˚୨୧⋆｡˚ ⋆`;
+  }
+
   return {
     title,
     kind,
     price: 5,
-    theme: 'y2k',
-    primaryColor: '#18181b',
-    secondaryColor: '#09090b',
-    accentColor: '#38bdf8',
-    pattern: 'grunge',
-    details: ['chains', 'zipper', 'custom shading'],
+    theme,
+    primaryColor,
+    secondaryColor,
+    accentColor,
+    pattern,
+    details,
     description: generateEnhancedSeoDescription(title),
-    reply: `Desenvolvi o modelo **${title}** baseado na sua descrição com caimento premium e texturas preparadas para o catálogo do Roblox!`,
+    reply: `Desenvolvi o modelo **${title}** no estilo autêntico da **Syn night shop**, com corte off-shoulder detalhado, laço ribbon ୨୧ e paleta otimizada para o público Moe/Jirai Kei do Roblox por 5 Robux!`,
   };
 }
