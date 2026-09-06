@@ -2,7 +2,7 @@ import { attachThumbnails } from "./thumbnails.js";
 import type { CatalogItem } from "./types.js";
 
 const BASE_URL = "https://catalog.roblox.com/v1/search/items/details";
-const UA = "Farol/1.0 (+local UGC research; polite catalog reads)";
+const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
 export interface MarketScanOptions {
   strategy?: "bestselling" | "favorited" | "recent" | "sales" | "price_asc";
@@ -78,6 +78,7 @@ async function fetchRobloxCatalog(params: {
   creatorType?: string;
   sortType: string;
   sortAggregation?: string;
+  minPrice?: number;
   maxPrice?: number;
   limit: number;
 }): Promise<any[]> {
@@ -91,6 +92,7 @@ async function fetchRobloxCatalog(params: {
   }
   url.searchParams.set("sortType", params.sortType);
   if (params.sortAggregation) url.searchParams.set("sortAggregation", params.sortAggregation);
+  if (typeof params.minPrice === "number") url.searchParams.set("minPrice", String(params.minPrice));
   if (typeof params.maxPrice === "number") url.searchParams.set("maxPrice", String(params.maxPrice));
 
   // Roblox catalog details endpoint strictly accepts limit of 10, 28, or 30
@@ -126,12 +128,6 @@ export async function scanMarketCatalog(options: MarketScanOptions): Promise<Mar
   const ratio = typeof options.shirtPantsRatio === "number" ? Math.max(0, Math.min(100, options.shirtPantsRatio)) : 50;
 
   // Map strategy to Roblox sortType
-  // Roblox Catalog Search API SortTypes:
-  // 1 = Most Favorited
-  // 2 = Bestselling / Top Sales (trending)
-  // 0 = Relevance
-  // 4 = Recently Updated
-  // (Note: sortType "5" is Price High to Low in Roblox, which caused 999,999,999 R$ placeholder items!)
   let sortType = "2"; // Default: Bestselling
   if (strategy === "favorited") sortType = "1";
   else if (strategy === "recent") sortType = "4";
@@ -145,8 +141,19 @@ export async function scanMarketCatalog(options: MarketScanOptions): Promise<Mar
   else if (timePeriod === "month") sortAggregation = "3";
   else if (timePeriod === "all") sortAggregation = "5";
 
-  // Clothing items price cap to guarantee real 5-10 Robux items and eliminate placeholder 999999999 items
+  // Clothing items price bounds: min 5 to eliminate free 0 Robux default starter items, max 100
+  const clothingMinPrice = assetType === "ugc" ? undefined : 5;
   const clothingMaxPrice = assetType === "ugc" ? undefined : 100;
+
+  function isValidClothing(item: any): boolean {
+    if (!item || !item.id) return false;
+    // Eliminate 0 Robux free items and official Roblox starter items
+    if (item.price === 0 || item.price == null || item.price < 5) return false;
+    if (item.price > 1000) return false;
+    const creator = String(item.creatorName || "").trim().toLowerCase();
+    if (creator === "roblox") return false;
+    return true;
+  }
 
   // Keywords handling (Fixed Amount or Rotation)
   let keywordsList: string[] = [];
@@ -176,8 +183,9 @@ export async function scanMarketCatalog(options: MarketScanOptions): Promise<Mar
           creatorTargetId: options.groupId,
           sortType,
           sortAggregation,
+          minPrice: clothingMinPrice,
           maxPrice: clothingMaxPrice,
-          limit: shirtQuota,
+          limit: Math.max(shirtQuota, 28),
         }),
         fetchRobloxCatalog({
           category: "Clothing",
@@ -186,21 +194,24 @@ export async function scanMarketCatalog(options: MarketScanOptions): Promise<Mar
           creatorTargetId: options.groupId,
           sortType,
           sortAggregation,
+          minPrice: clothingMinPrice,
           maxPrice: clothingMaxPrice,
-          limit: pantsQuota,
+          limit: Math.max(pantsQuota, 28),
         }),
       ]);
 
-      for (const item of shirts.slice(0, shirtQuota)) {
-        if (!seenIds.has(item.id) && (item.price == null || item.price <= 1000)) {
+      for (const item of shirts) {
+        if (!seenIds.has(item.id) && isValidClothing(item)) {
           seenIds.add(item.id);
           rawAccumulator.push({ ...item, _subcat: "ClassicShirts" });
+          if (rawAccumulator.filter((x) => x._subcat === "ClassicShirts").length >= shirtQuota) break;
         }
       }
-      for (const item of pants.slice(0, pantsQuota)) {
-        if (!seenIds.has(item.id) && (item.price == null || item.price <= 1000)) {
+      for (const item of pants) {
+        if (!seenIds.has(item.id) && isValidClothing(item)) {
           seenIds.add(item.id);
           rawAccumulator.push({ ...item, _subcat: "ClassicPants" });
+          if (rawAccumulator.filter((x) => x._subcat === "ClassicPants").length >= pantsQuota) break;
         }
       }
     } else if (assetType === "shirts") {
@@ -211,13 +222,15 @@ export async function scanMarketCatalog(options: MarketScanOptions): Promise<Mar
         creatorTargetId: options.groupId,
         sortType,
         sortAggregation,
+        minPrice: clothingMinPrice,
         maxPrice: clothingMaxPrice,
-        limit: requestedLimit,
+        limit: Math.max(requestedLimit, 28),
       });
       for (const item of shirts) {
-        if (!seenIds.has(item.id) && (item.price == null || item.price <= 1000)) {
+        if (!seenIds.has(item.id) && isValidClothing(item)) {
           seenIds.add(item.id);
           rawAccumulator.push({ ...item, _subcat: "ClassicShirts" });
+          if (rawAccumulator.length >= requestedLimit) break;
         }
       }
     } else if (assetType === "pants") {
@@ -228,13 +241,15 @@ export async function scanMarketCatalog(options: MarketScanOptions): Promise<Mar
         creatorTargetId: options.groupId,
         sortType,
         sortAggregation,
+        minPrice: clothingMinPrice,
         maxPrice: clothingMaxPrice,
-        limit: requestedLimit,
+        limit: Math.max(requestedLimit, 28),
       });
       for (const item of pants) {
-        if (!seenIds.has(item.id) && (item.price == null || item.price <= 1000)) {
+        if (!seenIds.has(item.id) && isValidClothing(item)) {
           seenIds.add(item.id);
           rawAccumulator.push({ ...item, _subcat: "ClassicPants" });
+          if (rawAccumulator.length >= requestedLimit) break;
         }
       }
     } else if (assetType === "tshirts") {
@@ -245,13 +260,15 @@ export async function scanMarketCatalog(options: MarketScanOptions): Promise<Mar
         creatorTargetId: options.groupId,
         sortType,
         sortAggregation,
+        minPrice: clothingMinPrice,
         maxPrice: clothingMaxPrice,
-        limit: requestedLimit,
+        limit: Math.max(requestedLimit, 28),
       });
       for (const item of tshirts) {
-        if (!seenIds.has(item.id) && (item.price == null || item.price <= 1000)) {
+        if (!seenIds.has(item.id) && isValidClothing(item)) {
           seenIds.add(item.id);
           rawAccumulator.push({ ...item, _subcat: "ClassicTShirts" });
+          if (rawAccumulator.length >= requestedLimit) break;
         }
       }
     } else if (assetType === "ugc") {

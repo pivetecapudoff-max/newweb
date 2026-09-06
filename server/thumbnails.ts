@@ -1,6 +1,6 @@
 import type { CatalogItem } from "./types.js";
 
-const UA = "Farol/1.0 (+local UGC research; polite thumbnail reads)";
+const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 const BATCH = 50;
 const GAP_MS = 800;
 
