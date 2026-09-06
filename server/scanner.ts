@@ -32,6 +32,8 @@ export interface ScannedMarketItem {
   category: string;
   assetTypeName: string;
   collectibleItemId?: string | null;
+  saleCount: number | null;
+  demandField: "vendas" | "favoritos";
 }
 
 export interface MarketScanResult {
@@ -317,6 +319,8 @@ export async function scanMarketCatalog(options: MarketScanOptions): Promise<Mar
       category: ci.category,
       assetTypeName: resolveAssetTypeName(ci.assetType, raw._subcat),
       collectibleItemId: ci.collectibleItemId,
+      saleCount: ci.saleCount,
+      demandField: ci.saleCount != null ? "vendas" : "favoritos",
     };
   });
 

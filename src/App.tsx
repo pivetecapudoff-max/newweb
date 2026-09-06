@@ -13,6 +13,7 @@ import { UgcCreatorView } from "./pages/UgcCreatorView";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { CopyPage } from "./pages/CopyPage";
 import { GamepassAutoPage } from "./pages/GamepassAutoPage";
+import { MassUploadPage } from "./pages/MassUploadPage";
 import { SilkShaderBackground } from "./components/SilkShaderBackground";
 import { AuthGuard } from "./components/AuthGuard";
 import { LoginPage } from "./pages/LoginPage";
@@ -38,6 +39,7 @@ export function App() {
               <Route path="ugc-creator" element={<UgcCreatorView />} />
               <Route path="create-ugc" element={<UgcCreatorView />} />
               <Route path="ugc-ai" element={<UgcCreatorView />} />
+              <Route path="mass-upload" element={<MassUploadPage />} />
               <Route path="analytics" element={<AnalyticsPage />} />
               <Route path="consultoria" element={<AnalyticsPage />} />
               <Route path="copy" element={<CopyPage />} />

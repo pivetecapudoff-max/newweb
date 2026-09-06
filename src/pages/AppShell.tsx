@@ -24,6 +24,7 @@ import {
   HelpCircle,
   Wand2,
   Radar,
+  Layers3,
 } from "lucide-react";
 
 // Adminly 3-dot cluster logo mark
@@ -143,6 +144,11 @@ export function AppShell() {
               <NavLink to="/painel/ugc-creator" className={() => navItemClass("/painel/ugc-creator", true)}>
                 <Wand2 className="w-4 h-4 text-purple-400" />
                 <span>UGC AI</span>
+              </NavLink>
+
+              <NavLink to="/painel/mass-upload" className={() => navItemClass("/painel/mass-upload", true)}>
+                <Layers3 className="w-4 h-4 text-blue-400" />
+                <span>Mass Upload</span>
               </NavLink>
 
               <NavLink to="/painel/conta" className={() => navItemClass("/painel/conta", true)}>

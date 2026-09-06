@@ -680,6 +680,8 @@ export interface ScannedMarketItem {
   category: string;
   assetTypeName: string;
   collectibleItemId?: string | null;
+  saleCount?: number | null;
+  demandField?: "vendas" | "favoritos";
 }
 
 export interface MarketScanResult {
