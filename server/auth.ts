@@ -17,7 +17,7 @@ function sessionSecret(): string {
   return process.env.SESSION_SECRET || runtimeSessionSecret;
 }
 
-function readCookies(req: Request): Record<string, string> {
+export function readCookies(req: Request): Record<string, string> {
   const out: Record<string, string> = {};
   for (const part of String(req.headers.cookie || "").split(";")) {
     const index = part.indexOf("=");
@@ -46,7 +46,7 @@ function cookieBase(req: Request | undefined, maxAge: number): string {
     .join("; ");
 }
 
-function setCookie(res: Response, name: string, value: string, maxAge: number, req?: Request): void {
+export function setCookie(res: Response, name: string, value: string, maxAge: number, req?: Request): void {
   const line = `${name}=${encodeURIComponent(value)}; ${cookieBase(req, maxAge)}`;
   const prev = res.getHeader("Set-Cookie");
   if (!prev) {
@@ -142,6 +142,13 @@ export function startDiscordLogin(req: Request, res: Response): void {
   if (!discordConfigured()) {
     res.redirect(`${origin}/painel/conta?discord=not-configured`);
     return;
+  }
+  const cookies = readCookies(req);
+  if (process.env.CLOUDFLARE_TURNSTILE_ENABLED !== "false" && isHosted(req)) {
+    if (cookies["illusions_cf_verified"] !== "true") {
+      res.redirect(`${origin}/login?error=turnstile_required`);
+      return;
+    }
   }
   const state = randomBytes(16).toString("hex");
   setCookie(res, STATE_COOKIE, state, 600, req);

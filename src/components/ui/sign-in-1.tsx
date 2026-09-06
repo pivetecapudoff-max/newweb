@@ -31,6 +31,7 @@ interface AuthFormProps extends React.HTMLAttributes<HTMLDivElement> {
     label: string;
     icon?: React.ReactNode;
     onClick: () => void;
+    disabled?: boolean;
   };
   /**
    * An array of secondary action buttons.
@@ -99,7 +100,16 @@ const AuthForm = React.forwardRef<HTMLDivElement, AuthFormProps>(
           </CardHeader>
           <CardContent className="grid gap-4">
             {/* Primary Action Button */}
-            <Button onClick={primaryAction.onClick} className="w-full transition-transform hover:scale-[1.03]">
+            <Button
+              onClick={primaryAction.onClick}
+              disabled={primaryAction.disabled}
+              className={cn(
+                "w-full transition-all duration-200",
+                primaryAction.disabled
+                  ? "opacity-40 cursor-not-allowed bg-white/10 text-white/40 hover:bg-white/10 pointer-events-none"
+                  : "hover:scale-[1.02] cursor-pointer"
+              )}
+            >
               {primaryAction.icon}
               {primaryAction.label}
             </Button>

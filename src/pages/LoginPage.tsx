@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { AuthForm } from "../components/ui/sign-in-1";
 import { discordLoginHref, fetchAccount } from "../lib/api";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Lock, CheckCircle2 } from "lucide-react";
 import { CloudflareTurnstile } from "../components/CloudflareTurnstile";
 
 const IconDiscord = (props: React.SVGProps<SVGSVGElement>) => (
@@ -15,7 +15,9 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [checking, setChecking] = useState(true);
-
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [verifyingTurnstile, setVerifyingTurnstile] = useState(false);
+  const [gateError, setGateError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -32,13 +34,39 @@ export function LoginPage() {
         if (alive) setChecking(false);
       });
 
-
     return () => {
       alive = false;
     };
   }, [navigate, location]);
 
+  const handleTurnstileSuccess = async (token: string) => {
+    setGateError(null);
+    setVerifyingTurnstile(true);
+    try {
+      const res = await fetch("/api/turnstile/verify-gate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setTurnstileToken(token);
+      } else {
+        setGateError(data.error || "Falha na validação de segurança. Tente novamente.");
+        setTurnstileToken(null);
+      }
+    } catch {
+      setTurnstileToken(token);
+    } finally {
+      setVerifyingTurnstile(false);
+    }
+  };
+
   const handleDiscordLogin = () => {
+    if (!turnstileToken) {
+      setGateError("Por favor, conclua a confirmação que é humano no desafio acima.");
+      return;
+    }
     window.location.href = discordLoginHref();
   };
 
@@ -62,8 +90,24 @@ export function LoginPage() {
         </Link>
       </div>
 
+      {gateError && (
+        <div className="w-full max-w-sm mb-3 px-3 py-2.5 bg-red-500/10 border border-red-500/30 rounded-xl text-xs text-red-400 text-center font-medium animate-in fade-in">
+          ⚠️ {gateError}
+        </div>
+      )}
+
       <div className="w-full max-w-sm mb-3">
-        <CloudflareTurnstile onSuccess={() => {}} />
+        <CloudflareTurnstile
+          onSuccess={handleTurnstileSuccess}
+          onError={(err) => {
+            setTurnstileToken(null);
+            setGateError(err || "Erro no desafio Cloudflare.");
+          }}
+          onExpire={() => {
+            setTurnstileToken(null);
+            setGateError("A verificação expirou. Clique novamente para confirmar.");
+          }}
+        />
       </div>
 
       <AuthForm
@@ -73,14 +117,29 @@ export function LoginPage() {
         title="Acessar Illusions AI"
         description="O login é obrigatório para acessar a plataforma. Conecte sua conta Discord para continuar."
         primaryAction={{
-          label: "Entrar com Discord",
-          icon: <IconDiscord className="mr-2.5 h-5 w-5 fill-white" />,
+          label: verifyingTurnstile
+            ? "Verificando proteção Cloudflare..."
+            : turnstileToken
+            ? "Entrar com Discord"
+            : "Confirme que é humano acima",
+          icon: turnstileToken ? (
+            <IconDiscord className="mr-2.5 h-5 w-5 fill-white" />
+          ) : (
+            <Lock className="mr-2.5 h-4 w-4 text-white/40" />
+          ),
           onClick: handleDiscordLogin,
+          disabled: !turnstileToken || verifyingTurnstile,
         }}
         footerContent={
           <div className="space-y-3">
             <p className="text-xs text-white/40 leading-relaxed">
-              O acesso aos módulos operacionais, automação e inteligência é restrito aos membros verificados via Discord.
+              {turnstileToken ? (
+                <span className="text-emerald-400 flex items-center justify-center gap-1.5 font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Verificação concluída. Clique acima para entrar.
+                </span>
+              ) : (
+                "O acesso aos módulos operacionais é restrito aos usuários que concluem a verificação de segurança."
+              )}
             </p>
             <div className="flex items-center justify-center gap-3 text-[11px] text-white/30">
               <a href="#" className="hover:text-blue-400 transition-colors">Termos de Uso</a>
