@@ -1393,8 +1393,24 @@ DIRETRIZES DE MARCA (UNIVERSAL PARA TODOS OS GRUPOS):
 6. RESPOSTA AO USUÁRIO (reply):
    Em português, explicando os detalhes da peça criada especialmente para a loja/grupo "${brandName}".
 
+7. PERSONAGENS & TEMAS POPULARES (MUITO IMPORTANTE):
+   Se o usuário pedir um tema ou personagem famoso (ex: Minions, Batman, Spiderman, Hello Kitty, Kuromi, etc.):
+   - O título DEVE conter o nome do personagem (ex: "⋆ ˚｡⋆୨୧˚ minion overalls aesthetic top ˚୨୧⋆｡˚ ⋆").
+   - As cores DEVEM ser fiéis ao personagem:
+     * Minions: primaryColor: "#facc15" (amarelo vibrante), secondaryColor: "#2563eb" (azul jeans), accentColor: "#18181b" (preto dos óculos e luvas).
+     * Batman: primaryColor: "#0f172a" (preto), secondaryColor: "#1e293b", accentColor: "#facc15" (amarelo morcego).
+     * Spiderman: primaryColor: "#dc2626" (vermelho), secondaryColor: "#1d4ed8" (azul), accentColor: "#000000" (teia).
+     * Hello Kitty: primaryColor: "#ffffff", secondaryColor: "#fce7f3", accentColor: "#ef4444" (laço vermelho).
+     * Kuromi: primaryColor: "#09090b", secondaryColor: "#18181b", accentColor: "#f472b6" (rosa).
+   - O array 'details' DEVE incluir o gatilho visual:
+     * Minions: ["minion-graphic", "goggles", "overalls"]
+     * Batman: ["batman-logo"]
+     * Spiderman: ["spider-logo", "webbing"]
+     * Hello Kitty: ["hellokitty-graphic", "ribbon-bow"]
+     * Kuromi: ["kuromi-graphic"]
+
 DETALHES RECONHECIDOS PELO MOTOR DE RENDERIZAÇÃO 2D (inclua no array 'details' os que se aplicam):
-"off-shoulder", "ribbon-bow", "lace-ruffles", "arm-warmers", "choker", "cat-graphic", "pleated-skirt", "safety-pins", "chains", "zipper", "pockets", "straps"
+"minion-graphic", "goggles", "overalls", "batman-logo", "spider-logo", "hellokitty-graphic", "kuromi-graphic", "skull-graphic", "heart-graphic", "flame-graphic", "butterfly-graphic", "off-shoulder", "ribbon-bow", "lace-ruffles", "arm-warmers", "choker", "cat-graphic", "pleated-skirt", "safety-pins", "chains", "zipper", "pockets", "straps"
 
 RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fora do JSON):
 {
@@ -1436,7 +1452,7 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fo
     addLog('warn', 'AI_UGC_CREATE', `Gemini fallback para criação UGC: ${err.message}`);
   }
 
-  // High-fidelity algorithmic fallback tuned for multi-groups
+  // High-fidelity algorithmic fallback tuned for multi-groups and popular characters
   const p = userPrompt.toLowerCase();
   const isPants = p.includes('calça') || p.includes('pants') || p.includes('cargo') || p.includes('saia') || p.includes('skirt');
   const isTshirt = p.includes('tshirt') || p.includes('estampa') || p.includes('decal');
@@ -1450,7 +1466,45 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fo
   let accentColor = '#f472b6';
   let pattern: 'solid' | 'stripes' | 'camo' | 'plaid' | 'grunge' | 'acid_wash' | 'stars' = 'solid';
 
-  if (p.includes('cat') || p.includes('gato') || p.includes('gatinho')) {
+  if (p.includes('minion')) {
+    title = isPants ? `minion denim overalls pants (yellow cuffs)` : `⋆ ˚｡⋆୨୧˚ minion overalls aesthetic top ˚୨୧⋆｡˚ ⋆`;
+    theme = 'minion';
+    details = ['minion-graphic', 'goggles', 'overalls'];
+    primaryColor = '#facc15';
+    secondaryColor = '#2563eb';
+    accentColor = '#18181b';
+    pattern = 'solid';
+  } else if (p.includes('batman')) {
+    title = `batman pjs pajamas da hood y2k (girl)`;
+    theme = 'batman';
+    details = ['batman-logo', 'stars'];
+    primaryColor = '#0f172a';
+    secondaryColor = '#1e293b';
+    accentColor = '#facc15';
+    pattern = 'stars';
+  } else if (p.includes('spiderman') || p.includes('spider')) {
+    title = `spiderman web aesthetic fit (match)`;
+    theme = 'spiderman';
+    details = ['spider-logo', 'webbing'];
+    primaryColor = '#dc2626';
+    secondaryColor = '#1d4ed8';
+    accentColor = '#000000';
+    pattern = 'stripes';
+  } else if (p.includes('hello kitty') || p.includes('hellokitty')) {
+    title = `⋆ ˚｡⋆୨୧˚ hello kitty cute top ˚୨୧⋆｡˚ ⋆`;
+    theme = 'coquette';
+    details = ['hellokitty-graphic', 'ribbon-bow'];
+    primaryColor = '#ffffff';
+    secondaryColor = '#fce7f3';
+    accentColor = '#ef4444';
+  } else if (p.includes('kuromi')) {
+    title = `kuromi dark emo aesthetic fit`;
+    theme = 'goth';
+    details = ['kuromi-graphic', 'choker'];
+    primaryColor = '#09090b';
+    secondaryColor = '#18181b';
+    accentColor = '#f472b6';
+  } else if (p.includes('cat') || p.includes('gato') || p.includes('gatinho')) {
     title = `⋆ ˚｡⋆୨୧˚ cutesy cat match (g) 🎀 ˚୨୧⋆｡˚ ⋆`;
     theme = 'moe';
     details = ['cat-graphic', 'ribbon-bow', 'off-shoulder'];
@@ -1461,8 +1515,8 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fo
     details = ['off-shoulder', 'choker', 'arm-warmers', 'straps'];
     accentColor = '#e4e4e7';
     pattern = 'stripes';
-  } else if (p.includes('pj') || p.includes('pajama') || p.includes('pijama') || p.includes('batman')) {
-    title = `batman pjs pajamas da hood y2k (girl)`;
+  } else if (p.includes('pj') || p.includes('pajama') || p.includes('pijama')) {
+    title = `cozy pjs pajamas da hood y2k (girl)`;
     theme = 'pjs';
     details = ['pjs', 'stars'];
     primaryColor = '#1e1b4b';
