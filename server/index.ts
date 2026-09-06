@@ -555,6 +555,16 @@ app.get("/api/turnstile/config", (_req, res) => {
   res.json(getTurnstileConfig());
 });
 
+app.post("/api/turnstile/verify-gate", async (req, res) => {
+  const token = req.body?.token ? String(req.body.token) : undefined;
+  const result = await verifyTurnstile(token, req.ip);
+  if (result.success) {
+    res.json({ ok: true });
+  } else {
+    res.status(403).json({ ok: false, error: result.error || "Falha na verificação de segurança Cloudflare." });
+  }
+});
+
 app.get("/api/account", (_req, res) => {
   res.json(publicAccount());
 });
