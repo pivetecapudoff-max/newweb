@@ -260,17 +260,10 @@ export function UgcCreatorView() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const quickPrompts = [
-    "Calça cargo baggy Y2K preta com correntes prateadas",
-    "Jaqueta puffer cyberpunk oversized neon",
-    "Camisa grunge vintage listrada com capuz",
-    "Top coquette aesthetic rosa com laços e renda",
-  ];
-
   return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] max-w-6xl mx-auto px-4 py-2 relative">
+    <div className="flex flex-col h-full max-w-5xl mx-auto px-3 sm:px-4 pb-2 pt-1 relative overflow-hidden">
       {/* Top Header & Settings Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#0a0a0a] border border-white/[0.06] mb-4 shrink-0 shadow-lg">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 sm:p-3.5 rounded-2xl bg-[#0a0a0a] border border-white/[0.06] mb-2.5 shrink-0 shadow-lg">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
             <Wand2 className="w-5 h-5 animate-pulse" />
@@ -326,7 +319,7 @@ export function UgcCreatorView() {
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto space-y-6 pr-2 mb-4 scrollbar-thin scrollbar-thumb-white/10">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1.5 mb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -491,23 +484,8 @@ export function UgcCreatorView() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Suggestion Chips */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-2 scrollbar-none">
-        <span className="text-[11px] text-white/40 shrink-0 font-medium">Sugestões:</span>
-        {quickPrompts.map((q, idx) => (
-          <button
-            key={idx}
-            onClick={() => handleSendPrompt(q)}
-            disabled={loading}
-            className="px-3 py-1 rounded-full bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] text-white/70 hover:text-white text-xs whitespace-nowrap transition-all cursor-pointer disabled:opacity-50"
-          >
-            {q}
-          </button>
-        ))}
-      </div>
-
-      {/* Input Component (Exact from Photo 2) */}
-      <div className="shrink-0">
+      {/* Input Component (Exact from Photo 2, pinned cleanly at bottom) */}
+      <div className="shrink-0 pt-1 pb-1">
         <PromptInput
           value={inputVal}
           onChange={(val) => setInputVal(val)}
