@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadAccount } from "./account.js";
+import { convertRobloxMeshToObj, repackZip } from "./meshConverter.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -105,7 +106,7 @@ export async function ripUgcAsset(params: {
       logs.push(`[stderr] ${text}`);
     });
 
-    py.on("close", (code) => {
+    py.on("close", async (code) => {
       const jsonMatch = stdoutBuffer.match(/JSON_RESULT:(.+)$/m);
       if (jsonMatch) {
         try {
@@ -115,6 +116,38 @@ export async function ripUgcAsset(params: {
           }
 
           const d = parsed.data;
+
+          // Check if a 3D mesh was extracted but NO .obj was generated (e.g. DracoPy missing in Python)
+          if (Array.isArray(d.files)) {
+            const hasObj = d.files.some((f: string) => f.toLowerCase().endsWith(".obj"));
+            const meshFile = d.files.find((f: string) => f.toLowerCase().endsWith(".mesh"));
+
+            if (!hasObj && meshFile && fs.existsSync(meshFile)) {
+              try {
+                const meshBuf = fs.readFileSync(meshFile);
+                const cleanName = (d.name || `Asset_${d.asset_id}`).replace(/[^a-zA-Z0-9_-]/g, "_");
+                const itemDir = path.dirname(meshFile);
+                const objFileName = `${cleanName}.obj`;
+                const objFilePath = path.join(itemDir, objFileName);
+
+                const objContent = await convertRobloxMeshToObj(meshBuf, "material.mtl");
+                if (objContent) {
+                  fs.writeFileSync(objFilePath, objContent, "utf-8");
+                  d.files.push(objFilePath);
+                  logs.push(`[+] Modelo 3D convertido para .OBJ com sucesso via WASM/Draco (${objContent.length} chars)`);
+
+                  // Re-package zip to ensure the .obj file is inside!
+                  if (d.zip_path && fs.existsSync(itemDir)) {
+                    await repackZip(itemDir, d.zip_path);
+                    logs.push(`[+] Pacote ZIP atualizado com o arquivo 3D .OBJ`);
+                  }
+                }
+              } catch (convErr: any) {
+                logs.push(`[!] Falha na conversão de mesh para OBJ: ${convErr?.message}`);
+              }
+            }
+          }
+
           const zipFileName = path.basename(d.zip_path);
           const zipUrl = `/downloads/${encodeURIComponent(zipFileName)}`;
 

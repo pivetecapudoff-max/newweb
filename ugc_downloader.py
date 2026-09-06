@@ -206,6 +206,17 @@ def convert_mesh_to_obj(data: bytes, mtl_name: str = "material.mtl") -> str:
         if draco_pos != -1:
             try:
                 import DracoPy
+            except ImportError:
+                try:
+                    import subprocess, sys
+                    print("[*] Dependência DracoPy ausente. Instalando automaticamente...")
+                    subprocess.run([sys.executable, "-m", "pip", "install", "DracoPy", "--quiet"], timeout=30)
+                    import DracoPy
+                except Exception as pip_err:
+                    print(f"[!] Não foi possível instalar DracoPy via pip: {pip_err}")
+
+            try:
+                import DracoPy
                 mesh = DracoPy.decode(data[draco_pos:])
                 obj_lines = [f"mtllib {mtl_name}", "usemtl UGC_Texture", "s 1"]
                 for pt in mesh.points:
