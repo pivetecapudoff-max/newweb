@@ -410,6 +410,7 @@ Ks 0.000 0.000 0.000
 d 1.0
 illum 1
 map_Kd {tex_filename}
+map_d {tex_filename}
 """
         mtl_path = os.path.join(item_dir, mtl_filename)
         with open(mtl_path, "w") as f:

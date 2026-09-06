@@ -136,6 +136,16 @@ export async function ripUgcAsset(params: {
                   d.files.push(objFilePath);
                   logs.push(`[+] Modelo 3D convertido para .OBJ com sucesso via WASM/Draco (${objContent.length} chars)`);
 
+                  // Ensure material.mtl includes map_d for Blender transparency
+                  const mtlPath = path.join(itemDir, "material.mtl");
+                  if (fs.existsSync(mtlPath)) {
+                    let mtlContent = fs.readFileSync(mtlPath, "utf-8");
+                    if (!mtlContent.includes("map_d") && mtlContent.includes("map_Kd")) {
+                      mtlContent = mtlContent.replace(/map_Kd\s+(.+)/, "map_Kd $1\nmap_d $1");
+                      fs.writeFileSync(mtlPath, mtlContent, "utf-8");
+                    }
+                  }
+
                   // Re-package zip to ensure the .obj file is inside!
                   if (d.zip_path && fs.existsSync(itemDir)) {
                     await repackZip(itemDir, d.zip_path);

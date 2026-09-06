@@ -79,7 +79,7 @@ export async function convertRobloxMeshToObj(
 
             // Positions
             const posAttrId = decoder.GetAttributeId(mesh, decoderModule.POSITION);
-            const posAttr = decoder.GetAttribute(mesh, posAttrId);
+            const posAttr = decoder.GetAttributeByUniqueId(mesh, posAttrId);
             const posData = new Float32Array(numPoints * 3);
             const posArray = new decoderModule.DracoFloat32Array();
             decoder.GetAttributeFloatForAllPoints(mesh, posAttr, posArray);
@@ -87,11 +87,20 @@ export async function convertRobloxMeshToObj(
               posData[i] = posArray.GetValue(i);
             }
 
-            // Normals
-            const normAttrId = decoder.GetAttributeId(mesh, decoderModule.NORMAL);
+            // Normals (in Roblox v7 CoreMesh, normals are stored in GENERIC attribute id 1)
+            let normAttrId = decoder.GetAttributeId(mesh, decoderModule.NORMAL);
+            if (normAttrId === -1) {
+              const genId = decoder.GetAttributeId(mesh, decoderModule.GENERIC);
+              if (genId !== -1) {
+                const testAttr = decoder.GetAttributeByUniqueId(mesh, genId);
+                if (testAttr && testAttr.num_components() === 3) {
+                  normAttrId = genId;
+                }
+              }
+            }
             let normData: Float32Array | null = null;
             if (normAttrId !== -1) {
-              const normAttr = decoder.GetAttribute(mesh, normAttrId);
+              const normAttr = decoder.GetAttributeByUniqueId(mesh, normAttrId);
               const normArray = new decoderModule.DracoFloat32Array();
               decoder.GetAttributeFloatForAllPoints(mesh, normAttr, normArray);
               normData = new Float32Array(numPoints * 3);
@@ -104,7 +113,7 @@ export async function convertRobloxMeshToObj(
             const texAttrId = decoder.GetAttributeId(mesh, decoderModule.TEX_COORD);
             let texData: Float32Array | null = null;
             if (texAttrId !== -1) {
-              const texAttr = decoder.GetAttribute(mesh, texAttrId);
+              const texAttr = decoder.GetAttributeByUniqueId(mesh, texAttrId);
               const texArray = new decoderModule.DracoFloat32Array();
               decoder.GetAttributeFloatForAllPoints(mesh, texAttr, texArray);
               texData = new Float32Array(numPoints * 2);
