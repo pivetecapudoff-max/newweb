@@ -905,7 +905,6 @@ ${liveUgc.slice(0, 4).map((i) => `  * "${i.name}" por ${i.creatorName} (${i.favo
         reply: `⚠️ Desculpe, tive uma instabilidade temporária ao comunicar com o modelo de inteligência: **${geminiError.message}**.\nVerifique a aba **Status e logs** para mais detalhes.`,
         actionTaken: 'gemini_error',
       };
-    }
   }
 }
 
