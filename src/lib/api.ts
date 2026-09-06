@@ -750,4 +750,38 @@ export function optimizeCatalog(groupId?: number): Promise<{ success: boolean; r
   }).then((res) => readJson<{ success: boolean; result: any; logs: any[] }>(res));
 }
 
+export interface CloneAssetParams {
+  assetId: number;
+  name?: string;
+  kind?: "shirt" | "pants" | "tshirt";
+  price?: number;
+  groupId?: number | null;
+  mode?: "original" | "ai_remake";
+}
+
+export interface CloneAssetResponse {
+  ok: boolean;
+  job?: UploadJob | null;
+  uploadError?: string | null;
+  templateDataUrl?: string;
+  item?: {
+    id: number;
+    name: string;
+    kind: string;
+    price: number;
+    groupId: number | null;
+  };
+  message?: string;
+  error?: string;
+}
+
+export function cloneAssetToGroup(params: CloneAssetParams): Promise<CloneAssetResponse> {
+  return api("/api/market-scanner/clone-asset", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  }).then((res) => readJson<CloneAssetResponse>(res));
+}
+
+
 

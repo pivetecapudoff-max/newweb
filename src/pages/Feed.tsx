@@ -30,6 +30,7 @@ import {
   Sparkle,
   ShoppingBag,
   Eye,
+  AlertCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { DotButton } from "../components/ui/DotButton";
@@ -45,6 +46,7 @@ import {
   searchLiveGroups,
   scanMarketCatalog,
   fetchUploads,
+  cloneAssetToGroup,
   type AssetLook,
   type FeedQuery,
   type FeedResponse,
@@ -55,6 +57,7 @@ import {
   type MarketScanResult,
   type ScannedMarketItem,
   type UploadGroup,
+  type UploadJob,
 } from "../lib/api";
 import { BADGE_LABEL, CATEGORY_LABEL, VERDICT_LABEL } from "../lib/labels";
 
@@ -133,6 +136,20 @@ export function Feed() {
 
   // Copied item toast
   const [copiedItemId, setCopiedItemId] = useState<number | null>(null);
+
+  // Clone & Post to Group Modal states
+  const [showCloneModal, setShowCloneModal] = useState(false);
+  const [cloneModalItem, setCloneModalItem] = useState<ScannedMarketItem | null>(null);
+  const [cloneName, setCloneName] = useState("");
+  const [clonePrice, setClonePrice] = useState(5);
+  const [cloneGroupId, setCloneGroupId] = useState<string>("");
+  const [customGroupIdInput, setCustomGroupIdInput] = useState("");
+  const [cloneMethod, setCloneMethod] = useState<"original" | "ai_remake">("original");
+  const [isCloning, setIsCloning] = useState(false);
+  const [cloneSuccessJob, setCloneSuccessJob] = useState<UploadJob | null>(null);
+  const [cloneDownloadedUrl, setCloneDownloadedUrl] = useState<string | null>(null);
+  const [cloneError, setCloneError] = useState<string | null>(null);
+  const [cloneSuccessMessage, setCloneSuccessMessage] = useState<string | null>(null);
 
   // View switch: "scanner" (primary) vs other analytical tabs
   const [scannerView, setScannerView] = useState<"results" | "clusters" | "groups" | "blueprints">("results");
@@ -332,6 +349,73 @@ export function Feed() {
     setCopiedItemId(id);
     window.setTimeout(() => setCopiedItemId(null), 1500);
   }
+
+  // Open Clone & Post to Group Modal
+  const handleOpenCloneModal = (item: ScannedMarketItem) => {
+    setCloneModalItem(item);
+    setCloneName(item.name);
+    setClonePrice(item.price === 5 || item.price <= 10 ? 5 : item.price);
+    const defaultGroup = groupId || (userGroups.length > 0 ? String(userGroups[0].id) : "");
+    setCloneGroupId(defaultGroup);
+    setCustomGroupIdInput(defaultGroup && !userGroups.some((g) => String(g.id) === defaultGroup) ? defaultGroup : "");
+    setCloneMethod("original");
+    setIsCloning(false);
+    setCloneSuccessJob(null);
+    setCloneDownloadedUrl(null);
+    setCloneError(null);
+    setCloneSuccessMessage(null);
+    setShowCloneModal(true);
+  };
+
+  // Execute Clone & Post to Group
+  const handleExecuteClone = async () => {
+    if (!cloneModalItem) return;
+    setIsCloning(true);
+    setCloneError(null);
+    setCloneSuccessMessage(null);
+
+    const targetGroupId = cloneGroupId === "custom" ? customGroupIdInput.trim() : cloneGroupId.trim();
+
+    try {
+      const res = await cloneAssetToGroup({
+        assetId: cloneModalItem.id,
+        name: cloneName.trim() || cloneModalItem.name,
+        kind: cloneModalItem.assetType === 12 || String(cloneModalItem.assetTypeName || "").toLowerCase().includes("pant")
+          ? "pants"
+          : cloneModalItem.assetType === 2 || String(cloneModalItem.assetTypeName || "").toLowerCase().includes("t-shirt")
+          ? "tshirt"
+          : "shirt",
+        price: clonePrice,
+        groupId: targetGroupId ? Number(targetGroupId) : null,
+        mode: cloneMethod,
+      });
+
+      if (!res.ok) {
+        throw new Error(res.error || "Falha ao copiar item para o grupo.");
+      }
+
+      setCloneSuccessJob(res.job || null);
+      if (res.templateDataUrl) {
+        setCloneDownloadedUrl(res.templateDataUrl);
+      }
+      setCloneSuccessMessage(res.message || "Peça copiada e enviada para a fila de publicação do grupo!");
+    } catch (err: any) {
+      setCloneError(err?.message || "Erro ao processar cópia.");
+    } finally {
+      setIsCloning(false);
+    }
+  };
+
+  // Download Extracted Template
+  const handleDownloadExtractedTemplate = () => {
+    if (!cloneDownloadedUrl || !cloneModalItem) return;
+    const a = document.createElement("a");
+    a.href = cloneDownloadedUrl;
+    a.download = `${(cloneName || cloneModalItem.name).replace(/[^a-zA-Z0-9]/g, "_")}_template.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
 
   const clusters = data?.cycle?.clusters || [];
   const csv = useMemo(() => exportHref(query), [query]);
@@ -952,18 +1036,12 @@ export function Feed() {
                   <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between gap-1">
                     <button
                       type="button"
-                      onClick={() =>
-                        navigate(
-                          `/painel/ugc-creator?prompt=${encodeURIComponent(
-                            `Crie uma versão alternativa e de alta demanda estilo ${item.name}`
-                          )}`
-                        )
-                      }
-                      title="Criar com UGC AI"
-                      className="p-2 rounded-lg bg-purple-500/10 hover:bg-purple-500/25 text-purple-300 hover:text-white transition-all cursor-pointer flex-1 flex items-center justify-center gap-1 text-[10px] font-bold"
+                      onClick={() => handleOpenCloneModal(item)}
+                      title="Copiar e postar no meu grupo"
+                      className="p-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 hover:text-emerald-100 border border-emerald-500/30 hover:border-emerald-500/50 transition-all cursor-pointer flex-1 flex items-center justify-center gap-1.5 text-[10px] font-bold shadow-sm active:scale-95"
                     >
-                      <Wand2 className="w-3 h-3 text-purple-400" />
-                      <span>UGC AI</span>
+                      <Copy className="w-3 h-3 text-emerald-400" />
+                      <span>Copiar &amp; Postar</span>
                     </button>
 
                     <button
@@ -1379,6 +1457,332 @@ export function Feed() {
                   Fechar
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Clone & Post to Group Modal */}
+        {showCloneModal && cloneModalItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="w-full max-w-lg bg-[#0c0c0e] border border-white/[0.1] rounded-2xl p-6 shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto [scrollbar-width:none]"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                    <Copy className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white tracking-wide">
+                      Copiar &amp; Postar no Grupo
+                    </h3>
+                    <p className="text-[11px] text-white/50">
+                      Clone esta peça diretamente para o seu grupo no Roblox
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCloneModal(false)}
+                  className="p-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-white/50 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Item Card Overview */}
+              <div className="flex items-center gap-3.5 p-3.5 rounded-xl bg-[#141416] border border-white/[0.06]">
+                <div className="w-16 h-16 rounded-lg bg-black border border-white/[0.08] overflow-hidden flex items-center justify-center shrink-0">
+                  {cloneModalItem.thumbnailUrl ? (
+                    <img
+                      src={cloneModalItem.thumbnailUrl}
+                      alt={cloneModalItem.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Shirt className="w-6 h-6 text-white/40" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-white/[0.08] text-white/80">
+                      {(cloneModalItem.assetTypeName || "CLOTHING").toUpperCase()}
+                    </span>
+                    <span className="text-[10px] text-amber-400 font-mono">
+                      ★ {cloneModalItem.favoriteCount.toLocaleString()}
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-semibold text-white truncate" title={cloneModalItem.name}>
+                    {cloneModalItem.name}
+                  </h4>
+                  <p className="text-[10px] text-white/40 truncate">
+                    Criador original: {cloneModalItem.creatorName} &bull; ID: {cloneModalItem.id}
+                  </p>
+                </div>
+              </div>
+
+              {/* Success Result View */}
+              {cloneSuccessMessage ? (
+                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/25 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-full bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-emerald-300">
+                        {cloneSuccessJob ? "Peça Agendada com Sucesso!" : "Molde Extraído com Sucesso!"}
+                      </h4>
+                      <p className="text-xs text-emerald-100/70 mt-1 leading-relaxed">
+                        {cloneSuccessMessage}
+                      </p>
+                    </div>
+                  </div>
+
+                  {cloneSuccessJob && (
+                    <div className="p-3 rounded-lg bg-black/40 border border-emerald-500/20 text-xs space-y-1 font-mono">
+                      <div className="text-white/60 text-[11px]">
+                        Status na Fila: <span className="text-emerald-400 font-bold uppercase">{cloneSuccessJob.status}</span>
+                      </div>
+                      <div className="text-white/60 text-[11px]">
+                        Preço: <span className="text-white font-bold">{cloneSuccessJob.price} Robux</span>
+                      </div>
+                      {cloneSuccessJob.groupId && (
+                        <div className="text-white/60 text-[11px]">
+                          Grupo: <span className="text-white font-bold">{cloneSuccessJob.groupId}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    {cloneDownloadedUrl && (
+                      <button
+                        type="button"
+                        onClick={handleDownloadExtractedTemplate}
+                        className="px-3 py-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Baixar Molde PNG (585x559)</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => navigate("/painel/uploads")}
+                      className="px-3 py-2 rounded-lg bg-white/[0.08] hover:bg-white/[0.12] text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Ver Fila de Uploads</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowCloneModal(false)}
+                      className="px-3 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-white/60 text-xs font-semibold ml-auto cursor-pointer"
+                    >
+                      Concluir
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Configuration Form */
+                <div className="space-y-4">
+                  {/* Field 1: New Item Name */}
+                  <div>
+                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/50 mb-1.5">
+                      Nome da Peça no seu Grupo
+                    </label>
+                    <input
+                      type="text"
+                      value={cloneName}
+                      onChange={(e) => setCloneName(e.target.value)}
+                      placeholder="Ex: Y2K Oversized Cyber Hoodie..."
+                      className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-white/20 transition-all font-medium"
+                    />
+                  </div>
+
+                  {/* Field 2: Target Group */}
+                  <div>
+                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/50 mb-1.5">
+                      Grupo de Destino (Roblox Group)
+                    </label>
+                    <div className="space-y-2">
+                      <select
+                        value={cloneGroupId}
+                        onChange={(e) => setCloneGroupId(e.target.value)}
+                        className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-white/20 transition-all cursor-pointer font-medium"
+                      >
+                        {userGroups.length > 0 ? (
+                          userGroups.map((grp) => (
+                            <option key={grp.id} value={String(grp.id)}>
+                              {grp.name} (ID: {grp.id}) {grp.role ? `• ${grp.role}` : ""}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="">Nenhum grupo detectado automaticamente</option>
+                        )}
+                        <option value="custom">-- Digitar ID de Outro Grupo --</option>
+                      </select>
+
+                      {(cloneGroupId === "custom" || userGroups.length === 0) && (
+                        <input
+                          type="text"
+                          value={customGroupIdInput}
+                          onChange={(e) => setCustomGroupIdInput(e.target.value)}
+                          placeholder="Digite o ID numérico do seu grupo (ex: 35320581)"
+                          className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-2.5 text-xs text-white font-mono placeholder:text-white/30 focus:outline-none focus:border-white/20 transition-all"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Field 3: Sale Price in Robux */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/50">
+                        Preço de Venda (Robux)
+                      </label>
+                      <div className="flex items-center gap-1.5">
+                        {[5, 7, 10, 15].map((p) => (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => setClonePrice(p)}
+                            className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold transition-all cursor-pointer ${
+                              clonePrice === p
+                                ? "bg-emerald-500 text-black"
+                                : "bg-white/[0.05] text-white/50 hover:text-white"
+                            }`}
+                          >
+                            {p} R$
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min={5}
+                        max={10000}
+                        value={clonePrice}
+                        onChange={(e) => setClonePrice(Math.max(5, Number(e.target.value) || 5))}
+                        className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-white/20 transition-all"
+                      />
+                      <span className="absolute right-3.5 top-2.5 text-xs font-bold text-emerald-400 font-mono">
+                        Robux
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Field 4: Extraction Method */}
+                  <div>
+                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/50 mb-1.5">
+                      Modo de Extração
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCloneMethod("original")}
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                          cloneMethod === "original"
+                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                            : "bg-[#121212] border-white/[0.06] text-white/50 hover:text-white"
+                        }`}
+                      >
+                        <div className="text-xs font-bold flex items-center gap-1.5">
+                          <span>⚡</span>
+                          <span>Molde Original 1:1</span>
+                        </div>
+                        <p className="text-[10px] text-white/40 mt-1">
+                          Extrai o template PNG oficial idêntico
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setCloneMethod("ai_remake")}
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                          cloneMethod === "ai_remake"
+                            ? "bg-purple-500/10 border-purple-500/30 text-purple-300"
+                            : "bg-[#121212] border-white/[0.06] text-white/50 hover:text-white"
+                        }`}
+                      >
+                        <div className="text-xs font-bold flex items-center gap-1.5">
+                          <span>🎨</span>
+                          <span>Remake IA Anti-Ban</span>
+                        </div>
+                        <p className="text-[10px] text-white/40 mt-1">
+                          Variação estilizada anti-moderação
+                        </p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {cloneError && (
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300 flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
+                      <div>
+                        <span>{cloneError}</span>
+                        {cloneError.includes("Conta") && (
+                          <div className="mt-1">
+                            <button
+                              type="button"
+                              onClick={() => navigate("/painel/conta")}
+                              className="text-emerald-400 hover:underline font-bold text-[11px]"
+                            >
+                              Ir para a aba Conta &rarr;
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Submit Actions */}
+                  <div className="pt-2 space-y-2">
+                    <button
+                      type="button"
+                      onClick={handleExecuteClone}
+                      disabled={isCloning}
+                      className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 hover:from-emerald-300 hover:to-teal-300 text-black font-black text-xs sm:text-sm tracking-wider uppercase shadow-[0_0_25px_rgba(52,211,153,0.35)] transition-all active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {isCloning ? (
+                        <>
+                          <LoaderCircle className="w-4 h-4 animate-spin text-black" />
+                          <span>PROCESSANDO E PUBLICANDO...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4 text-black" />
+                          <span>PUBLICAR NO MEU GRUPO AGORA</span>
+                        </>
+                      )}
+                    </button>
+
+                    <div className="flex items-center justify-between text-[11px] text-white/40 pt-1">
+                      <span>Roblox Upload Fee: 80 R$ (se aplicável pelo grupo)</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          navigate(
+                            `/painel/ugc-creator?prompt=${encodeURIComponent(
+                              `Crie uma versão alternativa estilo ${cloneModalItem.name}`
+                            )}`
+                          )
+                        }
+                        className="text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1 cursor-pointer font-medium"
+                      >
+                        <Wand2 className="w-3 h-3" />
+                        <span>Abrir no Studio UGC AI</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </motion.div>
           </div>
         )}

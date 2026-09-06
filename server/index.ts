@@ -2,6 +2,7 @@ import "./env.js";
 import cors from "cors";
 import express from "express";
 import path from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
   clearAccount,
@@ -51,6 +52,7 @@ import {
   pumpQueue,
   removeJob,
   retryJob,
+  type ClothingKind,
 } from "./upload.js";
 import {
   debounceKey,
@@ -1010,6 +1012,161 @@ app.post("/api/copy/download", requireAuth, async (req, res) => {
     res.status(500).json({
       error: "Falha ao processar e extrair o modelo 3D deste item. Verifique se o ID existe e tente novamente.",
     });
+  }
+});
+
+app.post("/api/market-scanner/clone-asset", requireAuth, async (req, res) => {
+  try {
+    const assetId = Number(req.body?.assetId);
+    if (!assetId || !Number.isFinite(assetId) || assetId <= 0) {
+      res.status(400).json({ ok: false, error: "Asset ID inválido." });
+      return;
+    }
+
+    const name = String(req.body?.name || "").trim();
+    const price = Math.max(0, Math.floor(Number(req.body?.price) || 5));
+    const groupId = req.body?.groupId ? Number(req.body.groupId) : null;
+    const mode = String(req.body?.mode || "original");
+    let kind = String(req.body?.kind || "shirt").toLowerCase() as ClothingKind;
+    if (!["shirt", "pants", "tshirt"].includes(kind)) {
+      kind = "shirt";
+    }
+
+    const account = loadAccount();
+    const cookie = account?.cookie;
+
+    let detailsName = `Item ${assetId}`;
+    let itemDescription = `High-demand aesthetic piece inspired by item #${assetId}.`;
+    let thumbnail = "";
+
+    try {
+      const look = await lookupAsset(String(assetId));
+      if (look) {
+        detailsName = look.name || detailsName;
+        if (look.assetTypeId === 12) kind = "pants";
+        else if (look.assetTypeId === 2) kind = "tshirt";
+        else if (look.assetTypeId === 11) kind = "shirt";
+        thumbnail = look.thumbnailUrl || "";
+      }
+    } catch {
+      // ignore
+    }
+
+    const finalName = (name || detailsName).slice(0, 50);
+    let templateBuffer: Buffer | null = null;
+    let mime = "image/png";
+
+    if (mode === "original") {
+      if (cookie) {
+        try {
+          const headers: Record<string, string> = {
+            "User-Agent": "Roblox/WinInet",
+            "Cookie": `.ROBLOSECURITY=${cookie}`,
+            "Accept": "text/xml, application/xml, */*",
+          };
+          const deliveryRes = await fetch(`https://assetdelivery.roblox.com/v1/asset/?id=${assetId}`, { headers });
+          if (deliveryRes.ok) {
+            const xmlText = await deliveryRes.text();
+            const match = xmlText.match(/<url>.*?id=(\d+).*?<\/url>/i) || xmlText.match(/id=(\d+)/i);
+            if (match && match[1] && match[1] !== String(assetId)) {
+              const subId = match[1];
+              const subRes = await fetch(`https://assetdelivery.roblox.com/v1/asset/?id=${subId}`, { headers });
+              if (subRes.ok) {
+                const subBuf = Buffer.from(await subRes.arrayBuffer());
+                if (subBuf.length > 500 && (subBuf[0] === 0x89 || subBuf[0] === 0xff)) {
+                  templateBuffer = subBuf;
+                  mime = subBuf[0] === 0xff ? "image/jpeg" : "image/png";
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("[CloneAsset] Direct cookie delivery error:", e);
+        }
+      }
+
+      if (!templateBuffer) {
+        try {
+          const ripResult = await ripUgcAsset({ urlOrId: String(assetId), cookie });
+          if (ripResult?.files) {
+            for (const f of ripResult.files) {
+              if ((f.type === "texture" || f.name.toLowerCase().includes("template")) && f.url) {
+                const filePath = path.join(downloadsDir, path.basename(f.url));
+                if (existsSync(filePath)) {
+                  templateBuffer = readFileSync(filePath);
+                  mime = filePath.endsWith(".jpg") || filePath.endsWith(".jpeg") ? "image/jpeg" : "image/png";
+                  break;
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("[CloneAsset] Rip fallback error:", e);
+        }
+      }
+    }
+
+    if (!templateBuffer && thumbnail) {
+      try {
+        const thumbRes = await fetch(thumbnail, { headers: { "User-Agent": "Mozilla/5.0" } });
+        if (thumbRes.ok) {
+          templateBuffer = Buffer.from(await thumbRes.arrayBuffer());
+          mime = "image/png";
+        }
+      } catch (e) {
+        console.warn("[CloneAsset] Thumbnail fallback error:", e);
+      }
+    }
+
+    if (!templateBuffer) {
+      res.status(404).json({
+        ok: false,
+        error: "Não foi possível extrair o molde da peça automaticamente. Conecte sua conta do Roblox na aba Conta ou verifique o item.",
+      });
+      return;
+    }
+
+    const templateDataUrl = `data:${mime};base64,${templateBuffer.toString("base64")}`;
+
+    let job = null;
+    let uploadError = null;
+
+    if (account) {
+      try {
+        job = enqueueUpload({
+          name: finalName,
+          description: itemDescription,
+          kind,
+          price,
+          groupId,
+          fileName: `${finalName.replace(/[^a-zA-Z0-9]/g, "_")}_template.png`,
+          image: templateDataUrl,
+        });
+      } catch (err) {
+        uploadError = err instanceof Error ? err.message : String(err);
+      }
+    }
+
+    res.json({
+      ok: true,
+      job,
+      uploadError,
+      templateDataUrl,
+      item: {
+        id: assetId,
+        name: finalName,
+        kind,
+        price,
+        groupId,
+      },
+      message: job
+        ? `Peça "${finalName}" copiada e enviada para a fila de publicação do grupo!`
+        : `Molde da peça "${finalName}" extraído com sucesso! Conecte sua conta para publicação automática ou faça download do PNG.`,
+    });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("[CloneAsset] Error:", error);
+    res.status(500).json({ ok: false, error: msg });
   }
 });
 
