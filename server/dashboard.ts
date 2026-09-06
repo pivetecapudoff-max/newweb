@@ -7,13 +7,13 @@ import { queueStats } from "./upload.js";
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
-const GAP_MS = 400;
-const MAX_SALE_PAGES = 6;
+const GAP_MS = 150;
+const MAX_SALE_PAGES = 4;
 export const SERVER_STARTED_AT = Date.now();
 
 let csrfToken: string | null = null;
 const cache = new Map<string, { at: number; payload: DashboardPayload }>();
-const CACHE_MS = 45_000;
+const CACHE_MS = 60_000;
 
 interface AuthUser {
   id: number;
@@ -200,14 +200,21 @@ async function fetchSalesPages(
       data?: Record<string, unknown>[];
       nextPageCursor?: string | null;
     } | null;
+    const eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;
+    let hasRecent = false;
     for (const row of payload?.data || []) {
       const created = typeof row.created === "string" ? row.created : "";
       if (!created) continue;
+      const t = new Date(created).getTime();
+      if (t >= eightDaysAgo) hasRecent = true;
       rows.push({
         created,
         amount: Math.max(0, readAmount(row)),
         name: readName(row),
       });
+    }
+    if (!hasRecent && rows.length > 0) {
+      break;
     }
     cursor = payload?.nextPageCursor || null;
     if (!cursor) return { rows, status, truncated };
@@ -383,8 +390,13 @@ export async function buildDashboard(groupIdRaw?: string): Promise<DashboardPayl
   let forbidden = false;
   let truncated = false;
   let skippedForbidden = 0;
-  for (const source of saleSources) {
-    const result = await fetchSalesPages(account.cookie, source.urlFor);
+  const saleResults = await Promise.all(
+    saleSources.map(async (source) => {
+      const result = await fetchSalesPages(account.cookie, source.urlFor);
+      return { source, result };
+    })
+  );
+  for (const { source, result } of saleResults) {
     if (result.status === 401 || result.status === 403) {
       forbidden = true;
       skippedForbidden += 1;
@@ -412,14 +424,16 @@ export async function buildDashboard(groupIdRaw?: string): Promise<DashboardPayl
   payload.totalsExact = !truncated && !forbidden;
 
   if (groupKey === "all") {
-    const dayTotals = await fetchTotals(
-      account.cookie,
-      `https://economy.roblox.com/v2/users/${account.userId}/transaction-totals?timeFrame=Day&transactionType=Sale`
-    );
-    const yearTotals = await fetchTotals(
-      account.cookie,
-      `https://economy.roblox.com/v2/users/${account.userId}/transaction-totals?timeFrame=Year&transactionType=Sale`
-    );
+    const [dayTotals, yearTotals] = await Promise.all([
+      fetchTotals(
+        account.cookie,
+        `https://economy.roblox.com/v2/users/${account.userId}/transaction-totals?timeFrame=Day&transactionType=Sale`
+      ),
+      fetchTotals(
+        account.cookie,
+        `https://economy.roblox.com/v2/users/${account.userId}/transaction-totals?timeFrame=Year&transactionType=Sale`
+      ),
+    ]);
     if (dayTotals && typeof dayTotals.salesTotal === "number") {
       payload.kpis.todaySales = dayTotals.salesTotal;
     }
