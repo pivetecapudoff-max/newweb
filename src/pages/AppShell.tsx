@@ -22,6 +22,7 @@ import {
   Gamepad2,
   Sparkles,
   HelpCircle,
+  Wand2,
 } from "lucide-react";
 
 // Adminly 3-dot cluster logo mark
@@ -136,6 +137,11 @@ export function AppShell() {
               <NavLink to="/painel/chat" className={() => navItemClass("/painel/chat", true)}>
                 <MessageSquare className="w-4 h-4" />
                 <span>Chat</span>
+              </NavLink>
+
+              <NavLink to="/painel/ugc-creator" className={() => navItemClass("/painel/ugc-creator", true)}>
+                <Wand2 className="w-4 h-4 text-purple-400" />
+                <span>UGC AI</span>
               </NavLink>
 
               <NavLink to="/painel/conta" className={() => navItemClass("/painel/conta", true)}>

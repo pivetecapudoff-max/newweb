@@ -19,6 +19,7 @@ import {
   searchLiveRobloxGroups,
   searchLiveRobloxCatalog,
   generateAiItemDescription,
+  generateUgcDesignData,
 } from "./ai.js";
 import { isHosted, isSecureRequest, listenTarget } from "./host.js";
 import {
@@ -386,6 +387,22 @@ app.post("/api/ai/describe", requireAuth, async (req, res) => {
     res.json({ description });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Erro ao gerar descrição inteligente com IA." });
+  }
+});
+
+app.post("/api/ai/ugc-create", requireAuth, async (req, res) => {
+  try {
+    const prompt = String(req.body?.prompt || "").trim();
+    if (!prompt) {
+      res.status(400).json({ error: "Descreva a peça que você deseja criar." });
+      return;
+    }
+    const attachments = req.body?.attachments;
+    const effort = req.body?.effort || "Detalhada";
+    const design = await generateUgcDesignData(prompt, attachments, effort);
+    res.json({ success: true, design });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Erro ao criar design UGC com IA." });
   }
 });
 

@@ -9,6 +9,7 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { UploadPage } from "./pages/UploadPage";
 
 import { AiAssistantView } from "./pages/AiAssistantView";
+import { UgcCreatorView } from "./pages/UgcCreatorView";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { CopyPage } from "./pages/CopyPage";
 import { GamepassAutoPage } from "./pages/GamepassAutoPage";
@@ -34,6 +35,9 @@ export function App() {
               <Route path="chat" element={<AiAssistantView />} />
               <Route path="assistant" element={<AiAssistantView />} />
               <Route path="ai" element={<AiAssistantView />} />
+              <Route path="ugc-creator" element={<UgcCreatorView />} />
+              <Route path="create-ugc" element={<UgcCreatorView />} />
+              <Route path="ugc-ai" element={<UgcCreatorView />} />
               <Route path="analytics" element={<AnalyticsPage />} />
               <Route path="consultoria" element={<AnalyticsPage />} />
               <Route path="copy" element={<CopyPage />} />

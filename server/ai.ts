@@ -189,7 +189,7 @@ export async function searchLiveRobloxGroups(
   }
 }
 
-// Enhanced Algorithmic Fallback Description Generator
+// Enhanced Algorithmic Fallback Description Generator (High-Converting English SEO)
 export function generateEnhancedSeoDescription(title: string, assetType?: number | string): string {
   const t = title.toLowerCase();
   const isUgc =
@@ -199,45 +199,45 @@ export function generateEnhancedSeoDescription(title: string, assetType?: number
     t.includes('hat') ||
     t.includes('beanie');
 
-  let header = `⚡ ${title} ⚡`;
-  let intro = 'Design exclusivo com caimento impecável para destacar seu avatar no Roblox.';
-  let tags: string[] = ['#roblox', '#aesthetic', '#trendy', '#outfit', '#catalogavatarcreator'];
+  let header = `— ⚡ ${title} ⚡ —`;
+  let intro = 'High quality aesthetic fit with clean custom shading and realistic details.';
+  let tagList = ['aesthetic', 'trendy', 'outfit', 'drip', 'style', 'clean', 'catalogavatarcreator', 'roblox'];
 
-  if (t.includes('goth') || t.includes('vamp') || t.includes('emo') || t.includes('dark') || t.includes('skull')) {
-    header = `🕷️ ${title} 🕷️`;
-    intro = 'Estética gótica e sombria com textura premium. Perfeito para avatares dark e misteriosos.';
-    tags.push('#goth', '#gothic', '#vampire', '#emo', '#grunge', '#drain', '#opium', '#altfashion', '#darkaesthetic');
+  if (t.includes('goth') || t.includes('vamp') || t.includes('emo') || t.includes('dark') || t.includes('skull') || t.includes('opium')) {
+    header = `— 🕷️ ${title} 🕷️ —`;
+    intro = 'Premium dark gothic aesthetic with high-fidelity shading. Designed for clean misterious fits.';
+    tagList.push('goth', 'gothic', 'vamp', 'vampire', 'emo', 'grunge', 'drain', 'opium', 'alt', 'darkaesthetic', 'cyber', 'punk');
   } else if (t.includes('cute') || t.includes('coquette') || t.includes('pink') || t.includes('sanrio') || t.includes('kawaii') || t.includes('bow')) {
-    header = `୨୧ ${title} ୨୧`;
-    intro = 'Super fofo e delicado com detalhes adoráveis. Combine para montar o look dos seus sonhos.';
-    tags.push('#coquette', '#cute', '#kawaii', '#pastel', '#cutecore', '#softgirl', '#sanrio', '#ribbon', '#girly');
+    header = `— ୨୧ ${title} ୨୧ —`;
+    intro = 'Super cute and delicate aesthetic with soft details. Perfect for dreamy and pastel avatar fits.';
+    tagList.push('coquette', 'cute', 'kawaii', 'pastel', 'cutecore', 'softgirl', 'sanrio', 'ribbon', 'girly', 'preppy', 'fairy');
   } else if (t.includes('cargo') || t.includes('baggy') || t.includes('jeans') || t.includes('streetwear') || t.includes('hoodie')) {
-    header = `🔥 ${title} 🔥`;
-    intro = 'Caimento baggy e streetwear moderno de alta fidelidade. O fit essencial para qualquer drop.';
-    tags.push('#streetwear', '#baggy', '#cargopants', '#hoodie', '#drip', '#oversized', '#urban', '#trifting');
+    header = `— 🔥 ${title} 🔥 —`;
+    intro = 'Modern baggy streetwear fit with realistic wrinkles. The essential drip for your avatar wardrobe.';
+    tagList.push('streetwear', 'baggy', 'cargopants', 'hoodie', 'drip', 'oversized', 'urban', 'vintage', 'skate', 'thrift');
   } else if (t.includes('cyber') || t.includes('y2k') || t.includes('star') || t.includes('retro')) {
-    header = `⭐ ${title} ⭐`;
-    intro = 'Vibe anos 2000 nostálgica e autêntica. Linhas limpas e presença marcante em qualquer jogo.';
-    tags.push('#y2k', '#cyberpunk', '#2000s', '#mcbling', '#star', '#vintage', '#retroaesthetic', '#y2koutfit');
+    header = `— ⭐ ${title} ⭐ —`;
+    intro = 'Authentic 2000s Y2K nostalgia with clean cyber accents. Stands out in any Roblox experience.';
+    tagList.push('y2k', 'cyberpunk', '2000s', 'mcbling', 'star', 'vintage', 'retro', 'y2koutfit', 'futuristic');
   } else {
-    tags.push('#aesthetic', '#fashion', '#robloxfashion', '#cool', '#vibes', '#robloxtrend');
+    tagList.push('fashion', 'robloxfashion', 'cool', 'vibes', 'popular', 'matching', 'casual');
   }
 
   if (isUgc) {
-    tags.push('#ugc', '#robloxugc', '#3daccessory', '#ugcitem');
+    tagList.push('ugc', 'robloxugc', '3daccessory', 'ugcitem');
   } else {
-    tags.push('#5robux', '#cheapclothing', '#classicclothing');
+    tagList.push('5robux', 'cheap', 'classic');
   }
 
-  const uniqueTags = Array.from(new Set(tags)).slice(0, 14);
+  const uniqueTags = Array.from(new Set(tagList)).slice(0, 20);
 
   return `${header}
 
-[🖤] • ${intro}
-[✨] • Experimente agora mesmo no Catalog Avatar Creator (CAC) antes de comprar!
-[💎] • Compre 5+ peças da nossa loja e comente no mural do grupo para garantir seu rank VIP!
+★ ${intro}
+★ Looks great with matching outfits & accessories! Try it on in Catalog Avatar Creator (CAC).
+★ Join our group for more high-quality aesthetic clothing drops!
 
-${uniqueTags.join(' ')}`;
+tags: ${uniqueTags.join(' ')}`;
 }
 
 // Backward compatibility alias
@@ -245,7 +245,7 @@ export function generateSeoDescription(title: string, assetType?: number | strin
   return generateEnhancedSeoDescription(title, assetType);
 }
 
-// Ultra-Intelligent AI Description Generator (Powered by Gemini)
+// Ultra-Intelligent AI Description Generator (Powered by Gemini, English High-Converting SEO)
 export async function generateAiItemDescription(
   title: string,
   assetType?: number | string,
@@ -257,20 +257,24 @@ export async function generateAiItemDescription(
     String(title).toLowerCase().includes('cabelo') ||
     String(title).toLowerCase().includes('hat');
 
-  const typeStr = isUgc ? 'Acessório UGC 3D' : 'Roupa Clássica 2D';
+  const typeStr = isUgc ? '3D UGC Accessory' : 'Classic 2D Clothing';
 
-  const prompt = `Você é um copywriter de elite e especialista em SEO para o marketplace do Roblox.
-Crie uma descrição de ALTA CONVERSÃO para o seguinte item de moda no Roblox:
-- Peça: "${title}"
-- Tipo: ${typeStr}
-${styleHint ? `- Estilo sugerido: ${styleHint}` : ''}
+  const prompt = `You are a top-tier Roblox clothing designer & SEO specialist whose items consistently hit the Roblox trending catalog and Catalog Avatar Creator (CAC) top charts.
+Write an authentic, highly aesthetic and viral description in ENGLISH for this Roblox clothing/UGC item:
+- Item Title: "${title}"
+- Type: ${typeStr}
+${styleHint ? `- Style Hint: ${styleHint}` : ''}
 
-DIRETRIZES DA DESCRIÇÃO:
-1. Comece com um cabeçalho estético com o nome da peça e emojis/símbolos combinando com a vibe (ex: se for gótico/dark use ⚡/🖤/🕷️; se for cute/coquette use ୨୧/🎀/✨; se for streetwear/y2k use 💫/⭐/🔥).
-2. Mini-parágrafo elegante (1-2 frases) destacando o design, caimento e autenticidade da peça.
-3. Call to Action estratégica: incentive a testar no Catalog Avatar Creator (CAC) e a adquirir a peça para receber cargo/rank VIP no mural do grupo.
-4. Bloco com 10 a 14 hashtags virais (#) altamente buscadas no catálogo do Roblox que combinem especificamente com a peça, cores e estilo.
-5. Retorne APENAS a descrição final formatada, pronta para publicação no Roblox. Sem notas ou textos de sistema.`;
+STRICT FORMAT RULES:
+1. Header: Clean title with aesthetic Unicode symbols (e.g. "— ⚡ ${title} ⚡ —" or "✦ ${title} ✦").
+2. 2 short, stylish English hook sentences explaining the fit, clean shading, and aesthetic appeal (e.g. "High quality detailed fit with custom shading & realistic wrinkles. Perfect for clean avatar combinations.").
+3. Brief English call-to-action:
+   - "★ Try it on in Catalog Avatar Creator (CAC)!"
+   - "★ Join our group for more high-quality clothing drops!"
+4. A rich, high-density block of 15 to 20 lowercase viral English search tags without '#' (Roblox catalog search and CAC index keywords better as space-separated lowercase words):
+   Example:
+   tags: aesthetic y2k streetwear grunge vintage cyber dark emo baggy fit hood drip cool thrift anime preppy gothic opium cyber goth oversized skate retro 2000s cargo jeans matching cute soft vamp chic trendy casual club fashion
+5. Output ONLY the final description. Do not include markdown asterisks '**', quotes, explanations, or notes. Must be 100% in ENGLISH.`;
 
   try {
     const aiText = await callGemini(prompt, '', { effort: 'Rápida' });
@@ -278,7 +282,7 @@ DIRETRIZES DA DESCRIÇÃO:
       return aiText.trim();
     }
   } catch (err: any) {
-    addLog('warn', 'AI_DESC_FALLBACK', `Gemini ocupado para "${title}": ${err.message}. Usando motor estético inteligente.`);
+    addLog('warn', 'AI_DESC_FALLBACK', `Gemini busy for "${title}": ${err.message}. Using English aesthetic SEO fallback.`);
   }
 
   return generateEnhancedSeoDescription(title, assetType);
@@ -898,8 +902,106 @@ ${liveUgc.slice(0, 4).map((i) => `  * "${i.name}" por ${i.creatorName} (${i.favo
       };
     }
     return {
-      reply: `⚠️ Desculpe, tive uma instabilidade temporária ao comunicar com o modelo de inteligência: **${geminiError.message}**.\nVerifique a aba **Status e logs** para mais detalhes.`,
-      actionTaken: 'gemini_error',
-    };
+        reply: `⚠️ Desculpe, tive uma instabilidade temporária ao comunicar com o modelo de inteligência: **${geminiError.message}**.\nVerifique a aba **Status e logs** para mais detalhes.`,
+        actionTaken: 'gemini_error',
+      };
+    }
   }
+}
+
+export interface GeneratedUgcDesign {
+  title: string;
+  kind: 'shirt' | 'pants' | 'tshirt';
+  price: number;
+  theme: string;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  pattern: 'solid' | 'stripes' | 'camo' | 'plaid' | 'grunge' | 'acid_wash' | 'stars';
+  details: string[];
+  description: string;
+  reply: string;
+}
+
+export async function generateUgcDesignData(
+  userPrompt: string,
+  attachments?: AiImageAttachment[],
+  effort: string = 'Detalhada'
+): Promise<GeneratedUgcDesign> {
+  const prompt = `Você é o designer-chefe de moda UGC no Roblox e especialista em tendências da plataforma.
+O usuário quer criar uma peça de roupa/UGC para o Roblox:
+"${userPrompt}"
+${attachments?.length ? 'O usuário anexou fotos de referência. Analise minuciosamente as cores, corte e estética da imagem.' : ''}
+
+SUA TAREFA:
+1. Definir o Título Comercial viral da peça (em inglês, com símbolos estéticos como ⚡, ★, ✦, ୨୧).
+2. Determinar o tipo: "shirt" (camisa/jaqueta/hoodie/top), "pants" (calça/short/saia/cargo) ou "tshirt" (estampa).
+3. Preço: 5 Robux (padrão de roupas clássicas para maximizar vendas).
+4. Cores em Hexadecimal (primaryColor, secondaryColor, accentColor).
+5. Padrão de textura (pattern: "solid", "stripes", "camo", "plaid", "grunge", "acid_wash", "stars").
+6. Lista de detalhes de acabamento (ex: ["chains", "pockets", "zipper", "distressed"]).
+7. Descrição & Tags SEO: DEVE SER 100% EM INGLÊS, seguindo o padrão viral de top criadores (Header, 2 frases de apelo estético, chamada para o Catalog Avatar Creator, e bloco de tags em minúsculo sem '#').
+8. Mensagem de Resposta ao Usuário (reply): Em português, explicando de forma estilosa o conceito da peça, o caimento e por que ela tem alto potencial de vendas no catálogo do Roblox.
+
+RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto antes ou depois):
+{
+  "title": "string",
+  "kind": "shirt" | "pants" | "tshirt",
+  "price": 5,
+  "theme": "y2k" | "streetwear" | "grunge" | "goth" | "cyberpunk" | "coquette" | "vintage",
+  "primaryColor": "#18181b",
+  "secondaryColor": "#09090b",
+  "accentColor": "#a855f7",
+  "pattern": "grunge",
+  "details": ["chains", "zipper"],
+  "description": "— ⚡ Title ⚡ —\n\n★ High quality aesthetic fit...\n\ntags: aesthetic y2k ...",
+  "reply": "Explicação em português da criação para o usuário..."
+}`;
+
+  try {
+    const rawAi = await callGemini(prompt, '', { effort: effort as any, attachments });
+    const jsonMatch = rawAi.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (parsed.title && parsed.kind) {
+        return {
+          title: parsed.title,
+          kind: ['shirt', 'pants', 'tshirt'].includes(parsed.kind) ? parsed.kind : 'shirt',
+          price: Number(parsed.price) || 5,
+          theme: parsed.theme || 'streetwear',
+          primaryColor: parsed.primaryColor || '#18181b',
+          secondaryColor: parsed.secondaryColor || '#09090b',
+          accentColor: parsed.accentColor || '#a855f7',
+          pattern: parsed.pattern || 'solid',
+          details: Array.isArray(parsed.details) ? parsed.details : ['custom fit'],
+          description: parsed.description || generateEnhancedSeoDescription(parsed.title),
+          reply: parsed.reply || `Criei o design de **${parsed.title}** com base no seu pedido.`,
+        };
+      }
+    }
+  } catch (err: any) {
+    addLog('warn', 'AI_UGC_CREATE', `Gemini fallback para criação UGC: ${err.message}`);
+  }
+
+  const kind = userPrompt.toLowerCase().includes('calça') || userPrompt.toLowerCase().includes('pants') || userPrompt.toLowerCase().includes('cargo')
+    ? 'pants'
+    : userPrompt.toLowerCase().includes('tshirt') || userPrompt.toLowerCase().includes('estampa')
+    ? 'tshirt'
+    : 'shirt';
+
+  const cleanName = userPrompt.replace(/cria|fazer|roupa|calça|camisa|uma|pra mim/gi, '').trim() || 'Aesthetic Drop';
+  const title = `[Y2K] ${cleanName.slice(0, 30)} ⚡`;
+  return {
+    title,
+    kind,
+    price: 5,
+    theme: 'y2k',
+    primaryColor: '#18181b',
+    secondaryColor: '#09090b',
+    accentColor: '#38bdf8',
+    pattern: 'grunge',
+    details: ['chains', 'zipper', 'custom shading'],
+    description: generateEnhancedSeoDescription(title),
+    reply: `Desenvolvi o modelo **${title}** baseado na sua descrição com caimento premium e texturas preparadas para o catálogo do Roblox!`,
+  };
 }

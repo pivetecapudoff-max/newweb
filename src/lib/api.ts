@@ -607,3 +607,34 @@ export function searchLiveGroups(query: string, limit: number = 10): Promise<{ g
     readJson<{ groups: LiveGroupItem[] }>(res)
   );
 }
+
+export interface CreateUgcPayload {
+  prompt: string;
+  attachments?: Array<{ name: string; mimeType: string; data: string }>;
+  effort?: "Rápida" | "Detalhada" | "Profunda";
+}
+
+export interface UgcDesignResponse {
+  success: boolean;
+  design: {
+    title: string;
+    kind: "shirt" | "pants" | "tshirt";
+    price: number;
+    theme: string;
+    primaryColor: string;
+    secondaryColor: string;
+    accentColor: string;
+    pattern: "solid" | "stripes" | "camo" | "plaid" | "grunge" | "acid_wash" | "stars";
+    details: string[];
+    description: string;
+    reply: string;
+  };
+}
+
+export function createUgcWithAi(payload: CreateUgcPayload): Promise<UgcDesignResponse> {
+  return api("/api/ai/ugc-create", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).then((res) => readJson<UgcDesignResponse>(res));
+}

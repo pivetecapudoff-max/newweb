@@ -143,7 +143,7 @@ export function UploadPage() {
     } finally {
       setGeneratingDesc(false);
     }
-    const desc = `⚡ ${t} ⚡\n\n[🖤] • Design exclusivo e caimento impecável para destacar seu avatar no Roblox.\n[✨] • Experimente agora mesmo no Catalog Avatar Creator (CAC)!\n[💎] • Compre 5+ peças e comente no mural do grupo para garantir seu rank VIP!\n\n#roblox #aesthetic #y2k #streetwear #outfit #cheap5robux #5robux #trending`;
+    const desc = `— ⚡ ${t} ⚡ —\n\n★ High quality aesthetic fit with clean custom shading & realistic details.\n★ Looks great with matching outfits! Try it on in Catalog Avatar Creator (CAC).\n★ Join our group for more high-quality clothing drops!\n\ntags: aesthetic y2k streetwear grunge vintage cyber dark emo baggy fit hood drip cool thrift anime preppy matching gothic opium 5robux`;
     setDescription(desc);
   }
 
