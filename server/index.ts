@@ -20,7 +20,7 @@ import {
   searchLiveRobloxCatalog,
   generateAiItemDescription,
 } from "./ai.js";
-import { isHosted, listenTarget } from "./host.js";
+import { isHosted, isSecureRequest, listenTarget } from "./host.js";
 import {
   authContext,
   authStatus,
