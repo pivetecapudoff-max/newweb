@@ -20,6 +20,7 @@ import {
   Check,
   BarChart3,
   TrendingUp,
+  Search,
 } from "lucide-react";
 import { PromptInput, type PromptInputMeta } from "../components/ui/ai-chat-input";
 import { LiquidMetalButton } from "../components/ui/liquid-metal-button";
@@ -43,6 +44,13 @@ interface UgcChatMessage {
   text: string;
   timestamp: string;
   attachments?: string[];
+  catalogResearch?: Array<{
+    id: number;
+    name: string;
+    creatorName: string;
+    favoriteCount: number;
+    url: string;
+  }>;
   design?: UgcDesignSpec & {
     templateDataUrl: string;
     uploadJob?: UploadJob | null;
@@ -53,12 +61,12 @@ interface UgcChatMessage {
 }
 
 export function UgcCreatorView() {
-  const [selectedStyle, setSelectedStyle] = useState<string>("syn_night_shop");
+  const [selectedStyle, setSelectedStyle] = useState<string>("basic_casual");
   const [messages, setMessages] = useState<UgcChatMessage[]>([
     {
       id: "welcome",
       role: "assistant",
-      text: "Olá! Eu sou o seu **Designer de Moda & UGC com IA** para o Roblox, 100% adaptado para **funcionar com qualquer grupo ou loja**. Você pode selecionar o seu grupo no topo, escolher o estilo estético desejado (como o estilo Moe / Jirai Kei da Syn night shop, Y2K Baggy ou Goth) e a IA vai gerar o molde oficial 2D, as tags e a descrição personalizada para a **sua própria marca** por 5 Robux!\n\nDescreva a peça desejada, clique em um dos atalhos de inspiração abaixo ou anexe uma foto de referência:",
+      text: "Olá! Eu sou o seu **Designer de Moda & UGC com IA** para o Roblox, 100% adaptado para **funcionar com qualquer grupo ou loja**. Você pode selecionar o seu grupo no topo, escolher o estilo estético (como T-Shirt Básica, Y2K Streetwear, Gothic ou Coquette) e a IA vai pesquisar o catálogo do Roblox em tempo real e gerar o molde oficial 2D, as tags e a descrição personalizada para a **sua própria marca** por 5 Robux!\n\nDescreva a peça desejada, clique em um dos atalhos de inspiração abaixo ou anexe uma foto de referência:",
       timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -153,10 +161,13 @@ export function UgcCreatorView() {
       const spec: UgcDesignSpec = {
         title: designData.title,
         kind: designData.kind,
+        shirtStyle: designData.shirtStyle,
         price: designData.price || 5,
         description: designData.description,
         tags: [designData.theme, ...designData.details],
         theme: designData.theme,
+        graphicTheme: designData.graphicTheme,
+        graphicText: designData.graphicText,
         primaryColor: designData.primaryColor,
         secondaryColor: designData.secondaryColor,
         accentColor: designData.accentColor,
@@ -192,6 +203,7 @@ export function UgcCreatorView() {
         role: "assistant",
         text: designData.reply,
         timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+        catalogResearch: designData.catalogResearch,
         design: {
           ...spec,
           templateDataUrl,
@@ -389,11 +401,14 @@ export function UgcCreatorView() {
               className="bg-transparent text-white text-xs focus:outline-none cursor-pointer max-w-[150px] truncate"
               title="Escolha o estilo estético desejado para o seu grupo"
             >
-              <option value="syn_night_shop" className="bg-[#0f0f0f] text-white">
-                🎀 Estilo Syn Night (Moe / Jirai)
+              <option value="basic_casual" className="bg-[#0f0f0f] text-white">
+                👕 T-Shirt Básica / Casual
               </option>
               <option value="y2k_streetwear" className="bg-[#0f0f0f] text-white">
                 🔥 Y2K Baggy Streetwear
+              </option>
+              <option value="moe_jirai" className="bg-[#0f0f0f] text-white">
+                🎀 Moe / Jirai Kei
               </option>
               <option value="goth_alt" className="bg-[#0f0f0f] text-white">
                 🕷️ Gothic & Opium Dark
@@ -487,6 +502,39 @@ export function UgcCreatorView() {
                       <h3 className="text-base font-bold text-white mt-1">{msg.design.title}</h3>
                     </div>
                   </div>
+
+                  {/* Live Roblox Catalog Market Intelligence */}
+                  {msg.catalogResearch && msg.catalogResearch.length > 0 && (
+                    <div className="rounded-xl bg-purple-950/20 border border-purple-500/20 p-3 space-y-2">
+                      <div className="flex items-center justify-between text-xs text-purple-300 font-semibold">
+                        <span className="flex items-center gap-1.5">
+                          <Search className="w-3.5 h-3.5 text-purple-400" />
+                          <span>Pesquisa ao Vivo no Catálogo Roblox</span>
+                        </span>
+                        <span className="text-[10px] text-purple-400/60 font-mono">
+                          {msg.catalogResearch.length} campeões analisados
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {msg.catalogResearch.map((item) => (
+                          <a
+                            key={item.id}
+                            href={item.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/40 hover:bg-white/10 border border-white/5 text-[11px] text-white/80 hover:text-white transition-colors"
+                            title={`Criado por ${item.creatorName}`}
+                          >
+                            <span className="truncate max-w-[170px]">{item.name}</span>
+                            <span className="text-amber-400 text-[10px] flex items-center font-mono font-bold">
+                              ⭐ {(item.favoriteCount || 0).toLocaleString()}
+                            </span>
+                            <ExternalLink className="w-2.5 h-2.5 text-white/40" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Template Visual Preview */}
                   <div className="relative rounded-xl overflow-hidden bg-black/60 border border-white/[0.06] p-3 flex flex-col items-center justify-center">

@@ -1303,9 +1303,9 @@ ${liveUgc.slice(0, 4).map((i) => `  * "${i.name}" por ${i.creatorName} (${i.favo
       };
     }
     return {
-        reply: `⚠️ Desculpe, tive uma instabilidade temporária ao comunicar com o modelo de inteligência: **${geminiError.message}**.\nVerifique a aba **Status e logs** para mais detalhes.`,
-        actionTaken: 'gemini_error',
-      };
+      reply: `⚠️ Desculpe, tive uma instabilidade temporária ao comunicar com o modelo de inteligência: **${geminiError.message}**.\nVerifique a aba **Status e logs** para mais detalhes.`,
+      actionTaken: 'gemini_error',
+    };
   }
 }
 
@@ -1321,6 +1321,16 @@ export interface GeneratedUgcDesign {
   details: string[];
   description: string;
   reply: string;
+  catalogResearch?: Array<{
+    id: number;
+    name: string;
+    creatorName: string;
+    favoriteCount: number;
+    url: string;
+  }>;
+  shirtStyle?: 'short_sleeve' | 'long_sleeve' | 'crop_top' | 'hoodie';
+  graphicTheme?: string;
+  graphicText?: string;
 }
 
 export interface GenerateUgcOptions {
@@ -1338,93 +1348,112 @@ export async function generateUgcDesignData(
   const targetGroupName = options?.groupName?.trim() || '';
   const hasTargetGroup = Boolean(targetGroupName);
   const brandName = hasTargetGroup ? targetGroupName : 'sua loja';
-  const stylePreset = options?.stylePreset || 'syn_night_shop';
+  const stylePreset = options?.stylePreset || 'basic_casual';
 
-  const prompt = `Você é um diretor criativo de moda Roblox e especialista em economia do catálogo, gerando roupas clássicas (2D) e itens de alto volume de vendas.
+  // 1. LIVE ROBLOX CATALOG RESEARCH
+  // Extract core topic keyword from prompt to research real bestselling items
+  const cleanSubject = userPrompt
+    .toLowerCase()
+    .replace(/cria(r)?|fazer|faz|falei|pra mim|roupa(s)?|calça(s)?|camisa(s)?|shirt(s)?|pants|tshirt|uma|um|cade|o|ai|por favor|quero|desenha(r)?|estilo|modelo/gi, ' ')
+    .replace(/[^\w\s\u00C0-\u00FF]/gi, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+
+  let searchKeyword = cleanSubject || 'aesthetic t-shirt';
+  const pLower = userPrompt.toLowerCase();
+  if (pLower.includes('minion')) searchKeyword = 'minion';
+  else if (pLower.includes('batman')) searchKeyword = 'batman';
+  else if (pLower.includes('spider') || pLower.includes('aranha')) searchKeyword = 'spiderman';
+  else if (pLower.includes('hello kitty') || pLower.includes('hellokitty')) searchKeyword = 'hello kitty';
+  else if (pLower.includes('kuromi')) searchKeyword = 'kuromi';
+  else if (pLower.includes('streetwear') || pLower.includes('y2k')) searchKeyword = 'y2k streetwear';
+  else if (pLower.includes('anime')) searchKeyword = 'anime shirt';
+  else if (pLower.includes('goth') || pLower.includes('gothic')) searchKeyword = 'goth shirt';
+  else if (pLower.includes('cat') || pLower.includes('gato')) searchKeyword = 'cat aesthetic';
+
+  let catalogResearch: Array<{ id: number; name: string; creatorName: string; favoriteCount: number; url: string }> = [];
+  try {
+    const rawCatalog = await searchLiveRobloxCatalog({
+      keyword: searchKeyword,
+      category: 'Clothing',
+      limit: 10,
+    });
+    catalogResearch = rawCatalog
+      .sort((a, b) => (b.favoriteCount || 0) - (a.favoriteCount || 0))
+      .slice(0, 5)
+      .map((item) => ({
+        id: item.id,
+        name: item.name,
+        creatorName: item.creatorName,
+        favoriteCount: item.favoriteCount || 0,
+        url: item.url,
+      }));
+  } catch (err: any) {
+    addLog('warn', 'AI_UGC_RESEARCH', `Falha na pesquisa ao vivo de catálogo: ${err.message}`);
+  }
+
+  const catalogSummary = catalogResearch.length > 0
+    ? catalogResearch.map((item, idx) => `${idx + 1}. "${item.name}" por ${item.creatorName} (${item.favoriteCount.toLocaleString()} favoritos)`).join('\n')
+    : 'Nenhum item específico encontrado na busca rápida, usando tendências globais de vendas.';
+
+  const prompt = `Você é um diretor criativo de moda Roblox e especialista em economia do catálogo, gerando roupas clássicas 2D de alta conversão.
 
 O usuário quer criar uma peça com base no seguinte pedido:
 "${userPrompt}"
 ${attachments?.length ? 'O usuário anexou fotos de referência. Analise minuciosamente os cortes, cores, caimento e detalhes da imagem.' : ''}
 
-CONTEXTO DO CRIADOR & MULTI-GRUPOS (MUITO IMPORTANTE):
+CONTEXTO DO CRIADOR & MULTI-GRUPOS:
 - Loja/Grupo de Destino: ${hasTargetGroup ? `"${targetGroupName}" (ID: ${options?.groupId || 'N/A'})` : 'Loja pessoal do usuário'}
 - Preset de Estilo Ativo: ${stylePreset}
 
-DIRETRIZES DE MARCA (UNIVERSAL PARA TODOS OS GRUPOS):
-1. O SISTEMA É UNIVERSAL: Cada criador possui seu próprio grupo ou loja no Roblox.
-   - NUNCA force nem mencione grupos de terceiros (como Syn night shop) nos títulos ou descrições, A MENOS que o grupo do próprio usuário SEJA esse ou o usuário peça expressamente no prompt.
+PESQUISA DE MERCADO ROBLOX EM TEMPO REAL:
+Termo pesquisado no catálogo oficial: "${searchKeyword}"
+${catalogSummary}
+
+DIRETRIZES DE DESIGN BASEADO NO CATÁLOGO REAL (MUITO IMPORTANTE):
+1. PADRÃO DAS ROUPAS QUE MAIS VENDEM NO ROBLOX:
+   - As camisas de maior sucesso comercial no Roblox são BÁSICAS, LIMPAS e USÁVEIS (estilo T-shirt clássica com manga curta e estampa frontal nítida).
+   - NUNCA cubra os braços inteiros com tecido ou faça parecer macacão/pijama de corpo inteiro a menos que seja explicitamente pedido "pijama" ou "macacão".
+   - shirtStyle: SEMPRE "short_sleeve" (manga curta) para camisas comuns/t-shirts. Use "long_sleeve" apenas para casacos/moletons, ou "crop_top" para tops curtos.
+   - Decote: gola careca clássica (crewneck) com recorte no pescoço para a cabeça do avatar.
+   - Estampa: centralizada e limpa no peito ("graphicTheme"), sem poluição visual.
+
+2. NENHUMA MENÇÃO A TERCEIROS:
+   - O sistema é 100% universal para a loja do criador: "${brandName}".
+   - NUNCA mencione grupos ou lojas de terceiros nos títulos ou descrições.
    - A descrição DEVE dar boas-vindas para o grupo/loja DELE:
      * Com grupo: "♡ Welcome to ${targetGroupName} !" e "♡ Buy 5+ clothes for special member rank rewards in our group!"
      * Sem grupo: "♡ Welcome to my Roblox store !" e "♡ Buy 5+ clothes to support our drops!"
    - A tag do grupo deve ser incluída em minúsculo: "${hasTargetGroup ? targetGroupName.toLowerCase().replace(/[^a-z0-9]/g, '') : 'roblox'}".
 
-2. MOTOR ESTÉTICO & TÉCNICAS VISUAIS (APLICÁVEIS A QUALQUER GRUPO):
-   Aplique cortes e texturas de alta conversão adaptados ao tema solicitado:
-   - Estilo Moe / Jirai Kei (量産型 / 地雷系) / Emo Alt:
-     * Decotes ombro-a-ombro ("off-shoulder") com alças finas ou gargantilha choker
-     * Laço de fita delicado ("ribbon-bow" ou "୨୧") no peito
-     * Rendas e babados ("lace-ruffles")
-     * Mangas/aquecedores de braço listrados ("arm-warmers")
-     * Pares matching "(g) 🎀" e "(b) 💙"
-     * Saias plissadas ("pleated-skirt") com alfinetes ("safety-pins")
-   - Estilo Streetwear / Y2K / Baggy:
-     * Calças cargo baggy, correntes ("chains"), bolsos ("pockets"), zíperes ("zipper"), lavagens ácidas
-   - Estilo PJs / Da Hood:
-     * Pijamas confortáveis com estampas de estrelas ("stars") e temática de casal
+3. PREÇO: ESTRITAMENTE 5 Robux (padrão oficial clássico para estimular compras em lote).
 
-3. CONVENÇÃO DE TÍTULOS:
-   - Para peças fofas/jirai/emo: "⋆ ˚｡⋆୨୧˚ [Nome da Peça] ˚୨୧⋆｡˚ ⋆"
-   - Para pares matching: "[Nome] match (g) 🎀" ou "[Nome] match (b) 💙"
-   - Para clássicos/streetwear: "─── ⋆⋅☆⋅⋆ ── [Nome] ── ⋆⋅☆⋅⋆ ───" ou "[Nome] off shoulder top [cor]"
+4. RESPOSTA AO USUÁRIO (reply):
+   Em português. DEVE começar citando a pesquisa realizada no catálogo do Roblox sobre "${searchKeyword}" e os itens de sucesso encontrados antes de detalhar o design criado para "${brandName}".
 
-4. PREÇO: ESTRITAMENTE 5 Robux (padrão clássico oficial para estimular compras em lote e ganho de membros no grupo).
-
-5. FORMATO DA DESCRIÇÃO (100% EM INGLÊS):
-   [Header com título e símbolos estéticos]
-
-   ${hasTargetGroup ? `♡ Welcome to ${targetGroupName} !` : '♡ Welcome to our official Roblox store !'}
-   ${hasTargetGroup ? '♡ Buy 5+ clothes for special rank rewards in our group!' : '♡ Buy 5+ clothes to support our shop & unlock matching fits!'}
-   ♡ Matching outfits & daily aesthetic drops.
-   ★ High quality aesthetic fit with custom shading & delicate details.
-   ★ Try it on in Catalog Avatar Creator (CAC)!
-
-   tags: [tags em minúsculo separadas por espaço incluindo a tag do grupo, 5robux, aesthetic, y2k, etc.]
-
-6. RESPOSTA AO USUÁRIO (reply):
-   Em português, explicando os detalhes da peça criada especialmente para a loja/grupo "${brandName}".
-
-7. PERSONAGENS & TEMAS POPULARES (MUITO IMPORTANTE):
-   Se o usuário pedir um tema ou personagem famoso (ex: Minions, Batman, Spiderman, Hello Kitty, Kuromi, etc.):
-   - O título DEVE conter o nome do personagem (ex: "⋆ ˚｡⋆୨୧˚ minion overalls aesthetic top ˚୨୧⋆｡˚ ⋆").
-   - As cores DEVEM ser fiéis ao personagem:
-     * Minions: primaryColor: "#facc15" (amarelo vibrante), secondaryColor: "#2563eb" (azul jeans), accentColor: "#18181b" (preto dos óculos e luvas).
-     * Batman: primaryColor: "#0f172a" (preto), secondaryColor: "#1e293b", accentColor: "#facc15" (amarelo morcego).
-     * Spiderman: primaryColor: "#dc2626" (vermelho), secondaryColor: "#1d4ed8" (azul), accentColor: "#000000" (teia).
-     * Hello Kitty: primaryColor: "#ffffff", secondaryColor: "#fce7f3", accentColor: "#ef4444" (laço vermelho).
-     * Kuromi: primaryColor: "#09090b", secondaryColor: "#18181b", accentColor: "#f472b6" (rosa).
-   - O array 'details' DEVE incluir o gatilho visual:
-     * Minions: ["minion-graphic", "goggles", "overalls"]
-     * Batman: ["batman-logo"]
-     * Spiderman: ["spider-logo", "webbing"]
-     * Hello Kitty: ["hellokitty-graphic", "ribbon-bow"]
-     * Kuromi: ["kuromi-graphic"]
-
-DETALHES RECONHECIDOS PELO MOTOR DE RENDERIZAÇÃO 2D (inclua no array 'details' os que se aplicam):
-"minion-graphic", "goggles", "overalls", "batman-logo", "spider-logo", "hellokitty-graphic", "kuromi-graphic", "skull-graphic", "heart-graphic", "flame-graphic", "butterfly-graphic", "off-shoulder", "ribbon-bow", "lace-ruffles", "arm-warmers", "choker", "cat-graphic", "pleated-skirt", "safety-pins", "chains", "zipper", "pockets", "straps"
+5. TEMAS E PERSONAGENS:
+   - Minions: primaryColor: "#111111" ou "#facc15", graphicTheme: "minion_face", details: ["short-sleeve", "crewneck", "minion-graphic"]
+   - Batman: primaryColor: "#0f172a", graphicTheme: "batman_logo", details: ["short-sleeve", "crewneck", "batman-logo"]
+   - Spiderman: primaryColor: "#111111" ou "#dc2626", graphicTheme: "spider_logo", details: ["short-sleeve", "crewneck", "spider-logo"]
+   - Hello Kitty: primaryColor: "#ffffff" ou "#111111", graphicTheme: "hellokitty", details: ["short-sleeve", "crewneck", "hellokitty-graphic"]
+   - Y2K / Streetwear: primaryColor: "#111111", graphicTheme: "chain_necklace", details: ["short-sleeve", "crewneck", "chains"]
 
 RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fora do JSON):
 {
-  "title": "⋆ ˚｡⋆୨୧˚ off shoulder top black ˚୨୧⋆｡˚ ⋆",
+  "title": "⋆ ˚｡⋆୨୧˚ minion cute basic tee ˚୨୧⋆｡˚ ⋆",
   "kind": "shirt" | "pants" | "tshirt",
+  "shirtStyle": "short_sleeve" | "long_sleeve" | "crop_top" | "hoodie",
   "price": 5,
-  "theme": "jiraikei" | "moe" | "vkei" | "emogirl" | "coquette" | "y2k" | "grunge" | "goth" | "matching" | "pjs",
-  "primaryColor": "#18181b",
-  "secondaryColor": "#09090b",
-  "accentColor": "#f472b6",
+  "theme": "minion" | "streetwear" | "y2k" | "goth" | "coquette" | "casual",
+  "graphicTheme": "minion_face" | "batman_logo" | "spider_logo" | "hellokitty" | "kuromi" | "chain_necklace" | "skull" | "heart" | "flame" | "star" | "none",
+  "graphicText": "",
+  "primaryColor": "#111111",
+  "secondaryColor": "#27272a",
+  "accentColor": "#facc15",
   "pattern": "solid" | "stripes" | "grunge" | "stars" | "acid_wash",
-  "details": ["off-shoulder", "ribbon-bow", "lace-ruffles"],
-  "description": "⋆ ˚｡⋆୨୧˚ ...",
-  "reply": "Explicação em português para o usuário..."
+  "details": ["short-sleeve", "crewneck", "minion-graphic"],
+  "description": "...",
+  "reply": "🔍 **Pesquisa no Catálogo Roblox:** Analisei os itens mais vendidos sobre..."
 }`;
 
   try {
@@ -1436,15 +1465,21 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fo
         return {
           title: parsed.title,
           kind: ['shirt', 'pants', 'tshirt'].includes(parsed.kind) ? parsed.kind : 'shirt',
-          price: 5, // Strictly 5 Robux
-          theme: parsed.theme || 'jiraikei',
-          primaryColor: parsed.primaryColor || '#18181b',
-          secondaryColor: parsed.secondaryColor || '#09090b',
+          shirtStyle: parsed.shirtStyle || 'short_sleeve',
+          price: 5,
+          theme: parsed.theme || 'casual',
+          graphicTheme: parsed.graphicTheme || (pLower.includes('minion') ? 'minion_face' : undefined),
+          graphicText: parsed.graphicText || '',
+          primaryColor: parsed.primaryColor || '#111111',
+          secondaryColor: parsed.secondaryColor || '#27272a',
           accentColor: parsed.accentColor || '#f472b6',
           pattern: parsed.pattern || 'solid',
-          details: Array.isArray(parsed.details) ? parsed.details : ['off-shoulder', 'ribbon-bow'],
+          details: Array.isArray(parsed.details) ? parsed.details : ['short-sleeve', 'crewneck'],
           description: parsed.description || generateEnhancedSeoDescription(parsed.title, undefined, targetGroupName),
-          reply: parsed.reply || `Criei o design de **${parsed.title}** especialmente para a sua loja!`,
+          reply: parsed.reply || (catalogResearch.length > 0
+            ? `🔍 **Pesquisa no Catálogo Roblox:** Analisei os itens mais populares sobre **${searchKeyword}** (como *${catalogResearch[0].name}* com ${catalogResearch[0].favoriteCount.toLocaleString()} favoritos). Desenvolvi uma **T-Shirt Básica** com caimento oficial e estampa de alta conversão para a sua loja!`
+            : `Desenvolvi uma **T-Shirt Básica** com caimento oficial e estampa limpa especialmente para a sua loja!`),
+          catalogResearch,
         };
       }
     }
@@ -1452,81 +1487,87 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fo
     addLog('warn', 'AI_UGC_CREATE', `Gemini fallback para criação UGC: ${err.message}`);
   }
 
-  // High-fidelity algorithmic fallback tuned for multi-groups and popular characters
+  // High-fidelity algorithmic fallback tuned for basic shirts and live catalog results
   const p = userPrompt.toLowerCase();
   const isPants = p.includes('calça') || p.includes('pants') || p.includes('cargo') || p.includes('saia') || p.includes('skirt');
   const isTshirt = p.includes('tshirt') || p.includes('estampa') || p.includes('decal');
   const kind = isPants ? 'pants' : isTshirt ? 'tshirt' : 'shirt';
+  const shirtStyle: 'short_sleeve' | 'long_sleeve' | 'crop_top' | 'hoodie' =
+    p.includes('moletom') || p.includes('hoodie') ? 'hoodie' :
+    p.includes('longa') || p.includes('long sleeve') ? 'long_sleeve' :
+    p.includes('cropped') || p.includes('crop') ? 'crop_top' : 'short_sleeve';
 
-  let title = `⋆ ˚｡⋆୨୧˚ off shoulder top black ˚୨୧⋆｡˚ ⋆`;
-  let theme = 'jiraikei';
-  let details = ['off-shoulder', 'ribbon-bow', 'lace-ruffles'];
-  let primaryColor = '#18181b';
-  let secondaryColor = '#09090b';
-  let accentColor = '#f472b6';
+  let title = `⋆ ˚｡⋆୨୧˚ basic aesthetic tee black ˚୨୧⋆｡˚ ⋆`;
+  let theme = 'casual';
+  let details = ['short-sleeve', 'crewneck'];
+  let primaryColor = '#111111';
+  let secondaryColor = '#27272a';
+  let accentColor = '#e4e4e7';
   let pattern: 'solid' | 'stripes' | 'camo' | 'plaid' | 'grunge' | 'acid_wash' | 'stars' = 'solid';
+  let graphicTheme: string = 'chain_necklace';
 
   if (p.includes('minion')) {
-    title = isPants ? `minion denim overalls pants (yellow cuffs)` : `⋆ ˚｡⋆୨୧˚ minion overalls aesthetic top ˚୨୧⋆｡˚ ⋆`;
+    title = isPants ? `minion denim classic pants` : `⋆ ˚｡⋆୨୧˚ minion cute basic tee ˚୨୧⋆｡˚ ⋆`;
     theme = 'minion';
-    details = ['minion-graphic', 'goggles', 'overalls'];
-    primaryColor = '#facc15';
-    secondaryColor = '#2563eb';
-    accentColor = '#18181b';
+    graphicTheme = 'minion_face';
+    details = ['short-sleeve', 'crewneck', 'minion-graphic'];
+    primaryColor = '#111111';
+    secondaryColor = '#1f2937';
+    accentColor = '#facc15';
     pattern = 'solid';
   } else if (p.includes('batman')) {
-    title = `batman pjs pajamas da hood y2k (girl)`;
+    title = `batman classic basic logo tee (black)`;
     theme = 'batman';
-    details = ['batman-logo', 'stars'];
+    graphicTheme = 'batman_logo';
+    details = ['short-sleeve', 'crewneck', 'batman-logo'];
     primaryColor = '#0f172a';
     secondaryColor = '#1e293b';
     accentColor = '#facc15';
-    pattern = 'stars';
-  } else if (p.includes('spiderman') || p.includes('spider')) {
-    title = `spiderman web aesthetic fit (match)`;
+    pattern = 'solid';
+  } else if (p.includes('spiderman') || p.includes('spider') || p.includes('aranha')) {
+    title = `spiderman web classic basic tee`;
     theme = 'spiderman';
-    details = ['spider-logo', 'webbing'];
-    primaryColor = '#dc2626';
-    secondaryColor = '#1d4ed8';
-    accentColor = '#000000';
-    pattern = 'stripes';
+    graphicTheme = 'spider_logo';
+    details = ['short-sleeve', 'crewneck', 'spider-logo'];
+    primaryColor = '#111111';
+    secondaryColor = '#1e1b4b';
+    accentColor = '#dc2626';
+    pattern = 'solid';
   } else if (p.includes('hello kitty') || p.includes('hellokitty')) {
-    title = `⋆ ˚｡⋆୨୧˚ hello kitty cute top ˚୨୧⋆｡˚ ⋆`;
+    title = `⋆ ˚｡⋆୨୧˚ hello kitty cute basic tee ˚୨୧⋆｡˚ ⋆`;
     theme = 'coquette';
-    details = ['hellokitty-graphic', 'ribbon-bow'];
+    graphicTheme = 'hellokitty';
+    details = ['short-sleeve', 'crewneck', 'hellokitty-graphic'];
     primaryColor = '#ffffff';
-    secondaryColor = '#fce7f3';
+    secondaryColor = '#f4f4f5';
     accentColor = '#ef4444';
   } else if (p.includes('kuromi')) {
-    title = `kuromi dark emo aesthetic fit`;
+    title = `kuromi dark basic aesthetic tee`;
     theme = 'goth';
-    details = ['kuromi-graphic', 'choker'];
+    graphicTheme = 'kuromi';
+    details = ['short-sleeve', 'crewneck', 'kuromi-graphic'];
     primaryColor = '#09090b';
     secondaryColor = '#18181b';
     accentColor = '#f472b6';
   } else if (p.includes('cat') || p.includes('gato') || p.includes('gatinho')) {
-    title = `⋆ ˚｡⋆୨୧˚ cutesy cat match (g) 🎀 ˚୨୧⋆｡˚ ⋆`;
-    theme = 'moe';
-    details = ['cat-graphic', 'ribbon-bow', 'off-shoulder'];
+    title = `⋆ ˚｡⋆୨୧˚ cute cat basic pocket tee ˚୨୧⋆｡˚ ⋆`;
+    theme = 'casual';
+    graphicTheme = 'cat';
+    details = ['short-sleeve', 'crewneck', 'cat-graphic'];
+    primaryColor = '#18181b';
     accentColor = '#ffffff';
-  } else if (p.includes('misa') || p.includes('death note') || p.includes('vkei') || p.includes('goth')) {
-    title = `death note misa black off shoulder match`;
-    theme = 'vkei';
-    details = ['off-shoulder', 'choker', 'arm-warmers', 'straps'];
-    accentColor = '#e4e4e7';
-    pattern = 'stripes';
-  } else if (p.includes('pj') || p.includes('pajama') || p.includes('pijama')) {
-    title = `cozy pjs pajamas da hood y2k (girl)`;
-    theme = 'pjs';
-    details = ['pjs', 'stars'];
-    primaryColor = '#1e1b4b';
-    secondaryColor = '#0f172a';
-    accentColor = '#facc15';
-    pattern = 'stars';
+  } else if (p.includes('streetwear') || p.includes('y2k') || p.includes('hood')) {
+    title = `─── ⋆⋅☆⋅⋆ ── y2k vintage basic tee ── ⋆⋅☆⋅⋆ ───`;
+    theme = 'streetwear';
+    graphicTheme = 'chain_necklace';
+    details = ['short-sleeve', 'crewneck', 'chains'];
+    primaryColor = '#111111';
+    secondaryColor = '#18181b';
+    accentColor = '#d4d4d8';
   } else if (isPants) {
     if (p.includes('saia') || p.includes('skirt')) {
       title = `⋆ ˚｡⋆୨୧˚ pleated skirt with pins ˚୨୧⋆｡˚ ⋆`;
-      theme = 'jiraikei';
+      theme = 'casual';
       details = ['pleated-skirt', 'safety-pins'];
       accentColor = '#e4e4e7';
     } else {
@@ -1539,20 +1580,27 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fo
 
   const cleanInput = userPrompt.replace(/cria|fazer|roupa|calça|camisa|uma|pra mim/gi, '').trim();
   if (cleanInput.length > 2 && !cleanInput.includes('http')) {
-    title = `⋆ ˚｡⋆୨୧˚ ${cleanInput.slice(0, 32)} ˚୨୧⋆｡˚ ⋆`;
+    title = `⋆ ˚｡⋆୨୧˚ ${cleanInput.slice(0, 32)} basic tee ˚୨୧⋆｡˚ ⋆`;
   }
+
+  const researchReply = catalogResearch.length > 0
+    ? `🔍 **Pesquisa no Catálogo Roblox:** Analisei os itens mais populares sobre **${searchKeyword}** (como *${catalogResearch[0].name}* com ${catalogResearch[0].favoriteCount.toLocaleString()} favoritos). Com base nas tendências reais dos criadores, desenvolvi a **${title}** em corte básico e usável (T-shirt com manga curta, gola recortada e estampa de alta definição) por 5 Robux!`
+    : `Desenvolvi a **${title}** para **${brandName}**, com caimento clássico básico (T-shirt manga curta, gola recortada e estampa limpa) por 5 Robux!`;
 
   return {
     title,
     kind,
+    shirtStyle,
     price: 5,
     theme,
+    graphicTheme,
     primaryColor,
     secondaryColor,
     accentColor,
     pattern,
     details,
+    catalogResearch,
     description: generateEnhancedSeoDescription(title, undefined, targetGroupName),
-    reply: `Desenvolvi o modelo **${title}** para **${brandName}**, com caimento impecável, detalhes estéticos de alta conversão e preço de 5 Robux!`,
+    reply: researchReply,
   };
 }

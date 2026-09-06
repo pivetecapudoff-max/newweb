@@ -4,10 +4,13 @@ export type UgcClothingKind = "shirt" | "pants" | "tshirt";
 export interface UgcDesignSpec {
   title: string;
   kind: UgcClothingKind;
+  shirtStyle?: "short_sleeve" | "long_sleeve" | "crop_top" | "hoodie";
   price: number;
   description: string;
   tags: string[];
   theme: string;
+  graphicTheme?: string;
+  graphicText?: string;
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
@@ -26,7 +29,7 @@ export async function renderRobloxTemplate(spec: UgcDesignSpec): Promise<string>
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Could not initialize 2D Canvas context.");
 
-  // Clear with transparency
+  // Clear with 100% transparency
   ctx.clearRect(0, 0, 585, 559);
 
   // If tshirt: Roblox T-shirt is a single 512x512 graphic or 128x128 chest decal
@@ -34,307 +37,266 @@ export async function renderRobloxTemplate(spec: UgcDesignSpec): Promise<string>
     return renderTshirtGraphic(spec);
   }
 
-  // Draw UV Sections for Shirt or Pants
-  // 1. Torso
-  const torsoSections = [
-    { name: "Torso_Top", x: 231, y: 74, w: 128, h: 64 },
-    { name: "Torso_Front", x: 231, y: 138, w: 128, h: 128 },
-    { name: "Torso_Back", x: 423, y: 138, w: 128, h: 128 },
-    { name: "Torso_Left", x: 367, y: 138, w: 64, h: 128 },
-    { name: "Torso_Right", x: 159, y: 138, w: 64, h: 128 },
-    { name: "Torso_Bottom", x: 231, y: 274, w: 128, h: 64 },
-  ];
-
-  // 2. Right Arm / Right Leg
-  const rightLimbSections = [
-    { name: "R_Top", x: 85, y: 342, w: 64, h: 64 },
-    { name: "R_Front", x: 85, y: 406, w: 64, h: 128 },
-    { name: "R_Back", x: 213, y: 406, w: 64, h: 128 },
-    { name: "R_Left", x: 149, y: 406, w: 64, h: 128 },
-    { name: "R_Right", x: 21, y: 406, w: 64, h: 128 },
-    { name: "R_Bottom", x: 85, y: 478, w: 64, h: 64 },
-  ];
-
-  // 3. Left Arm / Left Leg
-  const leftLimbSections = [
-    { name: "L_Top", x: 341, y: 342, w: 64, h: 64 },
-    { name: "L_Front", x: 341, y: 406, w: 64, h: 128 },
-    { name: "L_Back", x: 469, y: 406, w: 64, h: 128 },
-    { name: "L_Left", x: 405, y: 406, w: 64, h: 128 },
-    { name: "L_Right", x: 277, y: 406, w: 64, h: 128 },
-    { name: "L_Bottom", x: 341, y: 478, w: 64, h: 64 },
-  ];
-
-  const allSections = [...torsoSections, ...rightLimbSections, ...leftLimbSections];
-
-  // Fill each section with base primary color + texture
-  for (const s of allSections) {
-    drawSectionBase(ctx, s.x, s.y, s.w, s.h, spec);
-  }
-
-  // Draw specialized clothing details based on kind & theme
   if (spec.kind === "shirt") {
-    drawShirtDetails(ctx, spec);
+    await renderClassicRobloxShirt(ctx, spec);
   } else {
-    drawPantsDetails(ctx, spec);
+    await renderClassicRobloxPants(ctx, spec);
   }
-
-  // If user provided a reference image, composite it tastefully on the torso front
-  if (spec.referenceImageDataUrl) {
-    try {
-      await overlayReferenceImage(ctx, spec.referenceImageDataUrl);
-    } catch {
-      // ignore image load error and use synthetic design
-    }
-  }
-
-  // Add realistic clothing shading, folds, seams and stitch lines
-  applyRealisticShading(ctx, allSections);
 
   return canvas.toDataURL("image/png");
 }
 
-function drawSectionBase(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  spec: UgcDesignSpec
-) {
-  // Base fill
-  const grad = ctx.createLinearGradient(x, y, x, y + h);
-  grad.addColorStop(0, spec.primaryColor || "#18181b");
-  grad.addColorStop(1, spec.secondaryColor || "#09090b");
-  ctx.fillStyle = grad;
-  ctx.fillRect(x, y, w, h);
+/**
+ * Renders an authentic, wearable, clean Roblox Classic Shirt
+ * Short sleeves default: forearms and hands are 100% transparent for avatar skin.
+ * Crewneck collar with clean circular neck cutout on Torso_Top and front scoop.
+ */
+async function renderClassicRobloxShirt(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
+  const baseColor = spec.primaryColor || "#111111";
+  const collarColor = spec.secondaryColor || "#1f2937";
+  const stitchColor = spec.accentColor || "#e4e4e7";
+  const style = spec.shirtStyle || "short_sleeve";
+  const isCrop = style === "crop_top";
+  const isLong = style === "long_sleeve" || style === "hoodie";
 
-  // Pattern overlays
+  // ----------------------------------------------------
+  // 1. TORSO (231, 74) to (551, 266)
+  // ----------------------------------------------------
+  const tx = 231;
+  const ty = 138;
+  const torsoHeight = isCrop ? 76 : 128;
+
+  // A. Torso_Top (231, 74, 128, 64) - Shoulders & Neck Hole
+  ctx.fillStyle = baseColor;
+  ctx.fillRect(231, 74, 128, 64);
+  applyFabricTexture(ctx, 231, 74, 128, 64);
+
+  // Cut transparent circular neck hole at center (295, 106)
+  ctx.save();
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.beginPath();
+  ctx.arc(295, 106, 20, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Draw collar ribbing ring around neck hole
+  ctx.strokeStyle = collarColor;
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.arc(295, 106, 21.5, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Shoulder seam stitch lines
+  drawDoubleStitch(ctx, 231, 75, 64, false, stitchColor);
+  drawDoubleStitch(ctx, 358, 75, 64, false, stitchColor);
+
+  // B. Torso_Front (231, 138, 128, torsoHeight)
+  ctx.fillStyle = baseColor;
+  ctx.fillRect(tx, ty, 128, torsoHeight);
+  applyFabricTexture(ctx, tx, ty, 128, torsoHeight);
+
+  // Crewneck scoop cutout at top center of front torso
+  ctx.save();
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.beginPath();
+  ctx.ellipse(295, 138, 22, 9, 0, 0, Math.PI);
+  ctx.fill();
+  ctx.restore();
+
+  // Crewneck ribbing trim along front scoop
+  ctx.strokeStyle = collarColor;
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.ellipse(295, 138, 23, 10, 0, 0, Math.PI);
+  ctx.stroke();
+
+  // C. Torso_Back (423, 138, 128, torsoHeight)
+  ctx.fillStyle = baseColor;
+  ctx.fillRect(423, ty, 128, torsoHeight);
+  applyFabricTexture(ctx, 423, ty, 128, torsoHeight);
+
+  // Subtle back collar trim curve
+  ctx.strokeStyle = collarColor;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.ellipse(487, 138, 20, 4, 0, 0, Math.PI);
+  ctx.stroke();
+
+  // D. Torso_Left (367, 138, 64, torsoHeight) & Torso_Right (159, 138, 64, torsoHeight)
+  for (const sx of [159, 367]) {
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(sx, ty, 64, torsoHeight);
+    applyFabricTexture(ctx, sx, ty, 64, torsoHeight);
+    // Armpit fold shading
+    ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
+    ctx.fillRect(sx, ty, 6, 24);
+    ctx.fillRect(sx + 58, ty, 6, 24);
+  }
+
+  // E. Waist Hem: Double-needle stitched hem across bottom of torso
+  const hemY = ty + torsoHeight - 4;
+  for (const part of [{ x: 159, w: 64 }, { x: 231, w: 128 }, { x: 367, w: 64 }, { x: 423, w: 128 }]) {
+    drawDoubleStitch(ctx, part.x, hemY, part.w, true, stitchColor);
+  }
+
+  // Notice: Torso_Bottom (231, 274, 128, 64) is left 100% TRANSPARENT so legs show cleanly.
+
+  // ----------------------------------------------------
+  // 2. ARMS & SLEEVES (Right Arm: 21-276 | Left Arm: 277-532)
+  // ----------------------------------------------------
+  // Shoulder tops (R_Top: 85, 342, 64, 64 | L_Top: 341, 342, 64, 64)
+  ctx.fillStyle = baseColor;
+  ctx.fillRect(85, 342, 64, 64);
+  ctx.fillRect(341, 342, 64, 64);
+  applyFabricTexture(ctx, 85, 342, 64, 64);
+  applyFabricTexture(ctx, 341, 342, 64, 64);
+
+  // Arm vertical panels (Right arm: 21, 85, 149, 213 | Left arm: 277, 341, 405, 469)
+  const armPanels = [21, 85, 149, 213, 277, 341, 405, 469];
+  // Basic T-shirt sleeve height = ~48px (y: 406 to y: 454)
+  // Long sleeve height = 116px (down to wrist y: 522)
+  const sleeveHeight = isLong ? 116 : 48;
+
+  for (const ax of armPanels) {
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(ax, 406, 64, sleeveHeight);
+    applyFabricTexture(ctx, ax, 406, 64, sleeveHeight);
+
+    // Sleeve Hem with double stitching
+    drawDoubleStitch(ctx, ax, 406 + sleeveHeight - 4, 64, true, stitchColor);
+
+    // Soft underarm fold shadow near top
+    ctx.fillStyle = "rgba(0, 0, 0, 0.18)";
+    ctx.fillRect(ax, 406, 64, 10);
+  }
+
+  // IMPORTANT: For short sleeves, lower arms (y: 454 to 534) and hands (R_Bottom, L_Bottom)
+  // ARE 100% TRANSPARENT so avatar skin shows! No pajama/glove bug!
+
+  // ----------------------------------------------------
+  // 3. PATTERNS (If user requested stripes, stars, acid wash)
+  // ----------------------------------------------------
   if (spec.pattern === "stripes") {
-    ctx.strokeStyle = `${spec.accentColor}33`;
+    ctx.strokeStyle = `${stitchColor}33`;
     ctx.lineWidth = 2;
-    for (let lx = x; lx < x + w; lx += 8) {
+    for (let lx = tx; lx < tx + 128; lx += 10) {
       ctx.beginPath();
-      ctx.moveTo(lx, y);
-      ctx.lineTo(lx, y + h);
+      ctx.moveTo(lx, ty + 12);
+      ctx.lineTo(lx, ty + torsoHeight);
       ctx.stroke();
     }
   } else if (spec.pattern === "stars") {
-    ctx.fillStyle = `${spec.accentColor}44`;
-    for (let i = 0; i < 6; i++) {
-      const sx = x + Math.random() * (w - 10);
-      const sy = y + Math.random() * (h - 10);
-      drawStar(ctx, sx, sy, 3, 5, 2);
-    }
-  } else if (spec.pattern === "acid_wash" || spec.pattern === "grunge") {
-    // Noise/splatter effect
-    for (let i = 0; i < 25; i++) {
-      const nx = x + Math.random() * w;
-      const ny = y + Math.random() * h;
-      const radius = 2 + Math.random() * 5;
-      ctx.fillStyle = `${spec.accentColor}18`;
-      ctx.beginPath();
-      ctx.arc(nx, ny, radius, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.fillStyle = `${spec.accentColor}33`;
+    for (let i = 0; i < 5; i++) {
+      const sx = tx + 16 + (i * 22);
+      const sy = ty + 30 + (i % 2) * 20;
+      drawStar(ctx, sx, sy, 4, 4, 2);
     }
   }
+
+  // ----------------------------------------------------
+  // 4. HIGH-DEFINITION CHEST GRAPHIC PRINT
+  // ----------------------------------------------------
+  if (spec.referenceImageDataUrl) {
+    try {
+      await overlayReferenceImage(ctx, spec.referenceImageDataUrl);
+    } catch {
+      drawChestEmblem(ctx, spec);
+    }
+  } else {
+    drawChestEmblem(ctx, spec);
+  }
+
+  // Subtle realistic edge shading for the fabric
+  applyRealisticShading(ctx, [
+    { x: 231, y: 74, w: 128, h: 64 },
+    { x: tx, y: ty, w: 128, h: torsoHeight },
+    { x: 423, y: ty, w: 128, h: torsoHeight },
+    { x: 159, y: ty, w: 64, h: torsoHeight },
+    { x: 367, y: ty, w: 64, h: torsoHeight },
+    { x: 85, y: 342, w: 64, h: 64 },
+    { x: 341, y: 342, w: 64, h: 64 },
+  ]);
 }
 
-function drawShirtDetails(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
-  // Torso Front (231, 138, 128, 128)
+/**
+ * Renders authentic, clean Roblox Pants / Jeans / Cargo / Skirt
+ */
+async function renderClassicRobloxPants(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
+  const baseColor = spec.primaryColor || "#18181b";
+  const seamColor = spec.accentColor || "#d4d4d8";
+  const waistColor = spec.secondaryColor || "#09090b";
+
   const tx = 231;
   const ty = 138;
   const t = (spec.title || "").toLowerCase();
   const d = spec.details || [];
-  const th = (spec.theme || "").toLowerCase();
-
-  const isMinion =
-    t.includes("minion") ||
-    d.some((item) => item.includes("minion") || item.includes("goggle")) ||
-    th.includes("minion");
-
-  const isOffShoulder = d.some((item) => item.includes("shoulder")) || t.includes("off shoulder") || t.includes("off-shoulder");
-
-  // Minion Shirt takes full thematic control over torso and limbs
-  if (isMinion) {
-    drawMinionShirt(ctx, tx, ty, spec, isOffShoulder);
-    return;
-  }
-
-  const hasBow = d.some((item) => item.includes("bow") || item.includes("ribbon") || item.includes("୨୧")) || t.includes("bow") || spec.theme === "moe" || spec.theme === "jiraikei" || spec.theme === "coquette";
-  const hasLace = d.some((item) => item.includes("lace") || item.includes("ruffles")) || spec.theme === "jiraikei" || spec.theme === "vkei";
-  const hasArmWarmers = d.some((item) => item.includes("warmers") || item.includes("sleeve")) || t.includes("arm") || spec.theme === "vkei" || spec.theme === "emogirl";
-
-  const isBatman = t.includes("batman") || d.some((item) => item.includes("batman") || item.includes("bat-"));
-  const isSpiderman = t.includes("spiderman") || t.includes("spider-man") || t.includes("spider") || d.some((item) => item.includes("spider"));
-  const isHelloKitty = t.includes("hello kitty") || t.includes("hellokitty") || (t.includes("kitty") && !t.includes("cat")) || d.some((item) => item.includes("kitty"));
-  const isKuromi = t.includes("kuromi") || d.some((item) => item.includes("kuromi"));
-  const isCat = t.includes("cat") || t.includes("gatinho") || d.some((item) => item.includes("cat"));
-  const isHeart = t.includes("heart") || t.includes("coração") || t.includes("coracao") || d.some((item) => item.includes("heart"));
-  const isSkull = t.includes("skull") || t.includes("caveira") || d.some((item) => item.includes("skull"));
-  const isButterfly = t.includes("butterfly") || t.includes("borboleta") || d.some((item) => item.includes("butterfly"));
-  const isFlame = t.includes("flame") || t.includes("fire") || t.includes("fogo") || d.some((item) => item.includes("flame"));
-
-  // Neckline & Shoulders
-  if (isOffShoulder) {
-    // Off-shoulder cut: low horizontal neckline exposing shoulders
-    ctx.fillStyle = "#050508";
-    ctx.beginPath();
-    ctx.ellipse(tx + 64, ty + 18, 48, 14, 0, 0, Math.PI);
-    ctx.fill();
-
-    // Delicate spaghetti straps
-    ctx.strokeStyle = spec.accentColor || "#f4f4f5";
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.moveTo(tx + 32, ty);
-    ctx.lineTo(tx + 36, ty + 24);
-    ctx.moveTo(tx + 96, ty);
-    ctx.lineTo(tx + 92, ty + 24);
-    ctx.stroke();
-
-    // Choker / Collar
-    ctx.fillStyle = spec.secondaryColor || "#09090b";
-    ctx.fillRect(tx + 44, ty + 4, 40, 6);
-    ctx.strokeStyle = spec.accentColor || "#a855f7";
-    ctx.strokeRect(tx + 44, ty + 4, 40, 6);
-  } else {
-    // Standard Collar
-    ctx.fillStyle = "#09090b";
-    ctx.beginPath();
-    ctx.ellipse(tx + 64, ty + 12, 28, 14, 0, 0, Math.PI);
-    ctx.fill();
-    ctx.strokeStyle = spec.accentColor || "#a855f7";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  }
-
-  // Scalloped Lace Trim
-  if (hasLace) {
-    ctx.fillStyle = spec.accentColor || "#ffffff";
-    const laceY = isOffShoulder ? ty + 22 : ty + 14;
-    for (let lx = tx + 24; lx <= tx + 104; lx += 8) {
-      ctx.beginPath();
-      ctx.arc(lx, laceY, 2.5, 0, Math.PI);
-      ctx.fill();
-    }
-  }
-
-  // Center zipper or jacket cut
-  if (d.some((item) => item.includes("zipper") || item.includes("jacket") || item.includes("puffer"))) {
-    ctx.strokeStyle = "#71717a";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(tx + 64, ty + 26);
-    ctx.lineTo(tx + 64, ty + 128);
-    ctx.stroke();
-
-    ctx.fillStyle = spec.accentColor || "#e4e4e7";
-    ctx.fillRect(tx + 62, ty + 40, 4, 6);
-  }
-
-  // Syn night shop signature Bow Ribbon
-  if (hasBow) {
-    drawRibbonBow(ctx, tx + 64, isOffShoulder ? ty + 30 : ty + 24, spec.accentColor || "#f472b6");
-  }
-
-  // Chest Graphic / Character Logo / Aesthetic Emblem
-  if (isBatman) {
-    drawBatmanChestGraphic(ctx, tx + 64, ty + 64);
-  } else if (isSpiderman) {
-    drawSpidermanChestGraphic(ctx, tx + 64, ty + 64);
-  } else if (isHelloKitty) {
-    drawHelloKittyGraphic(ctx, tx + 64, ty + 64);
-  } else if (isKuromi) {
-    drawKuromiGraphic(ctx, tx + 64, ty + 64);
-  } else if (isSkull) {
-    drawSkullGraphic(ctx, tx + 64, ty + 64, spec.accentColor || "#e4e4e7");
-  } else if (isHeart) {
-    drawHeartGraphic(ctx, tx + 64, ty + 64, spec.accentColor || "#f43f5e");
-  } else if (isButterfly) {
-    drawButterflyGraphic(ctx, tx + 64, ty + 64, spec.accentColor || "#c084fc");
-  } else if (isFlame) {
-    drawFlameGraphic(ctx, tx + 64, ty + 64, spec.accentColor || "#f97316");
-  } else if (isCat) {
-    drawCatChestGraphic(ctx, tx + 64, ty + 64, spec.accentColor || "#ffffff");
-  } else {
-    drawAestheticChestEmblem(ctx, tx + 64, ty + 64, spec.accentColor || "#c084fc");
-  }
-
-  // Arm Warmers / Sleeves
-  if (hasArmWarmers) {
-    // Striped gothic/emo arm warmers on lower arms
-    const drawArmWarmerStripes = (lx: number, ly: number) => {
-      ctx.fillStyle = spec.secondaryColor || "#000000";
-      ctx.fillRect(lx, ly + 50, 64, 78);
-      ctx.strokeStyle = `${spec.accentColor || "#ffffff"}55`;
-      ctx.lineWidth = 3;
-      for (let sy = ly + 56; sy < ly + 120; sy += 12) {
-        ctx.beginPath();
-        ctx.moveTo(lx, sy);
-        ctx.lineTo(lx + 64, sy);
-        ctx.stroke();
-      }
-    };
-    drawArmWarmerStripes(85, 406);
-    drawArmWarmerStripes(341, 406);
-    drawArmWarmerStripes(21, 406);
-    drawArmWarmerStripes(277, 406);
-  } else {
-    // Normal Sleeve cuffs
-    ctx.fillStyle = spec.secondaryColor || "#000000";
-    ctx.fillRect(85, 406 + 118, 64, 10);
-    ctx.fillRect(341, 406 + 118, 64, 10);
-    ctx.fillRect(21, 406 + 118, 64, 10);
-    ctx.fillRect(277, 406 + 118, 64, 10);
-
-    ctx.strokeStyle = spec.accentColor || "#c084fc";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(85, 406 + 118);
-    ctx.lineTo(85 + 64, 406 + 118);
-    ctx.moveTo(341, 406 + 118);
-    ctx.lineTo(341 + 64, 406 + 118);
-    ctx.stroke();
-  }
-}
-
-function drawPantsDetails(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
-  const tx = 231;
-  const ty = 138;
-  const t = (spec.title || "").toLowerCase();
-  const d = spec.details || [];
-  const th = (spec.theme || "").toLowerCase();
-
-  const isMinion =
-    t.includes("minion") ||
-    d.some((item) => item.includes("minion") || item.includes("goggle")) ||
-    th.includes("minion");
+  const isSkirt = d.some((i) => i.includes("skirt") || i.includes("pleated")) || t.includes("skirt") || t.includes("saia");
+  const isMinion = t.includes("minion") || spec.theme.includes("minion");
 
   if (isMinion) {
     drawMinionPants(ctx, spec);
     return;
   }
 
-  const isSkirt = d.some((item) => item.includes("skirt") || item.includes("pleated")) || t.includes("skirt") || t.includes("saia");
-  const isPjs = d.some((item) => item.includes("pj") || item.includes("pajama")) || t.includes("pj") || t.includes("pajama");
+  // 1. Torso Pelvis (231, 138, 128, 128)
+  ctx.fillStyle = baseColor;
+  ctx.fillRect(tx, ty, 128, 128);
+  ctx.fillRect(423, ty, 128, 128); // Back
+  ctx.fillRect(159, ty, 64, 128);  // Right
+  ctx.fillRect(367, ty, 64, 128);  // Left
+  applyFabricTexture(ctx, tx, ty, 128, 128);
 
   // Waistband & Belt
-  ctx.fillStyle = "#09090b";
+  ctx.fillStyle = waistColor;
   ctx.fillRect(tx, ty, 128, 14);
-  ctx.strokeStyle = "#27272a";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(tx, ty, 128, 14);
+  ctx.fillRect(423, ty, 128, 14);
+  ctx.fillRect(159, ty, 64, 14);
+  ctx.fillRect(367, ty, 64, 14);
 
-  // Belt Loops & Buckle
-  ctx.fillStyle = spec.accentColor || "#d4d4d8";
+  // Belt Buckle & Loops
+  ctx.fillStyle = seamColor;
   ctx.fillRect(tx + 56, ty + 2, 16, 10);
   ctx.fillStyle = "#09090b";
   ctx.fillRect(tx + 60, ty + 4, 8, 6);
 
+  // Front Pockets & Fly Zipper
+  ctx.strokeStyle = `${seamColor}88`;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(tx + 64, ty + 14);
+  ctx.lineTo(tx + 64, ty + 68);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(tx + 24, ty + 14, 20, 0, 0.5 * Math.PI);
+  ctx.arc(tx + 104, ty + 14, 20, 0.5 * Math.PI, Math.PI);
+  ctx.stroke();
+
+  // 2. Legs (Right leg: 21, 85, 149, 213 | Left leg: 277, 341, 405, 469)
+  const legPanels = [21, 85, 149, 213, 277, 341, 405, 469];
+  const legHeight = isSkirt ? 60 : 112; // Skirt stops at thigh, pants down to ankles
+
+  for (const lx of legPanels) {
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(lx, 406, 64, legHeight);
+    applyFabricTexture(ctx, lx, 406, 64, legHeight);
+
+    // Ankle Cuff / Hem
+    drawDoubleStitch(ctx, lx, 406 + legHeight - 4, 64, true, seamColor);
+
+    // Side seam
+    ctx.strokeStyle = `${seamColor}55`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(lx + 32, 406);
+    ctx.lineTo(lx + 32, 406 + legHeight);
+    ctx.stroke();
+  }
+
+  // If skirt: draw pleats
   if (isSkirt) {
-    // Pleated Jirai Kei / Emo Skirt Lines
-    ctx.strokeStyle = `${spec.secondaryColor || "#000000"}cc`;
+    ctx.strokeStyle = `${waistColor}cc`;
     ctx.lineWidth = 2;
     for (let px = tx + 12; px < tx + 116; px += 10) {
       ctx.beginPath();
@@ -342,416 +304,441 @@ function drawPantsDetails(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
       ctx.lineTo(px, ty + 110);
       ctx.stroke();
     }
-    // Safety pin accent
-    ctx.strokeStyle = "#e4e4e7";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(tx + 28, ty + 40);
-    ctx.lineTo(tx + 40, ty + 36);
-    ctx.lineTo(tx + 30, ty + 48);
-    ctx.stroke();
-  } else if (isPjs) {
-    // Cozy cute repeating stars/bats for PJs
-    ctx.fillStyle = `${spec.accentColor}44`;
-    for (const [lx, ly] of [[85, 406], [341, 406]]) {
-      for (let i = 0; i < 5; i++) {
-        drawStar(ctx, lx + 15 + (i % 2) * 28, ly + 20 + i * 20, 4, 4, 2);
-      }
-    }
-  } else {
-    // Cargo Pockets on Thighs
-    const drawCargoPocket = (px: number, py: number) => {
-      ctx.fillStyle = spec.secondaryColor || "#18181b";
-      ctx.fillRect(px + 12, py + 35, 40, 48);
-      ctx.strokeStyle = `${spec.accentColor}66`;
-      ctx.lineWidth = 1.2;
-      ctx.strokeRect(px + 12, py + 35, 40, 48);
-
-      ctx.fillStyle = "#09090b";
-      ctx.fillRect(px + 10, py + 32, 44, 10);
-      ctx.strokeRect(px + 10, py + 32, 44, 10);
-
-      ctx.fillStyle = spec.accentColor || "#e4e4e7";
-      ctx.beginPath();
-      ctx.arc(px + 32, py + 37, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-    };
-
-    drawCargoPocket(85, 406);
-    drawCargoPocket(341, 406);
   }
 
-  // Chain detail hanging from belt
-  ctx.strokeStyle = spec.accentColor || "#e4e4e7";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(tx + 30, ty + 12);
-  ctx.bezierCurveTo(tx + 45, ty + 45, tx + 75, ty + 48, tx + 95, ty + 12);
-  ctx.stroke();
-
-  // Shoe cuffs at bottom
-  ctx.fillStyle = "#09090b";
-  ctx.fillRect(85, 406 + 120, 64, 8);
-  ctx.fillRect(341, 406 + 120, 64, 8);
+  // NOTE: Feet (R_Bottom, L_Bottom) remain 100% transparent for player's shoes.
 }
 
-function drawRibbonBow(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  color: string
-) {
+/**
+ * Draws the high-definition centered chest emblem matching the theme
+ */
+function drawChestEmblem(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
+  const cx = 295; // Center of Torso_Front (231 + 64)
+  const cy = 195; // Center of chest (138 + 57)
+  const t = (spec.title || "").toLowerCase();
+  const d = spec.details || [];
+  const th = (spec.theme || "").toLowerCase();
+  const gt = spec.graphicTheme || "";
+
+  if (
+    gt === "minion_face" ||
+    t.includes("minion") ||
+    th.includes("minion") ||
+    d.some((i) => i.includes("minion"))
+  ) {
+    drawMinionChestGraphic(ctx, cx, cy);
+  } else if (gt === "batman_logo" || t.includes("batman") || d.some((i) => i.includes("batman"))) {
+    drawBatmanChestGraphic(ctx, cx, cy);
+  } else if (gt === "spider_logo" || t.includes("spider") || d.some((i) => i.includes("spider"))) {
+    drawSpidermanChestGraphic(ctx, cx, cy);
+  } else if (gt === "hellokitty" || t.includes("hello kitty") || t.includes("hellokitty")) {
+    drawHelloKittyGraphic(ctx, cx, cy);
+  } else if (gt === "kuromi" || t.includes("kuromi")) {
+    drawKuromiGraphic(ctx, cx, cy);
+  } else if (
+    gt === "chain_necklace" ||
+    t.includes("y2k") ||
+    t.includes("streetwear") ||
+    t.includes("chain") ||
+    t.includes("pajama") ||
+    d.some((i) => i.includes("chain"))
+  ) {
+    drawStreetwearChainAndPocket(ctx, 231, 138);
+  } else if (t.includes("skull") || d.some((i) => i.includes("skull"))) {
+    drawSkullGraphic(ctx, cx, cy, spec.accentColor || "#e4e4e7");
+  } else if (t.includes("heart") || d.some((i) => i.includes("heart"))) {
+    drawHeartGraphic(ctx, cx, cy, spec.accentColor || "#f43f5e");
+  } else if (t.includes("flame") || d.some((i) => i.includes("flame"))) {
+    drawFlameGraphic(ctx, cx, cy, spec.accentColor || "#f97316");
+  } else if (t.includes("butterfly") || d.some((i) => i.includes("butterfly"))) {
+    drawButterflyGraphic(ctx, cx, cy, spec.accentColor || "#c084fc");
+  } else if (t.includes("cat") || t.includes("gato") || d.some((i) => i.includes("cat"))) {
+    drawCatChestGraphic(ctx, cx, cy, spec.accentColor || "#ffffff");
+  } else {
+    drawAestheticChestEmblem(ctx, cx, cy, spec.accentColor || "#c084fc");
+  }
+}
+
+/**
+ * Renders an adorable, high-definition Minion character graphic on the chest
+ */
+export function drawMinionChestGraphic(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
   ctx.save();
-  ctx.fillStyle = color;
-  ctx.strokeStyle = "#ffffff66";
-  ctx.lineWidth = 1;
+  const mw = 52;
+  const mh = 62;
+  const mx = cx - mw / 2;
+  const my = cy - mh / 2;
 
-  // Left loop
+  // 1. Minion Pill-shaped Yellow Body Silhouette
+  const yellowGrad = ctx.createLinearGradient(mx, my, mx, my + mh);
+  yellowGrad.addColorStop(0, "#fde047");
+  yellowGrad.addColorStop(1, "#facc15");
+  ctx.fillStyle = yellowGrad;
   ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.bezierCurveTo(cx - 14, cy - 10, cx - 14, cy + 10, cx, cy);
+  ctx.roundRect(mx, my, mw, mh, [26, 26, 16, 16]);
   ctx.fill();
+  ctx.strokeStyle = "#ca8a04";
+  ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  // Right loop
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.bezierCurveTo(cx + 14, cy - 10, cx + 14, cy + 10, cx, cy);
-  ctx.fill();
-  ctx.stroke();
-
-  // Center knot
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.arc(cx, cy, 3, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Hanging ribbons
-  ctx.strokeStyle = color;
+  // 2. Sprout Hair Strands at the top
+  ctx.strokeStyle = "#18181b";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(cx - 2, cy + 2);
-  ctx.lineTo(cx - 8, cy + 14);
-  ctx.moveTo(cx + 2, cy + 2);
-  ctx.lineTo(cx + 8, cy + 14);
+  ctx.moveTo(cx - 8, my + 6);
+  ctx.quadraticCurveTo(cx - 10, my - 4, cx - 14, my - 6);
+  ctx.moveTo(cx, my + 4);
+  ctx.lineTo(cx, my - 8);
+  ctx.moveTo(cx + 8, my + 6);
+  ctx.quadraticCurveTo(cx + 10, my - 4, cx + 14, my - 6);
   ctx.stroke();
+
+  // 3. Black Goggle Strap
+  const strapY = my + 16;
+  ctx.fillStyle = "#18181b";
+  ctx.fillRect(mx + 1, strapY, mw - 2, 9);
+  ctx.strokeStyle = "#09090b";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(mx + 1, strapY, mw - 2, 9);
+
+  // 4. Dual Silver Metallic Goggles with Eyes
+  const goggleY = strapY + 4.5;
+  const eyeDistance = 11;
+  for (const eyeX of [cx - eyeDistance, cx + eyeDistance]) {
+    // Outer Metallic Rim
+    const rimGrad = ctx.createLinearGradient(eyeX - 11, goggleY - 11, eyeX + 11, goggleY + 11);
+    rimGrad.addColorStop(0, "#ffffff");
+    rimGrad.addColorStop(0.3, "#cbd5e1");
+    rimGrad.addColorStop(0.7, "#94a3b8");
+    rimGrad.addColorStop(1, "#475569");
+    ctx.fillStyle = rimGrad;
+    ctx.beginPath();
+    ctx.arc(eyeX, goggleY, 11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#334155";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Rivets on goggle rim
+    ctx.fillStyle = "#1e293b";
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 2) {
+      const rx = eyeX + Math.cos(a) * 9.2;
+      const ry = goggleY + Math.sin(a) * 9.2;
+      ctx.beginPath();
+      ctx.arc(rx, ry, 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Inner White Sclera
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(eyeX, goggleY, 7.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hazel / Brown Iris
+    ctx.fillStyle = "#92400e";
+    ctx.beginPath();
+    ctx.arc(eyeX, goggleY + 0.5, 4.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Black Pupil
+    ctx.fillStyle = "#0f172a";
+    ctx.beginPath();
+    ctx.arc(eyeX, goggleY + 0.5, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Catchlight Glint
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(eyeX - 1.5, goggleY - 1, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 5. Friendly Smile
+  ctx.strokeStyle = "#854d0e";
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.arc(cx, my + 34, 9, 0.15 * Math.PI, 0.85 * Math.PI);
+  ctx.stroke();
+
+  // 6. Denim Bib with Gru Logo
+  const bibY = my + 44;
+  ctx.fillStyle = "#2563eb";
+  ctx.fillRect(mx + 4, bibY, mw - 8, mh - 44);
+  ctx.strokeStyle = "#fbbf24";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(mx + 4, bibY, mw - 8, mh - 44);
+
+  // Gru "G" Logo
+  ctx.fillStyle = "#0f172a";
+  ctx.beginPath();
+  ctx.arc(cx, bibY + 9, 5.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#fbbf24";
+  ctx.font = "bold 6.5px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("G", cx, bibY + 9);
 
   ctx.restore();
 }
 
-function drawCatChestGraphic(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  color: string
-) {
+/**
+ * Renders silver chain necklace + cute pocket dino mascot
+ * Matching the bestselling style uploaded in reference
+ */
+export function drawStreetwearChainAndPocket(ctx: CanvasRenderingContext2D, tx: number, ty: number) {
   ctx.save();
-  ctx.fillStyle = color;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1.2;
-
-  // Cat Head
+  // 1. Silver curb-link chain necklace hanging from collar
+  const chainY = ty + 12;
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+  ctx.ellipse(tx + 64, chainY, 32, 14, 0, 0, Math.PI);
+  ctx.stroke();
+
+  // Highlights on chain links
+  ctx.strokeStyle = "#94a3b8";
+  ctx.lineWidth = 1;
+  for (let a = 0; a <= Math.PI; a += Math.PI / 8) {
+    const lx = tx + 64 + Math.cos(a) * 32;
+    const ly = chainY + Math.sin(a) * 14;
+    ctx.strokeRect(lx - 1.5, ly - 1.5, 3, 3);
+  }
+
+  // 2. Cute pocket mascot on left chest (matches nightmay1000 store reference)
+  const px = tx + 24;
+  const py = ty + 42;
+
+  // Green dino pocket creature
+  ctx.fillStyle = "#4ade80";
+  ctx.beginPath();
+  ctx.roundRect(px, py + 2, 20, 20, [10, 10, 4, 4]);
   ctx.fill();
+  ctx.strokeStyle = "#16a34a";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Spikes on dino back
+  ctx.fillStyle = "#22c55e";
+  ctx.beginPath();
+  ctx.arc(px - 1, py + 6, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(px - 1, py + 12, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(px - 1, py + 18, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes and expression
+  ctx.fillStyle = "#ef4444";
+  ctx.beginPath();
+  ctx.arc(px + 13, py + 8, 1.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#0f172a";
+  ctx.fillRect(px + 9, py + 14, 5, 1.5);
+
+  ctx.restore();
+}
+
+/**
+ * Renders the iconic Batman yellow oval with black bat silhouette
+ */
+export function drawBatmanChestGraphic(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
+  ctx.save();
+  // Yellow Oval
+  ctx.fillStyle = "#facc15";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, 28, 18, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#09090b";
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // Black Bat Silhouette
+  ctx.fillStyle = "#09090b";
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 8);
+  ctx.lineTo(cx - 2, cy - 12);
+  ctx.lineTo(cx - 4, cy - 8);
+  ctx.quadraticCurveTo(cx - 16, cy - 14, cx - 24, cy - 4);
+  ctx.quadraticCurveTo(cx - 18, cy, cx - 14, cy + 6);
+  ctx.quadraticCurveTo(cx - 8, cy + 8, cx - 4, cy + 5);
+  ctx.lineTo(cx, cy + 10);
+  ctx.lineTo(cx + 4, cy + 5);
+  ctx.quadraticCurveTo(cx + 8, cy + 8, cx + 14, cy + 6);
+  ctx.quadraticCurveTo(cx + 18, cy, cx + 24, cy - 4);
+  ctx.quadraticCurveTo(cx + 16, cy - 14, cx + 4, cy - 8);
+  ctx.lineTo(cx + 2, cy - 12);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+/**
+ * Renders the iconic Spider-Man web and chest spider emblem
+ */
+export function drawSpidermanChestGraphic(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
+  ctx.save();
+  // Spider-web lines radiating from center
+  ctx.strokeStyle = "#09090b";
+  ctx.lineWidth = 1;
+  for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a) * 32, cy + Math.sin(a) * 32);
+    ctx.stroke();
+  }
+  for (const r of [12, 22, 32]) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Black Spider Silhouette in Center
+  ctx.fillStyle = "#09090b";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, 6, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Spider legs
+  ctx.strokeStyle = "#09090b";
+  ctx.lineWidth = 2.2;
+  const legCoords = [
+    [-4, -6, -18, -18, -26, -14],
+    [-5, -2, -20, -8, -28, -2],
+    [-5, 2, -20, 8, -28, 14],
+    [-4, 6, -18, 18, -24, 24],
+    [4, -6, 18, -18, 26, -14],
+    [5, -2, 20, -8, 28, -2],
+    [5, 2, 20, 8, 28, 14],
+    [4, 6, 18, 18, 24, 24],
+  ];
+  for (const [x1, y1, x2, y2, x3, y3] of legCoords) {
+    ctx.beginPath();
+    ctx.moveTo(cx + x1, cy + y1);
+    ctx.lineTo(cx + x2, cy + y2);
+    ctx.lineTo(cx + x3, cy + y3);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/**
+ * Renders Hello Kitty face emblem
+ */
+export function drawHelloKittyGraphic(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
+  ctx.save();
+  // White Head
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, 22, 16, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#09090b";
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
 
   // Ears
+  ctx.fillStyle = "#ffffff";
   ctx.beginPath();
-  ctx.moveTo(cx - 12, cy - 8);
-  ctx.lineTo(cx - 16, cy - 22);
-  ctx.lineTo(cx - 2, cy - 13);
+  ctx.moveTo(cx - 16, cy - 10);
+  ctx.lineTo(cx - 20, cy - 22);
+  ctx.lineTo(cx - 6, cy - 14);
   ctx.fill();
+  ctx.stroke();
 
   ctx.beginPath();
-  ctx.moveTo(cx + 12, cy - 8);
-  ctx.lineTo(cx + 16, cy - 22);
-  ctx.lineTo(cx + 2, cy - 13);
+  ctx.moveTo(cx + 16, cy - 10);
+  ctx.lineTo(cx + 20, cy - 22);
+  ctx.lineTo(cx + 6, cy - 14);
+  ctx.fill();
+  ctx.stroke();
+
+  // Red Ribbon Bow on right ear
+  drawRibbonBow(ctx, cx + 14, cy - 16, "#ef4444");
+
+  // Black Oval Eyes
+  ctx.fillStyle = "#09090b";
+  ctx.beginPath();
+  ctx.ellipse(cx - 8, cy - 1, 2.5, 3.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx + 8, cy - 1, 2.5, 3.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Yellow Nose
+  ctx.fillStyle = "#facc15";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + 3, 3, 2, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // Whiskers
   ctx.strokeStyle = "#09090b";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(cx - 5, cy + 1);
-  ctx.lineTo(cx - 20, cy);
-  ctx.moveTo(cx - 5, cy + 4);
-  ctx.lineTo(cx - 19, cy + 6);
-  ctx.moveTo(cx + 5, cy + 1);
-  ctx.lineTo(cx + 20, cy);
-  ctx.moveTo(cx + 5, cy + 4);
-  ctx.lineTo(cx + 19, cy + 6);
-  ctx.stroke();
-
-  ctx.restore();
-}
-
-function drawAestheticChestEmblem(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  accent: string
-) {
-  ctx.save();
-  ctx.strokeStyle = accent;
-  ctx.fillStyle = `${accent}22`;
-  ctx.lineWidth = 1.5;
-
-  // Aesthetic Cyber 4-point star / cross emblem
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - 18);
-  ctx.quadraticCurveTo(cx + 4, cy - 4, cx + 18, cy);
-  ctx.quadraticCurveTo(cx + 4, cy + 4, cx, cy + 18);
-  ctx.quadraticCurveTo(cx - 4, cy + 4, cx - 18, cy);
-  ctx.quadraticCurveTo(cx - 4, cy - 4, cx, cy - 18);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-
-  // Small inner star
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.restore();
-}
-
-/**
- * Renders the unmistakable official Minion shirt with goggles, eyes, smile, overalls and black gloves
- */
-function drawMinionShirt(
-  ctx: CanvasRenderingContext2D,
-  tx: number,
-  ty: number,
-  spec: UgcDesignSpec,
-  isOffShoulder: boolean
-) {
-  const cx = tx + 64;
-  const cy = ty + 64;
-
-  // 1. Torso Front: Minion Yellow Body
-  const yellowGrad = ctx.createLinearGradient(tx, ty, tx, ty + 128);
-  yellowGrad.addColorStop(0, "#fde047");
-  yellowGrad.addColorStop(1, "#facc15");
-  ctx.fillStyle = yellowGrad;
-  ctx.fillRect(tx, ty, 128, 128);
-
-  // 2. Off-shoulder or collar cut
-  if (isOffShoulder) {
-    ctx.fillStyle = "#050508";
-    ctx.beginPath();
-    ctx.ellipse(cx, ty + 14, 44, 12, 0, 0, Math.PI);
-    ctx.fill();
-
-    // Spaghetti straps
-    ctx.strokeStyle = "#18181b";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(tx + 28, ty); ctx.lineTo(tx + 32, ty + 18);
-    ctx.moveTo(tx + 100, ty); ctx.lineTo(tx + 96, ty + 18);
-    ctx.stroke();
-  }
-
-  // 3. Sprout Hair Strands at the top
-  ctx.strokeStyle = "#18181b";
-  ctx.lineWidth = 1.6;
-  ctx.beginPath();
-  ctx.moveTo(cx - 10, ty + 14); ctx.quadraticCurveTo(cx - 12, ty + 4, cx - 16, ty + 2);
-  ctx.moveTo(cx, ty + 12); ctx.lineTo(cx, ty);
-  ctx.moveTo(cx + 10, ty + 14); ctx.quadraticCurveTo(cx + 12, ty + 4, cx + 16, ty + 2);
-  ctx.stroke();
-
-  // 4. Black Goggle Strap running horizontally across Torso Front
-  const strapY = ty + 36;
-  ctx.fillStyle = "#18181b";
-  ctx.fillRect(tx, strapY, 128, 16);
-  ctx.strokeStyle = "#09090b";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(tx, strapY, 128, 16);
-
-  // 5. Minion Goggles with Two Large Expressive Eyes
-  const goggleY = strapY + 8;
-  const eyeDistance = 17;
-  for (const eyeX of [cx - eyeDistance, cx + eyeDistance]) {
-    // Outer Metallic Silver Rim
-    const rimGrad = ctx.createLinearGradient(eyeX - 17, goggleY - 17, eyeX + 17, goggleY + 17);
-    rimGrad.addColorStop(0, "#ffffff");
-    rimGrad.addColorStop(0.4, "#d1d5db");
-    rimGrad.addColorStop(0.8, "#9ca3af");
-    rimGrad.addColorStop(1, "#4b5563");
-    ctx.fillStyle = rimGrad;
-    ctx.beginPath();
-    ctx.arc(eyeX, goggleY, 17, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 4 Rivets on each rim
-    ctx.fillStyle = "#374151";
-    for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 2) {
-      const rx = eyeX + Math.cos(angle) * 14.5;
-      const ry = goggleY + Math.sin(angle) * 14.5;
-      ctx.beginPath();
-      ctx.arc(rx, ry, 1.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Inner eye shadow
-    ctx.fillStyle = "#e5e7eb";
-    ctx.beginPath();
-    ctx.arc(eyeX, goggleY, 13.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // White Sclera
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.arc(eyeX, goggleY, 12.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Warm Amber/Hazel Iris
-    ctx.fillStyle = "#b45309";
-    ctx.beginPath();
-    ctx.arc(eyeX, goggleY, 6.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Dark Pupil
-    ctx.fillStyle = "#09090b";
-    ctx.beginPath();
-    ctx.arc(eyeX, goggleY, 3.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Specular Light Glint
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.arc(eyeX + 2, goggleY - 2.5, 1.6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(eyeX - 2, goggleY + 2.5, 0.9, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Silver Goggle Bridge connecting the two rims
-  ctx.fillStyle = "#9ca3af";
-  ctx.fillRect(cx - 3, goggleY - 4, 6, 8);
-  ctx.strokeStyle = "#4b5563";
-  ctx.strokeRect(cx - 3, goggleY - 4, 6, 8);
-
-  // 6. Cute Minion Smile
-  ctx.strokeStyle = "#18181b";
-  ctx.lineWidth = 2.2;
-  ctx.beginPath();
-  ctx.arc(cx, goggleY + 14, 11, 0.15 * Math.PI, 0.85 * Math.PI);
-  ctx.stroke();
-  // Cheek lines
-  ctx.beginPath();
-  ctx.moveTo(cx - 10, goggleY + 20); ctx.lineTo(cx - 8, goggleY + 24);
-  ctx.moveTo(cx + 10, goggleY + 20); ctx.lineTo(cx + 8, goggleY + 24);
-  ctx.stroke();
-
-  // 7. Classic Blue Denim Overalls on lower torso
-  const overallY = ty + 70;
-  ctx.fillStyle = "#2563eb";
-  ctx.fillRect(tx, overallY, 128, 58);
-
-  // Yellow Stitch line across top of overalls
-  ctx.strokeStyle = "#fbbf24";
   ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.moveTo(tx, overallY);
-  ctx.lineTo(tx + 128, overallY);
+  ctx.moveTo(cx - 14, cy - 1);
+  ctx.lineTo(cx - 26, cy - 3);
+  ctx.moveTo(cx - 14, cy + 3);
+  ctx.lineTo(cx - 26, cy + 3);
+  ctx.moveTo(cx + 14, cy - 1);
+  ctx.lineTo(cx + 26, cy - 3);
+  ctx.moveTo(cx + 14, cy + 3);
+  ctx.lineTo(cx + 26, cy + 3);
   ctx.stroke();
 
-  // Overalls Suspender Straps coming from shoulders down to overalls
-  ctx.fillStyle = "#2563eb";
-  ctx.fillRect(tx + 14, ty + 12, 18, overallY - (ty + 12));
-  ctx.fillRect(tx + 96, ty + 12, 18, overallY - (ty + 12));
-  // Yellow stitching on suspenders
-  ctx.strokeStyle = "#fbbf24";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(tx + 14, ty + 12, 18, overallY - (ty + 12));
-  ctx.strokeRect(tx + 96, ty + 12, 18, overallY - (ty + 12));
-
-  // Metallic Buttons on suspenders
-  for (const bx of [tx + 23, tx + 105]) {
-    ctx.fillStyle = "#e5e7eb";
-    ctx.beginPath(); ctx.arc(bx, overallY - 5, 4.5, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "#4b5563"; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillStyle = "#1e293b";
-    ctx.beginPath(); ctx.arc(bx, overallY - 5, 1.5, 0, Math.PI * 2); ctx.fill();
-  }
-
-  // Front Overalls Pocket
-  const pox = tx + 46;
-  const poy = overallY + 10;
-  ctx.fillStyle = "#1d4ed8";
-  ctx.fillRect(pox, poy, 36, 32);
-  ctx.strokeStyle = "#fbbf24";
-  ctx.strokeRect(pox, poy, 36, 32);
-
-  // Gru "G" Logo in black circle on pocket
-  ctx.fillStyle = "#0f172a";
-  ctx.beginPath(); ctx.arc(pox + 18, poy + 16, 9, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#fbbf24";
-  ctx.font = "bold 10px sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("G", pox + 18, poy + 16);
-
-  // 8. Torso Back (423, 138, 128, 128)
-  const bx = 423;
-  const by = 138;
-  ctx.fillStyle = yellowGrad;
-  ctx.fillRect(bx, by, 128, 128);
-  // Continuing goggle strap across the back
-  ctx.fillStyle = "#18181b";
-  ctx.fillRect(bx, strapY, 128, 16);
-  ctx.strokeStyle = "#09090b";
-  ctx.strokeRect(bx, strapY, 128, 16);
-  // Denim Overalls on Back
-  ctx.fillStyle = "#2563eb";
-  ctx.fillRect(bx, overallY, 128, 58);
-  ctx.strokeStyle = "#fbbf24";
-  ctx.strokeRect(bx, overallY, 128, 58);
-  // Crossed Overalls Straps in Back
-  ctx.strokeStyle = "#2563eb";
-  ctx.lineWidth = 16;
-  ctx.beginPath();
-  ctx.moveTo(bx + 18, by + 12); ctx.lineTo(bx + 110, overallY);
-  ctx.moveTo(bx + 110, by + 12); ctx.lineTo(bx + 18, overallY);
-  ctx.stroke();
-
-  // 9. Torso Sides (159, 138) and (367, 138)
-  for (const sx of [159, 367]) {
-    ctx.fillStyle = yellowGrad;
-    ctx.fillRect(sx, ty, 64, 128);
-    // Continuing goggle strap
-    ctx.fillStyle = "#18181b";
-    ctx.fillRect(sx, strapY, 64, 16);
-    // Continuing overalls
-    ctx.fillStyle = "#2563eb";
-    ctx.fillRect(sx, overallY, 64, 58);
-  }
-
-  // 10. Arms / Sleeves (Right Arm: 85, 406 | Left Arm: 341, 406)
-  const armSections = [
-    { x: 85, y: 406 }, { x: 21, y: 406 }, { x: 149, y: 406 }, { x: 213, y: 406 },
-    { x: 341, y: 406 }, { x: 277, y: 406 }, { x: 405, y: 406 }, { x: 469, y: 406 },
-  ];
-  for (const arm of armSections) {
-    // Yellow sleeve
-    ctx.fillStyle = "#facc15";
-    ctx.fillRect(arm.x, arm.y, 64, 128);
-    // Black glove cuff at the bottom (26px)
-    ctx.fillStyle = "#18181b";
-    ctx.fillRect(arm.x, arm.y + 102, 64, 26);
-    ctx.strokeStyle = "#374151";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(arm.x, arm.y + 102, 64, 26);
-  }
+  ctx.restore();
 }
 
 /**
- * Renders the official Minion denim overalls pants with yellow cuffs
+ * Renders Kuromi dark gothic face emblem
  */
-function drawMinionPants(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
+export function drawKuromiGraphic(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
+  ctx.save();
+  // Black Jester Hood
+  ctx.fillStyle = "#09090b";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, 22, 18, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Jester Ears
+  ctx.beginPath();
+  ctx.moveTo(cx - 16, cy - 10);
+  ctx.quadraticCurveTo(cx - 24, cy - 26, cx - 20, cy - 30);
+  ctx.quadraticCurveTo(cx - 12, cy - 24, cx - 4, cy - 16);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(cx + 16, cy - 10);
+  ctx.quadraticCurveTo(cx + 24, cy - 26, cx + 20, cy - 30);
+  ctx.quadraticCurveTo(cx + 12, cy - 24, cx + 4, cy - 16);
+  ctx.fill();
+
+  // Pink Skull Emblem on forehead
+  drawSkullGraphic(ctx, cx, cy - 10, "#f472b6");
+
+  // Cute White Face
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + 4, 15, 11, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Slanted Emo Eyes
+  ctx.fillStyle = "#09090b";
+  ctx.beginPath();
+  ctx.ellipse(cx - 6, cy + 2, 2.5, 3.5, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx + 6, cy + 2, 2.5, 3.5, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+/**
+ * Renders Minion Denim Pants
+ */
+export function drawMinionPants(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
   const tx = 231;
   const ty = 138;
 
@@ -760,9 +747,12 @@ function drawMinionPants(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
   denimGrad.addColorStop(0, "#2563eb");
   denimGrad.addColorStop(1, "#1d4ed8");
 
-  // Torso Bottom / Waist (231, 138, 128, 128)
+  // Torso Pelvis (231, 138, 128, 128)
   ctx.fillStyle = denimGrad;
   ctx.fillRect(tx, ty, 128, 128);
+  ctx.fillRect(423, ty, 128, 128);
+  ctx.fillRect(159, ty, 64, 128);
+  ctx.fillRect(367, ty, 64, 128);
 
   // Waistband & yellow stitch
   ctx.fillStyle = "#1e40af";
@@ -780,223 +770,85 @@ function drawMinionPants(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
     ctx.stroke();
   }
 
-  // Pants Legs (Right: 85, 406 | Left: 341, 406)
-  const legSections = [
-    { x: 85, y: 406 }, { x: 21, y: 406 }, { x: 149, y: 406 }, { x: 213, y: 406 },
-    { x: 341, y: 406 }, { x: 277, y: 406 }, { x: 405, y: 406 }, { x: 469, y: 406 },
-  ];
-  for (const leg of legSections) {
+  // Pants Legs (Right: 21-276 | Left: 277-532)
+  const legPanels = [21, 85, 149, 213, 277, 341, 405, 469];
+  for (const lx of legPanels) {
     ctx.fillStyle = denimGrad;
-    ctx.fillRect(leg.x, leg.y, 64, 128);
+    ctx.fillRect(lx, 406, 64, 112);
 
     // Denim side seam
     ctx.strokeStyle = "#fbbf24";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(leg.x + 32, leg.y);
-    ctx.lineTo(leg.x + 32, leg.y + 110);
+    ctx.moveTo(lx + 32, 406);
+    ctx.lineTo(lx + 32, 406 + 96);
     ctx.stroke();
 
     // Rolled-up Minion Yellow Cuffs at the ankle
     ctx.fillStyle = "#facc15";
-    ctx.fillRect(leg.x, leg.y + 110, 64, 18);
+    ctx.fillRect(lx, 406 + 96, 64, 16);
     ctx.strokeStyle = "#fbbf24";
-    ctx.strokeRect(leg.x, leg.y + 110, 64, 18);
+    ctx.strokeRect(lx, 406 + 96, 64, 16);
   }
 }
 
 /**
- * Renders the iconic Batman yellow oval with black bat silhouette
+ * Renders cute Cat Face Graphic
  */
-function drawBatmanChestGraphic(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
+export function drawCatChestGraphic(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  color: string
+) {
   ctx.save();
-  // Yellow Oval
-  ctx.fillStyle = "#facc15";
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.2;
+
   ctx.beginPath();
-  ctx.ellipse(cx, cy, 28, 18, 0, 0, Math.PI * 2);
+  ctx.arc(cx, cy, 14, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "#09090b";
-  ctx.lineWidth = 2.5;
-  ctx.stroke();
 
-  // Black Bat Silhouette
-  ctx.fillStyle = "#09090b";
   ctx.beginPath();
-  ctx.moveTo(cx, cy - 8); // Head
-  ctx.lineTo(cx - 2, cy - 12); // Left ear
-  ctx.lineTo(cx - 4, cy - 8);
-  ctx.quadraticCurveTo(cx - 16, cy - 14, cx - 24, cy - 4); // Left wing top
-  ctx.quadraticCurveTo(cx - 18, cy, cx - 14, cy + 6); // Left wing scallop 1
-  ctx.quadraticCurveTo(cx - 8, cy + 8, cx - 4, cy + 5); // Left wing scallop 2
-  ctx.lineTo(cx, cy + 10); // Tail
-  ctx.lineTo(cx + 4, cy + 5); // Right wing scallop 2
-  ctx.quadraticCurveTo(cx + 8, cy + 8, cx + 14, cy + 6); // Right wing scallop 1
-  ctx.quadraticCurveTo(cx + 18, cy, cx + 24, cy - 4); // Right wing top
-  ctx.quadraticCurveTo(cx + 16, cy - 14, cx + 4, cy - 8);
-  ctx.lineTo(cx + 2, cy - 12); // Right ear
-  ctx.closePath();
+  ctx.moveTo(cx - 12, cy - 8);
+  ctx.lineTo(cx - 16, cy - 22);
+  ctx.lineTo(cx - 2, cy - 13);
   ctx.fill();
-  ctx.restore();
-}
 
-/**
- * Renders the iconic Spider-Man web and chest spider emblem
- */
-function drawSpidermanChestGraphic(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
-  ctx.save();
-  // Spider-web lines radiating from center
-  ctx.strokeStyle = "#09090b";
-  ctx.lineWidth = 1;
-  for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(a) * 32, cy + Math.sin(a) * 32);
-    ctx.stroke();
-  }
-  for (const r of [12, 22, 32]) {
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  // Black Spider Emblem
-  ctx.fillStyle = "#09090b";
-  // Body
   ctx.beginPath();
-  ctx.ellipse(cx, cy, 4, 10, 0, 0, Math.PI * 2);
+  ctx.moveTo(cx + 12, cy - 8);
+  ctx.lineTo(cx + 16, cy - 22);
+  ctx.lineTo(cx + 2, cy - 13);
   ctx.fill();
-  // Head
-  ctx.beginPath();
-  ctx.arc(cx, cy - 11, 3.5, 0, Math.PI * 2);
-  ctx.fill();
-  // Legs
-  ctx.strokeStyle = "#09090b";
-  ctx.lineWidth = 1.6;
-  for (const dir of [-1, 1]) {
-    // Upper legs
-    ctx.beginPath(); ctx.moveTo(cx + dir * 3, cy - 6); ctx.lineTo(cx + dir * 14, cy - 18); ctx.lineTo(cx + dir * 18, cy - 14); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx + dir * 3, cy - 3); ctx.lineTo(cx + dir * 16, cy - 8); ctx.lineTo(cx + dir * 20, cy - 3); ctx.stroke();
-    // Lower legs
-    ctx.beginPath(); ctx.moveTo(cx + dir * 3, cy + 2); ctx.lineTo(cx + dir * 16, cy + 10); ctx.lineTo(cx + dir * 14, cy + 18); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx + dir * 3, cy + 6); ctx.lineTo(cx + dir * 12, cy + 18); ctx.lineTo(cx + dir * 10, cy + 24); ctx.stroke();
-  }
-  ctx.restore();
-}
-
-/**
- * Renders Hello Kitty face with iconic red/pink bow and yellow nose
- */
-function drawHelloKittyGraphic(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
-  ctx.save();
-  // White Head Oval
-  ctx.fillStyle = "#ffffff";
-  ctx.strokeStyle = "#09090b";
-  ctx.lineWidth = 1.8;
-  ctx.beginPath();
-  ctx.ellipse(cx, cy, 22, 17, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-
-  // Left & Right Ears
-  ctx.beginPath();
-  ctx.moveTo(cx - 18, cy - 8); ctx.lineTo(cx - 20, cy - 22); ctx.lineTo(cx - 8, cy - 15); ctx.fill(); ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(cx + 18, cy - 8); ctx.lineTo(cx + 20, cy - 22); ctx.lineTo(cx + 8, cy - 15); ctx.fill(); ctx.stroke();
-
-  // Red Ribbon Bow on Left Ear
-  drawRibbonBow(ctx, cx - 14, cy - 16, "#ef4444");
-
-  // Eyes
-  ctx.fillStyle = "#09090b";
-  ctx.beginPath(); ctx.ellipse(cx - 8, cy + 1, 2.2, 3.2, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(cx + 8, cy + 1, 2.2, 3.2, 0, 0, Math.PI * 2); ctx.fill();
-
-  // Yellow Nose
-  ctx.fillStyle = "#facc15";
-  ctx.beginPath(); ctx.ellipse(cx, cy + 4, 3, 2, 0, 0, Math.PI * 2); ctx.fill();
 
   // Whiskers
   ctx.strokeStyle = "#09090b";
-  ctx.lineWidth = 1.2;
-  for (const dir of [-1, 1]) {
-    ctx.beginPath(); ctx.moveTo(cx + dir * 14, cy + 1); ctx.lineTo(cx + dir * 26, cy); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx + dir * 14, cy + 5); ctx.lineTo(cx + dir * 26, cy + 6); ctx.stroke();
-  }
-  ctx.restore();
-}
-
-/**
- * Renders Kuromi face with black jester hat and pink skull
- */
-function drawKuromiGraphic(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
-  ctx.save();
-  // Black Jester Hat
-  ctx.fillStyle = "#09090b";
+  ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.arc(cx, cy, 22, 0, Math.PI * 2);
-  ctx.fill();
-  // Pointy floppy ears
-  ctx.beginPath();
-  ctx.moveTo(cx - 16, cy - 10); ctx.lineTo(cx - 26, cy - 30); ctx.lineTo(cx - 6, cy - 20); ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(cx + 16, cy - 10); ctx.lineTo(cx + 26, cy - 30); ctx.lineTo(cx + 6, cy - 20); ctx.fill();
-
-  // White Face
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.ellipse(cx, cy + 6, 17, 13, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Pink Skull on Hat
-  ctx.fillStyle = "#f472b6";
-  ctx.beginPath();
-  ctx.arc(cx, cy - 8, 5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#09090b";
-  ctx.beginPath(); ctx.arc(cx - 1.5, cy - 8, 1, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx + 1.5, cy - 8, 1, 0, Math.PI * 2); ctx.fill();
-
-  // Mischievous Eyes & Blush
-  ctx.fillStyle = "#09090b";
-  ctx.beginPath(); ctx.ellipse(cx - 7, cy + 5, 2, 3, 0.2, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(cx + 7, cy + 5, 2, 3, -0.2, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#f472b6";
-  ctx.beginPath(); ctx.arc(cx - 10, cy + 10, 2.5, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx + 10, cy + 10, 2.5, 0, Math.PI * 2); ctx.fill();
-
-  ctx.restore();
-}
-
-/**
- * Renders an aesthetic chrome / gothic heart
- */
-function drawHeartGraphic(ctx: CanvasRenderingContext2D, cx: number, cy: number, color: string) {
-  ctx.save();
-  ctx.fillStyle = color;
-  ctx.strokeStyle = "#ffffff44";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(cx, cy + 12);
-  ctx.bezierCurveTo(cx - 18, cy - 2, cx - 22, cy - 18, cx, cy - 8);
-  ctx.bezierCurveTo(cx + 22, cy - 18, cx + 18, cy - 2, cx, cy + 12);
-  ctx.fill();
+  ctx.moveTo(cx - 5, cy + 1);
+  ctx.lineTo(cx - 18, cy);
+  ctx.moveTo(cx - 5, cy + 4);
+  ctx.lineTo(cx - 17, cy + 5);
+  ctx.moveTo(cx + 5, cy + 1);
+  ctx.lineTo(cx + 18, cy);
+  ctx.moveTo(cx + 5, cy + 4);
+  ctx.lineTo(cx + 17, cy + 5);
   ctx.stroke();
 
-  // Glossy highlight curve
-  ctx.strokeStyle = "#ffffffaa";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.arc(cx - 8, cy - 7, 5, 0.8 * Math.PI, 1.6 * Math.PI);
-  ctx.stroke();
   ctx.restore();
 }
 
 /**
- * Renders a gothic emo skull with crossbones
+ * Renders Skull Emblem
  */
-function drawSkullGraphic(ctx: CanvasRenderingContext2D, cx: number, cy: number, color: string) {
+export function drawSkullGraphic(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  color: string
+) {
   ctx.save();
-  // Skull Cranium
   ctx.fillStyle = color;
   ctx.strokeStyle = "#09090b";
   ctx.lineWidth = 1.5;
@@ -1004,52 +856,87 @@ function drawSkullGraphic(ctx: CanvasRenderingContext2D, cx: number, cy: number,
   ctx.arc(cx, cy - 4, 14, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
+
   // Jaw
   ctx.fillRect(cx - 8, cy + 6, 16, 10);
   ctx.strokeRect(cx - 8, cy + 6, 16, 10);
 
   // Hollow Eyes
   ctx.fillStyle = "#09090b";
-  ctx.beginPath(); ctx.ellipse(cx - 5, cy - 3, 3.5, 4.5, -0.2, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(cx + 5, cy - 3, 3.5, 4.5, 0.2, 0, Math.PI * 2); ctx.fill();
-  // Nose
-  ctx.beginPath(); ctx.moveTo(cx, cy + 2); ctx.lineTo(cx - 2, cy + 5); ctx.lineTo(cx + 2, cy + 5); ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx - 5, cy - 3, 3.5, 4.5, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx + 5, cy - 3, 3.5, 4.5, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+
   // Teeth
   ctx.strokeStyle = "#09090b";
   ctx.lineWidth = 1.2;
   for (let tx = cx - 5; tx <= cx + 5; tx += 3.5) {
-    ctx.beginPath(); ctx.moveTo(tx, cy + 7); ctx.lineTo(tx, cy + 15); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(tx, cy + 7);
+    ctx.lineTo(tx, cy + 15);
+    ctx.stroke();
   }
   ctx.restore();
 }
 
 /**
- * Renders Y2K butterfly wings
+ * Renders Heart Graphic
  */
-function drawButterflyGraphic(ctx: CanvasRenderingContext2D, cx: number, cy: number, color: string) {
+export function drawHeartGraphic(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  color: string
+) {
   ctx.save();
   ctx.fillStyle = color;
   ctx.strokeStyle = "#ffffff66";
   ctx.lineWidth = 1.2;
-  // Left wings
-  ctx.beginPath(); ctx.ellipse(cx - 10, cy - 6, 12, 8, -0.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(cx - 8, cy + 6, 8, 6, 0.3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  // Right wings
-  ctx.beginPath(); ctx.ellipse(cx + 10, cy - 6, 12, 8, 0.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(cx + 8, cy + 6, 8, 6, -0.3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  // Body & Antennas
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(cx - 1.5, cy - 10, 3, 20);
-  ctx.strokeStyle = "#ffffff";
-  ctx.beginPath(); ctx.moveTo(cx - 1, cy - 10); ctx.lineTo(cx - 6, cy - 18); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx + 1, cy - 10); ctx.lineTo(cx + 6, cy - 18); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx, cy + 12);
+  ctx.bezierCurveTo(cx - 16, cy - 2, cx - 18, cy - 16, cx, cy - 8);
+  ctx.bezierCurveTo(cx + 18, cy - 16, cx + 16, cy - 2, cx, cy + 12);
+  ctx.fill();
+  ctx.stroke();
   ctx.restore();
 }
 
 /**
- * Renders streetwear flame tongues
+ * Renders Butterfly Graphic
  */
-function drawFlameGraphic(ctx: CanvasRenderingContext2D, cx: number, cy: number, color: string) {
+export function drawButterflyGraphic(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  color: string
+) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.strokeStyle = "#ffffff66";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.ellipse(cx - 10, cy - 6, 12, 8, -0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(cx + 10, cy - 6, 12, 8, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * Renders Flame Graphic
+ */
+export function drawFlameGraphic(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  _color: string
+) {
   ctx.save();
   const flameGrad = ctx.createLinearGradient(cx, cy + 18, cx, cy - 18);
   flameGrad.addColorStop(0, "#ef4444");
@@ -1067,7 +954,85 @@ function drawFlameGraphic(ctx: CanvasRenderingContext2D, cx: number, cy: number,
   ctx.restore();
 }
 
-function drawStar(
+/**
+ * Renders Ribbon Bow
+ */
+export function drawRibbonBow(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  color: string
+) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.strokeStyle = "#ffffff66";
+  ctx.lineWidth = 1;
+
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.bezierCurveTo(cx - 14, cy - 10, cx - 14, cy + 10, cx, cy);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.bezierCurveTo(cx + 14, cy - 10, cx + 14, cy + 10, cx, cy);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx - 2, cy + 2);
+  ctx.lineTo(cx - 8, cy + 14);
+  ctx.moveTo(cx + 2, cy + 2);
+  ctx.lineTo(cx + 8, cy + 14);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+/**
+ * Renders Aesthetic Cyber Cross / Star Emblem
+ */
+export function drawAestheticChestEmblem(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  accent: string
+) {
+  ctx.save();
+  ctx.strokeStyle = accent;
+  ctx.fillStyle = `${accent}22`;
+  ctx.lineWidth = 1.5;
+
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 18);
+  ctx.quadraticCurveTo(cx + 4, cy - 4, cx + 18, cy);
+  ctx.quadraticCurveTo(cx + 4, cy + 4, cx, cy + 18);
+  ctx.quadraticCurveTo(cx - 4, cy + 4, cx - 18, cy);
+  ctx.quadraticCurveTo(cx - 4, cy - 4, cx, cy - 18);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+/**
+ * Draws crisp 4-pointed or 5-pointed stars
+ */
+export function drawStar(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
@@ -1098,24 +1063,85 @@ function drawStar(
   ctx.fill();
 }
 
-function applyRealisticShading(
+/**
+ * Draws a clean double-needle seam stitch
+ */
+export function drawDoubleStitch(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  len: number,
+  horizontal: boolean,
+  color: string
+) {
+  ctx.save();
+  ctx.strokeStyle = `${color}44`;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 2]);
+
+  if (horizontal) {
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + len, y);
+    ctx.moveTo(x, y + 2.5);
+    ctx.lineTo(x + len, y + 2.5);
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, y + len);
+    ctx.moveTo(x + 2.5, y);
+    ctx.lineTo(x + 2.5, y + len);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/**
+ * Applies subtle cotton/jersey weave texture
+ */
+export function applyFabricTexture(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+) {
+  ctx.save();
+  ctx.fillStyle = "rgba(255, 255, 255, 0.015)";
+  const step = 6;
+  for (let px = x; px < x + w; px += step) {
+    for (let py = y; py < y + h; py += step) {
+      if ((px + py) % (step * 2) === 0) {
+        ctx.fillRect(px, py, 1, 1);
+      }
+    }
+  }
+  ctx.restore();
+}
+
+/**
+ * Applies realistic edge seams and corner shading
+ */
+export function applyRealisticShading(
   ctx: CanvasRenderingContext2D,
   sections: Array<{ x: number; y: number; w: number; h: number }>
 ) {
   for (const s of sections) {
-    // Subtle inner shadow along borders
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.45)";
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(s.x + 0.75, s.y + 0.75, s.w - 1.5, s.h - 1.5);
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(s.x + 0.6, s.y + 0.6, s.w - 1.2, s.h - 1.2);
 
-    // Subtle edge highlight
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
     ctx.lineWidth = 1;
     ctx.strokeRect(s.x + 1.5, s.y + 1.5, s.w - 3, s.h - 3);
   }
 }
 
-async function overlayReferenceImage(
+/**
+ * Composites reference image onto the front torso
+ */
+export async function overlayReferenceImage(
   ctx: CanvasRenderingContext2D,
   dataUrl: string
 ): Promise<void> {
@@ -1123,12 +1149,17 @@ async function overlayReferenceImage(
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
-      // Place centered on Torso Front (231, 138, 128, 128)
+      // Bounded centered on Torso Front (231, 138, 128, 128)
       ctx.save();
+      const targetW = 76;
+      const targetH = 76;
+      const targetX = 231 + (128 - targetW) / 2;
+      const targetY = 138 + 26;
+
       ctx.beginPath();
-      ctx.rect(231 + 16, 138 + 24, 96, 80);
+      ctx.roundRect(targetX, targetY, targetW, targetH, 4);
       ctx.clip();
-      ctx.drawImage(img, 231 + 16, 138 + 24, 96, 80);
+      ctx.drawImage(img, targetX, targetY, targetW, targetH);
       ctx.restore();
       resolve();
     };
@@ -1137,21 +1168,21 @@ async function overlayReferenceImage(
   });
 }
 
-function renderTshirtGraphic(spec: UgcDesignSpec): string {
+/**
+ * Renders Roblox 2D T-Shirt Decal (512x512)
+ */
+export function renderTshirtGraphic(spec: UgcDesignSpec): string {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
   canvas.height = 512;
   const ctx = canvas.getContext("2d");
   if (!ctx) return "";
 
-  // Pure dark background with glowing emblem
   ctx.fillStyle = spec.primaryColor || "#09090b";
   ctx.fillRect(0, 0, 512, 512);
 
-  // Large center graphic
   drawAestheticChestEmblem(ctx, 256, 256, spec.accentColor || "#38bdf8");
 
-  // Title text at bottom
   ctx.fillStyle = "#ffffff";
   ctx.font = "bold 24px sans-serif";
   ctx.textAlign = "center";

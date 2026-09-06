@@ -628,9 +628,19 @@ export interface UgcDesignResponse {
     secondaryColor: string;
     accentColor: string;
     pattern: "solid" | "stripes" | "camo" | "plaid" | "grunge" | "acid_wash" | "stars";
+    shirtStyle?: "short_sleeve" | "long_sleeve" | "crop_top" | "hoodie";
+    graphicTheme?: string;
+    graphicText?: string;
     details: string[];
     description: string;
     reply: string;
+    catalogResearch?: Array<{
+      id: number;
+      name: string;
+      creatorName: string;
+      favoriteCount: number;
+      url: string;
+    }>;
   };
 }
 
