@@ -395,7 +395,9 @@ export async function buildDashboard(groupIdRaw?: string): Promise<DashboardPayl
   let groups: DashboardGroup[] = [];
   let access: GroupAccess[] = [];
   try {
-    access = await listGroupAccess(account.cookie, account.userId);
+    access = (await listGroupAccess(account.cookie, account.userId)).filter(
+      (g) => g.isOwner || g.canPost || g.canViewSales || g.manageItems || g.createItems || g.rank === 255
+    );
     groups = access.map(toDashboardGroup);
     payload.groups = groups;
     payload.sources.groups = groups.length ? "live" : "empty";

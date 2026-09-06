@@ -169,22 +169,30 @@ export async function listGroupAccess(cookie: string, userId: number): Promise<G
     if (i) await sleep(GAP_MS);
     const roleId = row.role?.id || 0;
     const flags = roleId ? await readMembership(cookie, id, roleId) : null;
-    groups.push(
-      decide({
-        id,
-        name: row.group?.name || "Group",
-        role: row.role?.name || "Member",
-        rank: row.role?.rank || 0,
-        isOwner: flags?.isOwner,
-        createItems: flags?.createItems,
-        manageItems: flags?.manageItems,
-        viewGroupPayouts: flags?.viewGroupPayouts,
-        memberCount: typeof row.group?.memberCount === "number" ? row.group.memberCount : 0,
-      })
-    );
+    const entry = decide({
+      id,
+      name: row.group?.name || "Group",
+      role: row.role?.name || "Member",
+      rank: row.role?.rank || 0,
+      isOwner: flags?.isOwner,
+      createItems: flags?.createItems,
+      manageItems: flags?.manageItems,
+      viewGroupPayouts: flags?.viewGroupPayouts,
+      memberCount: typeof row.group?.memberCount === "number" ? row.group.memberCount : 0,
+    });
+    if (
+      entry.isOwner ||
+      entry.canPost ||
+      entry.canViewSales ||
+      entry.manageItems ||
+      entry.createItems ||
+      entry.rank === 255
+    ) {
+      groups.push(entry);
+    }
   }
 
-  groups.sort((a, b) => Number(b.canPost) - Number(a.canPost) || a.name.localeCompare(b.name));
+  groups.sort((a, b) => Number(b.isOwner) - Number(a.isOwner) || Number(b.canPost) - Number(a.canPost) || a.name.localeCompare(b.name));
   cache.set(key, { at: Date.now(), groups });
   return groups;
 }

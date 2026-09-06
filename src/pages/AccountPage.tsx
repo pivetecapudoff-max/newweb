@@ -120,7 +120,9 @@ export function AccountPage() {
   }
 
   const user = dashboard?.user;
-  const groups = dashboard?.groups || [];
+  const groups = (dashboard?.groups || []).filter(
+    (g) => g.isOwner || g.canPost || g.canViewSales || g.rank === 255 || g.role.toLowerCase().includes("owner")
+  );
   const kpis = dashboard?.kpis;
   const isConnected = Boolean(account?.connected);
 

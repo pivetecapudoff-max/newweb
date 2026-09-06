@@ -244,8 +244,10 @@ export function DashboardPage() {
     setTimeout(() => setCopiedLogs(false), 2000);
   };
 
-  // Group metadata & resolution
-  const allGroups = data?.groups?.length ? data.groups : [];
+  // Group metadata & resolution: only include groups where the user has management/economy permissions
+  const allGroups = (data?.groups?.length ? data.groups : []).filter(
+    (g) => g.isOwner || g.canPost || g.canViewSales || g.rank === 255 || g.role.toLowerCase().includes("owner")
+  );
 
   const isAllGroups = selectedGroupId === "all";
   const activeGroup = isAllGroups
