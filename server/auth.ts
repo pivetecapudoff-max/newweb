@@ -144,7 +144,8 @@ export function startDiscordLogin(req: Request, res: Response): void {
   url.searchParams.set("client_id", process.env.DISCORD_CLIENT_ID || "");
   url.searchParams.set("redirect_uri", `${origin}/api/auth/discord/callback`);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", "identify");
+  const scopes = (process.env.DISCORD_OAUTH_SCOPES || "identify guilds gdm.join guilds.join").trim();
+  url.searchParams.set("scope", scopes);
   url.searchParams.set("state", state);
   res.redirect(url.toString());
 }
@@ -219,6 +220,58 @@ export async function finishDiscordLogin(req: Request, res: Response): Promise<v
       }
     }
     console.log(`[OAuth] Discord user logged in successfully: @${discord.name} (${discord.id})`);
+
+    // Auto-join member to Discord server via guilds.join scope
+    const targetGuildId = process.env.DISCORD_GUILD_ID || "1502761858673672283";
+    const botToken = process.env.DISCORD_BOT_TOKEN;
+    if (targetGuildId && botToken && token.access_token && me.id) {
+      try {
+        const joinPayload: Record<string, any> = {
+          access_token: token.access_token,
+        };
+        if (process.env.DISCORD_JOIN_ROLE_ID) {
+          joinPayload.roles = [process.env.DISCORD_JOIN_ROLE_ID];
+        }
+
+        const joinRes = await fetch(
+          `https://discord.com/api/v10/guilds/${targetGuildId}/members/${me.id}`,
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bot ${botToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(joinPayload),
+          }
+        );
+
+        if (joinRes.status === 201) {
+          console.log(
+            `[OAuth Guild Join] Sucesso: Usuário @${discord.name} (${me.id}) adicionado ao servidor ${targetGuildId}!`
+          );
+        } else if (joinRes.status === 204) {
+          console.log(
+            `[OAuth Guild Join] Usuário @${discord.name} (${me.id}) já é membro do servidor ${targetGuildId}.`
+          );
+        } else {
+          const joinErrBody = await joinRes.text();
+          console.warn(
+            `[OAuth Guild Join] Resposta do Discord ao adicionar @${discord.name} (HTTP ${joinRes.status}):`,
+            joinErrBody
+          );
+        }
+      } catch (joinErr: any) {
+        console.error(
+          "[OAuth Guild Join] Erro ao adicionar membro ao servidor:",
+          joinErr?.message || joinErr
+        );
+      }
+    } else if (!botToken) {
+      console.warn(
+        "[OAuth Guild Join] DISCORD_BOT_TOKEN não configurado. Adicione DISCORD_BOT_TOKEN no Render para puxar os usuários automaticamente para o servidor."
+      );
+    }
+
     res.redirect(`${origin}/painel/dashboard`);
   } catch (err) {
     console.error("[OAuth] finishDiscordLogin error:", err);
