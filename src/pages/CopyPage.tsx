@@ -17,8 +17,6 @@ import {
   RefreshCw,
   FolderArchive,
   ArrowRight,
-  ShieldCheck,
-  Zap,
 } from "lucide-react";
 import { ripUgcItem, type UgcRipResult } from "../lib/api";
 import { useNavigate } from "react-router-dom";
@@ -35,14 +33,6 @@ interface HistoryItem {
   isClothing: boolean;
   copiedAt: string;
 }
-
-const PRESET_EXAMPLES = [
-  { label: "👱 Blonde Hair (3D)", id: "122105362767114" },
-  { label: "🦋 Butterfly Hat (3D)", id: "4849184439" },
-  { label: "🧝 Elf Ears (3D)", id: "6275932619" },
-  { label: "🎟️ Pass (3D)", id: "18112476810" },
-  { label: "🥋 Dark Robes (2D)", id: "12210536" },
-];
 
 export function CopyPage() {
   const navigate = useNavigate();
@@ -125,12 +115,8 @@ export function CopyPage() {
   return (
     <div className="min-h-screen bg-transparent p-6 lg:p-10 max-w-7xl mx-auto space-y-8 pb-20">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
+      <div className="border-b border-white/[0.08] pb-6">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">
-            <Zap className="w-3.5 h-3.5" />
-            Roblox UGC 3D Ripper & Cloner
-          </div>
           <h1 className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
             Copy
             <span className="text-xs font-normal px-2.5 py-1 rounded-lg bg-white/5 border border-white/[0.08] text-white/60">
@@ -140,13 +126,6 @@ export function CopyPage() {
           <p className="text-sm text-white/50 mt-1 max-w-2xl">
             Extraia o modelo 3D (.OBJ, .MTL) e textura original (.PNG) de qualquer item do catálogo Roblox com 1 clique.
           </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/40 border border-white/[0.08] text-xs text-white/60">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Sessão Roblox Integrada</span>
-          </div>
         </div>
       </div>
 
@@ -194,23 +173,7 @@ export function CopyPage() {
             </div>
           </div>
 
-          {/* Quick Examples */}
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="text-xs text-white/40 font-medium mr-1">Exemplos rápidos:</span>
-            {PRESET_EXAMPLES.map((ex) => (
-              <button
-                key={ex.id}
-                onClick={() => {
-                  setInputVal(ex.id);
-                  handleRip(ex.id);
-                }}
-                disabled={loading}
-                className="px-3 py-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] hover:border-blue-500/40 text-xs text-white/70 hover:text-white transition-all cursor-pointer disabled:opacity-50"
-              >
-                {ex.label}
-              </button>
-            ))}
-          </div>
+
 
           {/* Advanced Accordion */}
           <div className="pt-2 border-t border-white/[0.06]">

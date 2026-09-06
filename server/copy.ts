@@ -8,7 +8,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "..");
 const repoRoot = path.resolve(rootDir, "..");
-const pythonScriptPath = path.resolve(repoRoot, "ugc_downloader.py");
+const candidates = [
+  path.resolve(rootDir, "ugc_downloader.py"),
+  path.resolve(__dirname, "ugc_downloader.py"),
+  path.resolve(repoRoot, "ugc_downloader.py"),
+];
+const pythonScriptPath = candidates.find((p) => fs.existsSync(p)) || candidates[0];
 const downloadsDir = path.resolve(rootDir, "public", "downloads");
 
 // Ensure downloads directory exists
@@ -75,7 +80,7 @@ export async function ripUgcAsset(params: {
 
   return new Promise((resolve, reject) => {
     const py = spawn("python", args, {
-      cwd: repoRoot,
+      cwd: path.dirname(pythonScriptPath),
       env: { ...process.env, PYTHONIOENCODING: "utf-8" },
     });
 
