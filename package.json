@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@paper-design/shaders": "^0.0.80",
+    "adm-zip": "^0.6.0",
     "archiver": "^8.0.0",
     "autoprefixer": "^10.4.21",
     "cors": "^2.8.5",
@@ -28,6 +29,7 @@
     "tsx": "^4.20.5"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
     "@types/archiver": "^8.0.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",

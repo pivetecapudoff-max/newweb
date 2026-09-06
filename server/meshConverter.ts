@@ -1,8 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import archiver from "archiver";
-// @ts-ignore
-import draco3d from "draco3d";
+import { createRequire } from "node:module";
+import AdmZip from "adm-zip";
+
+const require = createRequire(import.meta.url);
+const draco3d = require("draco3d");
 
 let cachedDecoderModule: any = null;
 
@@ -237,23 +239,13 @@ export async function convertRobloxMeshToObj(
  * Re-packages a download folder into a clean ZIP file containing all extracted files
  */
 export async function repackZip(itemDir: string, zipPath: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const output = fs.createWriteStream(zipPath);
-    const archive = archiver("zip", { zlib: { level: 9 } });
-
-    output.on("close", () => resolve());
-    archive.on("error", (err) => reject(err));
-
-    archive.pipe(output);
-
-    const files = fs.readdirSync(itemDir);
-    for (const file of files) {
-      const fullPath = path.join(itemDir, file);
-      if (fs.statSync(fullPath).isFile()) {
-        archive.file(fullPath, { name: file });
-      }
+  const zip = new AdmZip();
+  const files = fs.readdirSync(itemDir);
+  for (const file of files) {
+    const fullPath = path.join(itemDir, file);
+    if (fs.statSync(fullPath).isFile()) {
+      zip.addLocalFile(fullPath);
     }
-
-    archive.finalize();
-  });
+  }
+  zip.writeZip(zipPath);
 }
