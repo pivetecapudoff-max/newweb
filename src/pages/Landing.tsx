@@ -474,57 +474,6 @@ export function Landing() {
               </div>
             </div>
 
-            {/* Recent Sales Live Feed */}
-            <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-white/[0.06] space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-white/70 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Atividades Recentes de Vendas • Transações Roblox</span>
-                </span>
-                <span className="text-[11px] text-white/40 font-mono">why</span>
-              </div>
-
-              <div className="grid sm:grid-cols-3 gap-2.5 pt-1">
-                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] flex items-center justify-between">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0 font-bold text-xs">
-                      ⚡
-                    </div>
-                    <div className="truncate">
-                      <p className="text-xs font-semibold text-white truncate">Cyberpunk Tactical Jacket</p>
-                      <p className="text-[10px] text-white/40">why • há 4 min</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-bold text-emerald-400 shrink-0 font-mono">+5 R$</span>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] flex items-center justify-between">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400 shrink-0 font-bold text-xs">
-                      ⚡
-                    </div>
-                    <div className="truncate">
-                      <p className="text-xs font-semibold text-white truncate">Baggy Y2K Grunge Cargo</p>
-                      <p className="text-[10px] text-white/40">why • há 14 min</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-bold text-emerald-400 shrink-0 font-mono">+5 R$</span>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] flex items-center justify-between">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 shrink-0 font-bold text-xs">
-                      ⚡
-                    </div>
-                    <div className="truncate">
-                      <p className="text-xs font-semibold text-white truncate">Oversized Vintage Hoodie</p>
-                      <p className="text-[10px] text-white/40">why • há 28 min</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-bold text-emerald-400 shrink-0 font-mono">+5 R$</span>
-                </div>
-              </div>
-            </div>
           </div>
         </motion.div>
       </section>
