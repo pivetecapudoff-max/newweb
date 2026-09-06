@@ -117,6 +117,7 @@ export function Feed() {
   const [totalItems, setTotalItems] = useState(10);
   const [rotationKeywords, setRotationKeywords] = useState("y2k, grunge, anime, streetwear, gothic, cyber");
   const [showAdvanced, setShowAdvanced] = useState(true);
+  const [isConfigCollapsed, setIsConfigCollapsed] = useState(false);
   const [assetType, setAssetType] = useState<"both" | "shirts" | "pants" | "tshirts" | "ugc">("both");
   const [shirtPantsRatio, setShirtPantsRatio] = useState(50);
   const [isScanningMarket, setIsScanningMarket] = useState(false);
@@ -423,241 +424,356 @@ export function Feed() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45 }}
-        className="rounded-2xl bg-[#0a0a0a] border border-white/[0.08] p-5 sm:p-6 md:p-7 space-y-5 shadow-2xl relative"
+        className="rounded-2xl bg-[#0a0a0a] border border-white/[0.08] p-5 sm:p-6 space-y-4 shadow-2xl relative"
       >
-        {/* Row 1: Scan Strategy & Time Period */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
-              SCAN STRATEGY
-            </label>
-            <select
-              value={scanStrategy}
-              onChange={(e) => setScanStrategy(e.target.value as any)}
-              className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/20 transition-all cursor-pointer"
-            >
-              <option value="bestselling">Bestselling (Trending)</option>
-              <option value="favorited">Most Favorited</option>
-              <option value="recent">Recently Updated / New Releases</option>
-              <option value="sales">High Velocity (Sales Spike)</option>
-              <option value="price_asc">Price Ascending / 5 Robux Gems</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
-              TIME PERIOD
-            </label>
-            <select
-              value={timePeriod}
-              onChange={(e) => setTimePeriod(e.target.value as any)}
-              className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/20 transition-all cursor-pointer"
-            >
-              <option value="all">All Time</option>
-              <option value="day">Past Day</option>
-              <option value="week">Past Week</option>
-              <option value="month">Past Month</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Row 2: Keywords */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40">
-              KEYWORDS
-            </label>
-            <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
-              {["y2k", "grunge", "streetwear", "cyber", "baggy", "gothic", "anime"].map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => setKeywords(tag)}
-                  className={`text-[10px] px-2 py-0.5 rounded-full transition-all cursor-pointer ${
-                    keywords.toLowerCase() === tag
-                      ? "bg-white text-black font-bold"
-                      : "bg-white/[0.04] text-white/50 hover:text-white"
-                  }`}
-                >
-                  {tag}
-                </button>
-              ))}
+        {/* Header Bar: Title, Live Status, Big Action Scan Button & Collapse/Expand Arrow */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/[0.06]">
+          <div
+            onClick={() => setIsConfigCollapsed(!isConfigCollapsed)}
+            className="flex items-center gap-2.5 cursor-pointer select-none group"
+            title={isConfigCollapsed ? "Clique para expandir configurações" : "Clique para minimizar configurações"}
+          >
+            <div className="p-2 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white/70 group-hover:text-emerald-400 group-hover:border-emerald-500/30 transition-all">
+              <SlidersHorizontal className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-white tracking-wide group-hover:text-emerald-300 transition-colors">
+                  Filtros &amp; Configurações do Scanner
+                </span>
+                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold">
+                  Live Engine
+                </span>
+              </div>
+              <p className="text-[11px] text-white/40">
+                {isConfigCollapsed
+                  ? "Configurações minimizadas — clique para expandir ou use o botão ao lado"
+                  : "Ajuste a estratégia, período, nichos e palavras-chave de busca"}
+              </p>
             </div>
           </div>
-          <input
-            type="text"
-            value={keywords}
-            onChange={(e) => setKeywords(e.target.value)}
-            placeholder="e.g. y2k, vintage, techwear, anime hoodie..."
-            className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-all"
-          />
-        </div>
 
-        {/* Row 3: Group ID & Select Group Button */}
-        <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
-            GROUP ID
-          </label>
-          <div className="flex items-center gap-3">
-            <input
-              type="text"
-              value={groupId}
-              onChange={(e) => setGroupId(e.target.value)}
-              placeholder="Digite o ID do grupo (ex: 12556581) ou deixe vazio para escanear todo o catálogo"
-              className="flex-1 bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-all font-mono"
-            />
+          {/* Quick Action & Collapse Toggle Controls */}
+          <div className="flex items-center gap-2 ml-auto">
+            {/* Super prominent, high-contrast SCAN BUTTON (Always visible at top!) */}
             <button
               type="button"
-              onClick={() => setShowGroupModal(true)}
-              className="px-4 py-3 bg-[#181818] hover:bg-[#222222] border border-white/[0.1] rounded-xl text-xs font-semibold text-white/80 hover:text-white flex items-center gap-2 transition-all cursor-pointer shrink-0 active:scale-95"
+              onClick={handleMarketScan}
+              disabled={isScanningMarket}
+              className="relative group px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 hover:from-emerald-300 hover:to-teal-300 text-black font-black text-xs sm:text-sm tracking-wider uppercase shadow-[0_0_25px_rgba(52,211,153,0.4)] hover:shadow-[0_0_35px_rgba(52,211,153,0.7)] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer shrink-0"
+              title="Iniciar varredura do catálogo do Roblox"
             >
-              <Users className="w-4 h-4 text-white/60" />
-              <span>SELECT GROUP</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Row 4: Scan Mode Tabs */}
-        <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
-            SCAN MODE
-          </label>
-          <div className="grid grid-cols-2 border-b border-white/[0.08]">
-            <button
-              type="button"
-              onClick={() => setScanMode("fixed")}
-              className={`py-3 text-xs font-bold uppercase tracking-wider transition-all relative cursor-pointer ${
-                scanMode === "fixed" ? "text-white" : "text-white/40 hover:text-white/70"
-              }`}
-            >
-              FIXED AMOUNT
-              {scanMode === "fixed" && (
-                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#e07a5f]" />
+              {isScanningMarket ? (
+                <>
+                  <LoaderCircle className="w-4 h-4 animate-spin text-black" />
+                  <span className="font-extrabold">ESCANEANDO...</span>
+                </>
+              ) : (
+                <>
+                  <Radar className="w-4 h-4 text-black animate-pulse" />
+                  <span className="font-extrabold">INICIAR SCANNER</span>
+                </>
               )}
             </button>
+
+            {/* Minimize / Expand Arrow Button */}
             <button
               type="button"
-              onClick={() => setScanMode("rotation")}
-              className={`py-3 text-xs font-bold uppercase tracking-wider transition-all relative cursor-pointer ${
-                scanMode === "rotation" ? "text-white" : "text-white/40 hover:text-white/70"
-              }`}
+              onClick={() => setIsConfigCollapsed(!isConfigCollapsed)}
+              className="px-3 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-white/80 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold shrink-0"
+              title={isConfigCollapsed ? "Expandir configurações" : "Minimizar configurações"}
             >
-              KEYWORD ROTATION
-              {scanMode === "rotation" && (
-                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#e07a5f]" />
+              <span className="hidden sm:inline text-[11px] text-white/60">
+                {isConfigCollapsed ? "Expandir" : "Minimizar"}
+              </span>
+              {isConfigCollapsed ? (
+                <ChevronDown className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <ChevronUp className="w-4 h-4 text-white/70" />
               )}
             </button>
           </div>
         </div>
 
-        {/* Row 5: Total Items or Rotation Input */}
-        {scanMode === "fixed" ? (
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
-              TOTAL ITEMS TO FETCH
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={100}
-              value={totalItems}
-              onChange={(e) => setTotalItems(Math.max(1, Math.min(100, Number(e.target.value) || 10)))}
-              className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/20 transition-all font-mono"
-            />
-          </div>
-        ) : (
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
-              KEYWORDS TO ROTATE (SEPARATED BY COMMA)
-            </label>
-            <input
-              type="text"
-              value={rotationKeywords}
-              onChange={(e) => setRotationKeywords(e.target.value)}
-              placeholder="e.g. y2k, cyber, goth, grunge, anime, streetwear"
-              className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/20 transition-all font-mono"
-            />
+        {/* Compact summary pill when collapsed */}
+        {isConfigCollapsed && (
+          <div
+            onClick={() => setIsConfigCollapsed(false)}
+            className="flex flex-wrap items-center gap-2 pt-1 pb-1 text-xs cursor-pointer hover:opacity-90 transition-opacity"
+            title="Clique para abrir e editar as configurações completas"
+          >
+            <span className="text-[11px] text-white/40 font-mono">Filtros ativos:</span>
+            <span className="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/80 font-medium">
+              Estratégia: <strong className="text-white capitalize">{scanStrategy}</strong>
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/80 font-medium">
+              Período: <strong className="text-white capitalize">{timePeriod}</strong>
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/80 font-medium">
+              Nicho: <strong className="text-emerald-300">"{keywords}"</strong>
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/80 font-medium">
+              Modo: <strong className="text-white">{scanMode === "fixed" ? `${totalItems} itens` : "Rotação"}</strong>
+            </span>
+            {groupId && (
+              <span className="px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300 font-medium font-mono">
+                Grupo: {groupId}
+              </span>
+            )}
+            <span className="text-[11px] text-emerald-400 font-semibold underline ml-1">
+              (Clique para abrir)
+            </span>
           </div>
         )}
 
-        {/* Row 6: Advanced Options (Collapsible) */}
-        <div className="border-t border-white/[0.06] pt-4">
-          <button
-            type="button"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex items-center gap-2 text-xs font-bold tracking-wider uppercase text-white/50 hover:text-white transition-colors cursor-pointer"
-          >
-            <span>{showAdvanced ? "▲" : "▼"}</span>
-            <span>ADVANCED OPTIONS</span>
-          </button>
-
-          {showAdvanced && (
+        {/* Collapsible Full Settings Area */}
+        <AnimatePresence>
+          {!isConfigCollapsed && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
-              className="mt-4 space-y-4 pt-2"
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-5 overflow-hidden"
             >
-              <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
-                  ASSET TYPE
-                </label>
-                <select
-                  value={assetType}
-                  onChange={(e) => setAssetType(e.target.value as any)}
-                  className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/20 transition-all cursor-pointer"
-                >
-                  <option value="both">Shirts + Pants</option>
-                  <option value="shirts">Shirts Only</option>
-                  <option value="pants">Pants Only</option>
-                  <option value="tshirts">T-Shirts</option>
-                  <option value="ugc">UGC 3D Accessories</option>
-                </select>
+              {/* Row 1: Scan Strategy & Time Period */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
+                    SCAN STRATEGY
+                  </label>
+                  <select
+                    value={scanStrategy}
+                    onChange={(e) => setScanStrategy(e.target.value as any)}
+                    className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/20 transition-all cursor-pointer"
+                  >
+                    <option value="bestselling">Bestselling (Trending)</option>
+                    <option value="favorited">Most Favorited</option>
+                    <option value="recent">Recently Updated / New Releases</option>
+                    <option value="sales">High Velocity (Sales Spike)</option>
+                    <option value="price_asc">Price Ascending / 5 Robux Gems</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
+                    TIME PERIOD
+                  </label>
+                  <select
+                    value={timePeriod}
+                    onChange={(e) => setTimePeriod(e.target.value as any)}
+                    className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/20 transition-all cursor-pointer"
+                  >
+                    <option value="all">All Time</option>
+                    <option value="day">Past Day</option>
+                    <option value="week">Past Week</option>
+                    <option value="month">Past Month</option>
+                  </select>
+                </div>
               </div>
 
-              {assetType === "both" && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40">
-                      SHIRT / PANTS RATIO
-                    </label>
-                    <span className="text-xs font-mono text-white/60">
-                      {shirtPantsRatio}% Shirts / {100 - shirtPantsRatio}% Pants
-                    </span>
+              {/* Row 2: Keywords */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40">
+                    KEYWORDS
+                  </label>
+                  <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
+                    {["y2k", "grunge", "streetwear", "cyber", "baggy", "gothic", "anime"].map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => setKeywords(tag)}
+                        className={`text-[10px] px-2 py-0.5 rounded-full transition-all cursor-pointer ${
+                          keywords.toLowerCase() === tag
+                            ? "bg-white text-black font-bold"
+                            : "bg-white/[0.04] text-white/50 hover:text-white"
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
                   </div>
+                </div>
+                <input
+                  type="text"
+                  value={keywords}
+                  onChange={(e) => setKeywords(e.target.value)}
+                  placeholder="e.g. y2k, vintage, techwear, anime hoodie..."
+                  className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-all"
+                />
+              </div>
+
+              {/* Row 3: Group ID & Select Group Button */}
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
+                  GROUP ID
+                </label>
+                <div className="flex items-center gap-3">
                   <input
-                    type="range"
-                    min={0}
+                    type="text"
+                    value={groupId}
+                    onChange={(e) => setGroupId(e.target.value)}
+                    placeholder="Digite o ID do grupo (ex: 12556581) ou deixe vazio para escanear todo o catálogo"
+                    className="flex-1 bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-all font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowGroupModal(true)}
+                    className="px-4 py-3 bg-[#181818] hover:bg-[#222222] border border-white/[0.1] rounded-xl text-xs font-semibold text-white/80 hover:text-white flex items-center gap-2 transition-all cursor-pointer shrink-0 active:scale-95"
+                  >
+                    <Users className="w-4 h-4 text-white/60" />
+                    <span>SELECT GROUP</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Row 4: Scan Mode Tabs */}
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
+                  SCAN MODE
+                </label>
+                <div className="grid grid-cols-2 border-b border-white/[0.08]">
+                  <button
+                    type="button"
+                    onClick={() => setScanMode("fixed")}
+                    className={`py-3 text-xs font-bold uppercase tracking-wider transition-all relative cursor-pointer ${
+                      scanMode === "fixed" ? "text-white" : "text-white/40 hover:text-white/70"
+                    }`}
+                  >
+                    FIXED AMOUNT
+                    {scanMode === "fixed" && (
+                      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#e07a5f]" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScanMode("rotation")}
+                    className={`py-3 text-xs font-bold uppercase tracking-wider transition-all relative cursor-pointer ${
+                      scanMode === "rotation" ? "text-white" : "text-white/40 hover:text-white/70"
+                    }`}
+                  >
+                    KEYWORD ROTATION
+                    {scanMode === "rotation" && (
+                      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#e07a5f]" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Row 5: Total Items or Rotation Input */}
+              {scanMode === "fixed" ? (
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
+                    TOTAL ITEMS TO FETCH
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
                     max={100}
-                    step={5}
-                    value={shirtPantsRatio}
-                    onChange={(e) => setShirtPantsRatio(Number(e.target.value))}
-                    className="w-full h-1.5 bg-[#222222] rounded-lg appearance-none cursor-pointer accent-[#e07a5f]"
+                    value={totalItems}
+                    onChange={(e) => setTotalItems(Math.max(1, Math.min(100, Number(e.target.value) || 10)))}
+                    className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/20 transition-all font-mono"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
+                    KEYWORDS TO ROTATE (SEPARATED BY COMMA)
+                  </label>
+                  <input
+                    type="text"
+                    value={rotationKeywords}
+                    onChange={(e) => setRotationKeywords(e.target.value)}
+                    placeholder="e.g. y2k, cyber, goth, grunge, anime, streetwear"
+                    className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/20 transition-all font-mono"
                   />
                 </div>
               )}
+
+              {/* Row 6: Advanced Options (Collapsible) */}
+              <div className="border-t border-white/[0.06] pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="flex items-center gap-2 text-xs font-bold tracking-wider uppercase text-white/50 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span>{showAdvanced ? "▲" : "▼"}</span>
+                  <span>ADVANCED OPTIONS</span>
+                </button>
+
+                {showAdvanced && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="mt-4 space-y-4 pt-2"
+                  >
+                    <div>
+                      <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40 mb-2">
+                        ASSET TYPE
+                      </label>
+                      <select
+                        value={assetType}
+                        onChange={(e) => setAssetType(e.target.value as any)}
+                        className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/20 transition-all cursor-pointer"
+                      >
+                        <option value="both">Shirts + Pants</option>
+                        <option value="shirts">Shirts Only</option>
+                        <option value="pants">Pants Only</option>
+                        <option value="tshirts">T-Shirts</option>
+                        <option value="ugc">UGC 3D Accessories</option>
+                      </select>
+                    </div>
+
+                    {assetType === "both" && (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/40">
+                            SHIRT / PANTS RATIO
+                          </label>
+                          <span className="text-xs font-mono text-white/60">
+                            {shirtPantsRatio}% Shirts / {100 - shirtPantsRatio}% Pants
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          step={5}
+                          value={shirtPantsRatio}
+                          onChange={(e) => setShirtPantsRatio(Number(e.target.value))}
+                          className="w-full h-1.5 bg-[#222222] rounded-lg appearance-none cursor-pointer accent-[#e07a5f]"
+                        />
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Row 7: Big Glowing Bottom START SCAN Button */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleMarketScan}
+                  disabled={isScanningMarket}
+                  className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 hover:from-emerald-300 hover:to-teal-300 text-black font-black text-sm tracking-widest uppercase shadow-[0_0_30px_rgba(52,211,153,0.35)] hover:shadow-[0_0_45px_rgba(52,211,153,0.6)] transition-all active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3 cursor-pointer"
+                >
+                  {isScanningMarket ? (
+                    <>
+                      <LoaderCircle className="w-5 h-5 animate-spin text-black" />
+                      <span className="tracking-wider">ESCANEANDO CATÁLOGO DO ROBLOX...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Radar className="w-5 h-5 text-black animate-pulse" />
+                      <span className="tracking-wider">INICIAR SCANNER DE MERCADO</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </motion.div>
           )}
-        </div>
-
-        {/* Row 7: START SCAN Button */}
-        <button
-          type="button"
-          onClick={handleMarketScan}
-          disabled={isScanningMarket}
-          className="w-full py-4 rounded-xl bg-[#F4EFE6] hover:bg-[#FAF6EE] text-black font-extrabold text-sm tracking-widest uppercase shadow-xl transition-all active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3 cursor-pointer"
-        >
-          {isScanningMarket ? (
-            <>
-              <LoaderCircle className="w-4 h-4 animate-spin text-black" />
-              <span>SCANNING ROBLOX CATALOG...</span>
-            </>
-          ) : (
-            <>
-              <Radar className="w-4 h-4 text-black" />
-              <span>START SCAN</span>
-            </>
-          )}
-        </button>
+        </AnimatePresence>
 
         {marketScanError && (
           <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300">
