@@ -335,10 +335,6 @@ export function Feed() {
         className="flex flex-col md:flex-row md:items-center justify-between gap-4"
       >
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-600/10 text-[11px] font-semibold text-blue-400 uppercase tracking-wider mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-            <span>Inteligência de Mercado &bull; UGC Reports</span>
-          </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
             Relatórios &amp; Tendências de Mercado
           </h1>
