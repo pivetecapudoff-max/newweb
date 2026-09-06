@@ -203,20 +203,8 @@ export function CloudflareGate({ children }: CloudflareGateProps) {
         </div>
 
         {/* Turnstile Container Box */}
-        <div className="p-6 rounded-2xl bg-[#141416] border border-white/[0.08] shadow-2xl space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold text-white/90">Verificação Anti-DDoS &amp; Bot Guard</p>
-              <p className="text-[11px] text-white/40 mt-0.5">Clique na caixa abaixo se solicitado para confirmar que você é humano.</p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[11px] text-emerald-400 font-medium">Desafio Ativo</span>
-            </div>
-          </div>
-
-          <div className="pt-2 flex justify-start">
+        <div className="p-5 rounded-xl bg-[#141416] border border-white/[0.08] shadow-2xl space-y-3">
+          <div className="flex justify-start">
             <div ref={containerRef} className="min-h-[65px] flex items-center" />
           </div>
 
