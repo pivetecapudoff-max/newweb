@@ -159,11 +159,17 @@ export function AiAssistantView({ userName }: { userName?: string }) {
     featured?: boolean;
   }[] = [
     {
+      title: "Diagnóstico de Vendas do Grupo",
+      description: "Descubra exatamente por que algumas peças vendem e outras não.",
+      prompt: "Analise o desempenho das roupas e itens do meu grupo no Roblox. Identifique exatamente por que alguns itens vendem e outros não, comparando títulos, tags, preços e relevância no Catalog Avatar Creator.",
+      icon: BarChart3,
+      featured: true,
+    },
+    {
       title: "O que criar agora",
       description: "Tendências de Halloween, peças 2D, acessórios UGC e termos de busca.",
       prompt: "Quais são as principais tendências de Halloween que estão chegando no Roblox para o meu grupo criar agora? Me dê ideias de roupas 2D a 5 R$, acessórios 3D UGC a 65 R$ e as tags virais de SEO.",
       icon: TrendingUp,
-      featured: true,
     },
     {
       title: "Rumo a 1.000 Robux/dia",

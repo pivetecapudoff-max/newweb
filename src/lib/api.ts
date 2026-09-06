@@ -692,3 +692,59 @@ export function scanMarketCatalog(params: MarketScanParams): Promise<MarketScanR
   }).then((res) => readJson<MarketScanResult>(res));
 }
 
+export interface GroupSalesAnalysis {
+  group: {
+    id: number;
+    name: string;
+    memberCount: number;
+    description: string;
+  };
+  metrics: {
+    totalItems: number;
+    sellingItemsCount: number;
+    stagnantItemsCount: number;
+    totalFavorites: number;
+    avgPrice: number;
+    healthScore: number;
+    overpricedCount: number;
+    vagueTitleCount: number;
+    shortDescCount: number;
+  };
+  topSellingItems: Array<{
+    id: number;
+    name: string;
+    price: number;
+    favorites: number;
+    assetType: string;
+    reasonsForSuccess: string[];
+  }>;
+  stagnantItems: Array<{
+    id: number;
+    name: string;
+    price: number;
+    favorites: number;
+    assetType: string;
+    reasonsWhyItFails: string[];
+    suggestedFix: string;
+  }>;
+  aiDiagnosis: string;
+  actionPlan: string[];
+}
+
+export function analyzeGroupSales(groupId?: number): Promise<{ success: boolean; analysis: GroupSalesAnalysis }> {
+  return api("/api/ai/analyze-group", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ groupId }),
+  }).then((res) => readJson<{ success: boolean; analysis: GroupSalesAnalysis }>(res));
+}
+
+export function optimizeCatalog(groupId?: number): Promise<{ success: boolean; result: any; logs: any[] }> {
+  return api("/api/ai/optimize", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ groupId }),
+  }).then((res) => readJson<{ success: boolean; result: any; logs: any[] }>(res));
+}
+
+

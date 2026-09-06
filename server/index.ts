@@ -20,6 +20,7 @@ import {
   searchLiveRobloxCatalog,
   generateAiItemDescription,
   generateUgcDesignData,
+  analyzeGroupSalesPerformance,
 } from "./ai.js";
 import { isHosted, isSecureRequest, listenTarget } from "./host.js";
 import {
@@ -362,6 +363,16 @@ app.post("/api/ai/optimize", requireAuth, async (req, res) => {
     res.json({ success: true, result, logs: getLogs() });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Falha na otimização" });
+  }
+});
+
+app.post("/api/ai/analyze-group", requireAuth, async (req, res) => {
+  try {
+    const groupId = req.body?.groupId ? Number(req.body.groupId) : undefined;
+    const analysis = await analyzeGroupSalesPerformance(groupId);
+    res.json({ success: true, analysis });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Erro ao analisar vendas do grupo com IA." });
   }
 });
 
