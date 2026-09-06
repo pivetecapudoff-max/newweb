@@ -53,11 +53,12 @@ interface UgcChatMessage {
 }
 
 export function UgcCreatorView() {
+  const [selectedStyle, setSelectedStyle] = useState<string>("syn_night_shop");
   const [messages, setMessages] = useState<UgcChatMessage[]>([
     {
       id: "welcome",
       role: "assistant",
-      text: "Olá! Eu sou o seu **Designer de Moda & UGC com IA** do Roblox, especializado na estética da **Syn night shop** (Moe, Jirai Kei, Emo Alt, Coquette, Couple Matching e cortes Off-Shoulder a 5 Robux).\n\nDescreva a peça desejada em linguagem natural, selecione uma das sugestões rápidas abaixo ou anexe uma imagem de referência. Eu desenho o molde 2D oficial do Roblox, configuro o SEO viral e posso publicar automaticamente no seu grupo!",
+      text: "Olá! Eu sou o seu **Designer de Moda & UGC com IA** para o Roblox, 100% adaptado para **funcionar com qualquer grupo ou loja**. Você pode selecionar o seu grupo no topo, escolher o estilo estético desejado (como o estilo Moe / Jirai Kei da Syn night shop, Y2K Baggy ou Goth) e a IA vai gerar o molde oficial 2D, as tags e a descrição personalizada para a **sua própria marca** por 5 Robux!\n\nDescreva a peça desejada, clique em um dos atalhos de inspiração abaixo ou anexe uma foto de referência:",
       timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -134,11 +135,16 @@ export function UgcCreatorView() {
         })
       );
 
-      // Call AI design engine
+      const activeGroup = groups.find((g) => g.id === selectedGroupId);
+
+      // Call AI design engine with target group and aesthetic style
       const res = await createUgcWithAi({
         prompt,
         attachments: formattedAttachments,
         effort: meta?.effort || "Detalhada",
+        groupId: selectedGroupId,
+        groupName: activeGroup?.name || undefined,
+        stylePreset: selectedStyle,
       });
 
       const designData = res.design;
@@ -324,19 +330,19 @@ export function UgcCreatorView() {
             <h1 className="text-base font-bold text-white flex items-center gap-2 flex-wrap">
               <span>Criador UGC com IA</span>
               <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/35 text-purple-300 backdrop-blur-md shadow-sm">
-                Roblox 3D/2D Studio
+                Multi-Grupos 3D/2D
               </span>
-              <span className="text-[10px] font-semibold tracking-wider px-2 py-0.5 rounded-full bg-pink-500/15 border border-pink-500/30 text-pink-300 backdrop-blur-md shadow-sm flex items-center gap-1">
-                <span>🎀 Estilo: Syn night shop</span>
+              <span className="text-[10px] font-semibold tracking-wider px-2 py-0.5 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 backdrop-blur-md shadow-sm flex items-center gap-1">
+                <span>🎯 Alvo: {groups.find((g) => g.id === selectedGroupId)?.name || "Minha Loja Roblox"}</span>
               </span>
             </h1>
             <p className="text-xs text-white/60">
-              Treinado no estilo Moe, Jirai Kei, Emo Alt & Matching Outfits da <strong>Syn night shop</strong> (5 R$). Crie designs virais e publique direto no grupo!
+              Gere roupas de alta conversão para <strong>qualquer grupo ou marca</strong>, com moldes 2D oficiais a 5 R$, SEO dinâmico e auto-publicação.
             </p>
           </div>
         </div>
 
-        {/* Global Controls: Auto-Post Toggle, Group Selector & Group Analysis */}
+        {/* Global Controls: Auto-Post Toggle, Group Selector, Style Preset & Group Analysis */}
         <div className="relative z-10 flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-end">
           {/* Group Sales Analysis Button with Liquid Glass */}
           <button
@@ -360,7 +366,8 @@ export function UgcCreatorView() {
             <select
               value={selectedGroupId || ""}
               onChange={(e) => setSelectedGroupId(e.target.value ? Number(e.target.value) : null)}
-              className="bg-transparent text-white text-xs focus:outline-none cursor-pointer"
+              className="bg-transparent text-white text-xs focus:outline-none cursor-pointer max-w-[140px] truncate"
+              title="Selecione o grupo onde a peça será lançada"
             >
               <option value="" className="bg-[#0f0f0f] text-white">
                 Minha Conta Pessoal
@@ -370,6 +377,33 @@ export function UgcCreatorView() {
                   Grupo: {g.name}
                 </option>
               ))}
+            </select>
+          </div>
+
+          {/* Aesthetic Style Preset Selector */}
+          <div className="flex items-center gap-2 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.1] px-3 py-1.5 rounded-xl text-xs backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-all">
+            <Sliders className="w-3.5 h-3.5 text-purple-400" />
+            <select
+              value={selectedStyle}
+              onChange={(e) => setSelectedStyle(e.target.value)}
+              className="bg-transparent text-white text-xs focus:outline-none cursor-pointer max-w-[150px] truncate"
+              title="Escolha o estilo estético desejado para o seu grupo"
+            >
+              <option value="syn_night_shop" className="bg-[#0f0f0f] text-white">
+                🎀 Estilo Syn Night (Moe / Jirai)
+              </option>
+              <option value="y2k_streetwear" className="bg-[#0f0f0f] text-white">
+                🔥 Y2K Baggy Streetwear
+              </option>
+              <option value="goth_alt" className="bg-[#0f0f0f] text-white">
+                🕷️ Gothic & Opium Dark
+              </option>
+              <option value="coquette_cute" className="bg-[#0f0f0f] text-white">
+                ✨ Coquette & Cutecore
+              </option>
+              <option value="auto" className="bg-[#0f0f0f] text-white">
+                🌐 Estilo Livre (Do Prompt)
+              </option>
             </select>
           </div>
 
@@ -755,18 +789,19 @@ export function UgcCreatorView() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Inspiration Chips (Syn night shop catalog inspirations) */}
+      {/* Quick Inspiration Chips (Compatible with any group) */}
       <div className="shrink-0 flex items-center gap-1.5 overflow-x-auto py-1 px-0.5 mb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <span className="text-[10px] uppercase font-bold text-pink-400/80 tracking-wider flex items-center gap-1 shrink-0">
-          <Sparkles className="w-3 h-3 text-pink-400" />
-          <span>Syn night shop:</span>
+        <span className="text-[10px] uppercase font-bold text-purple-400/80 tracking-wider flex items-center gap-1 shrink-0">
+          <Sparkles className="w-3 h-3 text-purple-400" />
+          <span>Inspirações Virais:</span>
         </span>
         {[
-          { label: "🎀 Off-Shoulder Bow Top", prompt: "uwu off shoulder top white com laço delicado e decote ombro a ombro estilo Syn night shop" },
+          { label: "🎀 Off-Shoulder Bow Top", prompt: "uwu off shoulder top white com laço delicado e decote ombro a ombro" },
           { label: "🕷️ Misa Alt Matching", prompt: "death note misa black off shoulder match com aquecedores de braço listrados e choker" },
           { label: "🐾 Cat Shirt Match (g)", prompt: "cutesy cat shirt match (g) 🎀 estampa de gatinho e laço fofo Moe Jirai Kei" },
           { label: "⭐ Batman PJs Da Hood", prompt: "batman pjs pajamas da hood y2k (girl) com padrão de estrelas aconchegante" },
           { label: "🖤 Saia Plissada com Pins", prompt: "saia plissada preta estilo Jirai Kei com alfinete de segurança e cinto Y2K" },
+          { label: "🔥 Calça Cargo Baggy Y2K", prompt: "calça cargo baggy preta streetwear com correntes e bolsos utilitários" },
         ].map((chip, idx) => (
           <button
             key={idx}
@@ -790,7 +825,7 @@ export function UgcCreatorView() {
           onChange={(val) => setInputVal(val)}
           onSubmit={(val, meta) => handleSendPrompt(val, meta)}
           loading={loading}
-          placeholder="Descreva a roupa ou item UGC no estilo Syn night shop (ex: uwu off shoulder top ou cat shirt match)..."
+          placeholder={`Descreva a roupa ou item UGC para ${groups.find((g) => g.id === selectedGroupId)?.name || 'sua loja'} (ex: calça cargo baggy ou off shoulder top)...`}
           className="w-full"
         />
       </div>

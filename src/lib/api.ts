@@ -612,6 +612,9 @@ export interface CreateUgcPayload {
   prompt: string;
   attachments?: Array<{ name: string; mimeType: string; data: string }>;
   effort?: "Rápida" | "Detalhada" | "Profunda";
+  groupId?: number | null;
+  groupName?: string | null;
+  stylePreset?: string | null;
 }
 
 export interface UgcDesignResponse {

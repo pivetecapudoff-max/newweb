@@ -411,7 +411,10 @@ app.post("/api/ai/ugc-create", requireAuth, async (req, res) => {
     }
     const attachments = req.body?.attachments;
     const effort = req.body?.effort || "Detalhada";
-    const design = await generateUgcDesignData(prompt, attachments, effort);
+    const groupId = req.body?.groupId ? Number(req.body?.groupId) : undefined;
+    const groupName = req.body?.groupName ? String(req.body?.groupName).trim() : undefined;
+    const stylePreset = req.body?.stylePreset ? String(req.body?.stylePreset).trim() : undefined;
+    const design = await generateUgcDesignData(prompt, attachments, effort, { groupId, groupName, stylePreset });
     res.json({ success: true, design });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Erro ao criar design UGC com IA." });

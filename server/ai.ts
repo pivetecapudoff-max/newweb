@@ -189,8 +189,12 @@ export async function searchLiveRobloxGroups(
   }
 }
 
-// Enhanced Algorithmic Fallback Description Generator (High-Converting English SEO - Syn night shop Style)
-export function generateEnhancedSeoDescription(title: string, assetType?: number | string): string {
+// Enhanced Algorithmic Fallback Description Generator (High-Converting English SEO - Multi-Group Universal)
+export function generateEnhancedSeoDescription(
+  title: string,
+  assetType?: number | string,
+  groupName?: string
+): string {
   const t = title.toLowerCase();
   const isUgc =
     Number(assetType) >= 41 ||
@@ -210,7 +214,6 @@ export function generateEnhancedSeoDescription(title: string, assetType?: number
     'clean',
     'catalogavatarcreator',
     'roblox',
-    'synnightshop',
     'moe',
     'jiraikei',
     'vkei',
@@ -222,6 +225,15 @@ export function generateEnhancedSeoDescription(title: string, assetType?: number
     '5robux',
     'cheap',
   ];
+
+  // Dynamically inject the user's specific group tag
+  const storeName = groupName && groupName.trim() ? groupName.trim() : null;
+  if (storeName) {
+    const cleanGroupTag = storeName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (cleanGroupTag && cleanGroupTag.length >= 2) {
+      tagList.unshift(cleanGroupTag);
+    }
+  }
 
   if (t.includes('goth') || t.includes('vamp') || t.includes('emo') || t.includes('dark') || t.includes('skull') || t.includes('opium') || t.includes('misa') || t.includes('death note')) {
     header = `⋆ ˚｡⋆୨୧˚ ${title} ˚୨୧⋆｡˚ ⋆`;
@@ -255,10 +267,17 @@ export function generateEnhancedSeoDescription(title: string, assetType?: number
 
   const uniqueTags = Array.from(new Set(tagList)).slice(0, 24);
 
+  const welcomeLine = storeName
+    ? `♡ Welcome to ${storeName} !`
+    : `♡ Welcome to our official Roblox store !`;
+  const rankLine = storeName
+    ? `♡ Buy 5+ clothes for special rank rewards in our group!`
+    : `♡ Buy 5+ clothes to support our drops and unlock matching outfits!`;
+
   return `${header}
 
-♡ Welcome to Syn night shop !
-♡ Buy 5+ clothes for the 'angel' rank in our group!
+${welcomeLine}
+${rankLine}
 ♡ Matching outfits & daily aesthetic drops.
 ★ ${intro}
 ★ Try it on in Catalog Avatar Creator (CAC)!
@@ -267,15 +286,16 @@ tags: ${uniqueTags.join(' ')}`;
 }
 
 // Backward compatibility alias
-export function generateSeoDescription(title: string, assetType?: number | string): string {
-  return generateEnhancedSeoDescription(title, assetType);
+export function generateSeoDescription(title: string, assetType?: number | string, groupName?: string): string {
+  return generateEnhancedSeoDescription(title, assetType, groupName);
 }
 
 // Ultra-Intelligent AI Description Generator (Powered by Gemini, English High-Converting SEO)
 export async function generateAiItemDescription(
   title: string,
   assetType?: number | string,
-  styleHint?: string
+  styleHint?: string,
+  groupName?: string
 ): Promise<string> {
   const isUgc =
     Number(assetType) >= 41 ||
@@ -289,18 +309,17 @@ export async function generateAiItemDescription(
 Write an authentic, highly aesthetic and viral description in ENGLISH for this Roblox clothing/UGC item:
 - Item Title: "${title}"
 - Type: ${typeStr}
+- Store/Group Name: "${groupName || 'our Roblox store'}"
 ${styleHint ? `- Style Hint: ${styleHint}` : ''}
 
 STRICT FORMAT RULES:
-1. Header: Clean title with aesthetic Unicode symbols (e.g. "— ⚡ ${title} ⚡ —" or "✦ ${title} ✦").
-2. 2 short, stylish English hook sentences explaining the fit, clean shading, and aesthetic appeal (e.g. "High quality detailed fit with custom shading & realistic wrinkles. Perfect for clean avatar combinations.").
-3. Brief English call-to-action:
-   - "★ Try it on in Catalog Avatar Creator (CAC)!"
-   - "★ Join our group for more high-quality clothing drops!"
-4. A rich, high-density block of 15 to 20 lowercase viral English search tags without '#' (Roblox catalog search and CAC index keywords better as space-separated lowercase words):
-   Example:
-   tags: aesthetic y2k streetwear grunge vintage cyber dark emo baggy fit hood drip cool thrift anime preppy gothic opium cyber goth oversized skate retro 2000s cargo jeans matching cute soft vamp chic trendy casual club fashion
-5. Output ONLY the final description. Do not include markdown asterisks '**', quotes, explanations, or notes. Must be 100% in ENGLISH.`;
+1. Header: Clean title with aesthetic Unicode symbols (e.g. "⋆ ˚｡⋆୨୧˚ ${title} ˚୨୧⋆｡˚ ⋆" or "─── ⋆⋅☆⋅⋆ ── ${title} ── ⋆⋅☆⋅⋆ ───").
+2. Welcome line tailored to the creator's store: "${groupName ? `♡ Welcome to ${groupName} !` : '♡ Welcome to our official store !'}"
+3. Call to action for member rank: "${groupName ? '♡ Buy 5+ clothes for special rank rewards in our group!' : '♡ Buy 5+ clothes to support our drops!'}"
+4. 2 short, stylish English hook sentences explaining the fit, clean shading, and aesthetic appeal.
+5. Catalog Avatar Creator (CAC) call-to-action: "★ Try it on in Catalog Avatar Creator (CAC)!"
+6. A rich, high-density block of 15 to 22 lowercase viral search tags without '#' (including the store tag "${groupName ? groupName.toLowerCase().replace(/[^a-z0-9]/g, '') : 'roblox'}" and aesthetic keywords).
+7. Output ONLY the final description. Do not include markdown asterisks '**', quotes, explanations, or notes. Must be 100% in ENGLISH.`;
 
   try {
     const aiText = await callGemini(prompt, '', { effort: 'Rápida' });
@@ -311,7 +330,7 @@ STRICT FORMAT RULES:
     addLog('warn', 'AI_DESC_FALLBACK', `Gemini busy for "${title}": ${err.message}. Using English aesthetic SEO fallback.`);
   }
 
-  return generateEnhancedSeoDescription(title, assetType);
+  return generateEnhancedSeoDescription(title, assetType, groupName);
 }
 
 // Full Roblox Group Catalog Optimization (Clothing 2D + UGC 3D)
@@ -1304,63 +1323,82 @@ export interface GeneratedUgcDesign {
   reply: string;
 }
 
+export interface GenerateUgcOptions {
+  groupId?: number;
+  groupName?: string;
+  stylePreset?: string;
+}
+
 export async function generateUgcDesignData(
   userPrompt: string,
   attachments?: AiImageAttachment[],
-  effort: string = 'Detalhada'
+  effort: string = 'Detalhada',
+  options?: GenerateUgcOptions
 ): Promise<GeneratedUgcDesign> {
-  const prompt = `Você é o diretor criativo e designer-chefe oficial da marca "Syn night shop" (Roblox Group ID: 35320581), famosa por liderar o catálogo do Roblox em roupas estéticas, virais e de alta conversão.
+  const targetGroupName = options?.groupName?.trim() || '';
+  const hasTargetGroup = Boolean(targetGroupName);
+  const brandName = hasTargetGroup ? targetGroupName : 'sua loja';
+  const stylePreset = options?.stylePreset || 'syn_night_shop';
+
+  const prompt = `Você é um diretor criativo de moda Roblox e especialista em economia do catálogo, gerando roupas clássicas (2D) e itens de alto volume de vendas.
 
 O usuário quer criar uma peça com base no seguinte pedido:
 "${userPrompt}"
-${attachments?.length ? 'O usuário anexou fotos de referência. Analise minuciosamente os cortes, cores, laços, rendas e caimento da imagem.' : ''}
+${attachments?.length ? 'O usuário anexou fotos de referência. Analise minuciosamente os cortes, cores, caimento e detalhes da imagem.' : ''}
 
-DIRETRIZES DE ESTILO DA MARCA "SYN NIGHT SHOP":
-1. MICRO-GÊNEROS PRINCIPAIS:
-   - Moe, Jirai Kei (地雷系), Ryousangata (量産型), Visual Kei (V-Kei)
-   - Emo Alt / Scene / Dark Kawaii / Goth Doll / Coquette Goth
-   - Peças de Casal Matching: indicadas com "(g) 🎀" (girl) e "(b) 💙" (boy)
-   - PJs fofos (Pajamas Y2K / Da Hood com estampas de gatinho, morcego ou estrelas)
-   - Death Note Misa gothic off-shoulder fits
+CONTEXTO DO CRIADOR & MULTI-GRUPOS (MUITO IMPORTANTE):
+- Loja/Grupo de Destino: ${hasTargetGroup ? `"${targetGroupName}" (ID: ${options?.groupId || 'N/A'})` : 'Loja pessoal do usuário'}
+- Preset de Estilo Ativo: ${stylePreset}
 
-2. CORTES E ELEMENTOS VISUAIS CARACTERÍSTICOS:
-   - Tops/camisas com decote "off-shoulder" (ombro caído com alças finas ou choker)
-   - Laço de fita delicado ("ribbon-bow" ou "୨୧") no peito
-   - Rendas e babados ("lace-ruffles") no decote
-   - Mangas/aquecedores de braço listrados ("arm-warmers") no estilo gothic emo
-   - Saias plissadas ("pleated-skirt") com alfinetes ("safety-pins") para calças/shorts
-   - Estampas sutis de gatinho ("cat-graphic") ou emblemas estéticos
+DIRETRIZES DE MARCA (UNIVERSAL PARA TODOS OS GRUPOS):
+1. O SISTEMA É UNIVERSAL: Cada criador possui seu próprio grupo ou loja no Roblox.
+   - NUNCA force nem mencione grupos de terceiros (como Syn night shop) nos títulos ou descrições, A MENOS que o grupo do próprio usuário SEJA esse ou o usuário peça expressamente no prompt.
+   - A descrição DEVE dar boas-vindas para o grupo/loja DELE:
+     * Com grupo: "♡ Welcome to ${targetGroupName} !" e "♡ Buy 5+ clothes for special member rank rewards in our group!"
+     * Sem grupo: "♡ Welcome to my Roblox store !" e "♡ Buy 5+ clothes to support our drops!"
+   - A tag do grupo deve ser incluída em minúsculo: "${hasTargetGroup ? targetGroupName.toLowerCase().replace(/[^a-z0-9]/g, '') : 'roblox'}".
 
-3. CONVENÇÃO DE TÍTULOS DA SYN NIGHT SHOP:
-   - Para itens fofos/jirai/emo: "⋆ ˚｡⋆୨୧˚ [Nome da Peça] ˚୨୧⋆｡˚ ⋆"
+2. MOTOR ESTÉTICO & TÉCNICAS VISUAIS (APLICÁVEIS A QUALQUER GRUPO):
+   Aplique cortes e texturas de alta conversão adaptados ao tema solicitado:
+   - Estilo Moe / Jirai Kei (量産型 / 地雷系) / Emo Alt:
+     * Decotes ombro-a-ombro ("off-shoulder") com alças finas ou gargantilha choker
+     * Laço de fita delicado ("ribbon-bow" ou "୨୧") no peito
+     * Rendas e babados ("lace-ruffles")
+     * Mangas/aquecedores de braço listrados ("arm-warmers")
+     * Pares matching "(g) 🎀" e "(b) 💙"
+     * Saias plissadas ("pleated-skirt") com alfinetes ("safety-pins")
+   - Estilo Streetwear / Y2K / Baggy:
+     * Calças cargo baggy, correntes ("chains"), bolsos ("pockets"), zíperes ("zipper"), lavagens ácidas
+   - Estilo PJs / Da Hood:
+     * Pijamas confortáveis com estampas de estrelas ("stars") e temática de casal
+
+3. CONVENÇÃO DE TÍTULOS:
+   - Para peças fofas/jirai/emo: "⋆ ˚｡⋆୨୧˚ [Nome da Peça] ˚୨୧⋆｡˚ ⋆"
    - Para pares matching: "[Nome] match (g) 🎀" ou "[Nome] match (b) 💙"
-   - Para tops clássicos: "[Nome] off shoulder top [cor]"
-   - Para Y2K/alt: "─── ⋆⋅☆⋅⋆ ── [Nome] ── ⋆⋅☆⋅⋆ ───"
+   - Para clássicos/streetwear: "─── ⋆⋅☆⋅⋆ ── [Nome] ── ⋆⋅☆⋅⋆ ───" ou "[Nome] off shoulder top [cor]"
 
-4. PREÇO:
-   - ESTRITAMENTE 5 Robux (preço padrão oficial de roupas clássicas para estimular a compra de 5+ peças e rank 'angel').
+4. PREÇO: ESTRITAMENTE 5 Robux (padrão clássico oficial para estimular compras em lote e ganho de membros no grupo).
 
-5. DESCRIÇÃO E SEO (PADRÃO OFICIAL SYN NIGHT SHOP):
-   - Deve ser em INGLÊS no formato exato:
-     ⋆ ˚｡⋆୨୧˚ [Nome da Peça] ˚୨୧⋆｡˚ ⋆
+5. FORMATO DA DESCRIÇÃO (100% EM INGLÊS):
+   [Header com título e símbolos estéticos]
 
-     ♡ Welcome to Syn night shop !
-     ♡ Buy 5+ clothes for the 'angel' rank in our group!
-     ♡ Matching outfits & daily aesthetic drops.
-     ★ High quality aesthetic fit with custom shading & delicate details.
-     ★ Try it on in Catalog Avatar Creator (CAC)!
+   ${hasTargetGroup ? `♡ Welcome to ${targetGroupName} !` : '♡ Welcome to our official Roblox store !'}
+   ${hasTargetGroup ? '♡ Buy 5+ clothes for special rank rewards in our group!' : '♡ Buy 5+ clothes to support our shop & unlock matching fits!'}
+   ♡ Matching outfits & daily aesthetic drops.
+   ★ High quality aesthetic fit with custom shading & delicate details.
+   ★ Try it on in Catalog Avatar Creator (CAC)!
 
-     tags: [palavras-chave em minúsculo separadas por espaço incluindo synnightshop, aesthetic, y2k, cheap, 5robux, cutefit, emogirl, moe, jiraikei, vkei, matching, etc.]
+   tags: [tags em minúsculo separadas por espaço incluindo a tag do grupo, 5robux, aesthetic, y2k, etc.]
 
 6. RESPOSTA AO USUÁRIO (reply):
-   - Em português, explicando de forma estilosa o conceito da peça no padrão Syn night shop (destacando o decote off-shoulder, laços ୨୧, estilo Jirai/Emo e o apelo de vendas no catálogo do Roblox).
+   Em português, explicando os detalhes da peça criada especialmente para a loja/grupo "${brandName}".
 
 DETALHES RECONHECIDOS PELO MOTOR DE RENDERIZAÇÃO 2D (inclua no array 'details' os que se aplicam):
 "off-shoulder", "ribbon-bow", "lace-ruffles", "arm-warmers", "choker", "cat-graphic", "pleated-skirt", "safety-pins", "chains", "zipper", "pockets", "straps"
 
 RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fora do JSON):
 {
-  "title": "⋆ ˚｡⋆୨୧˚ uwu off shoulder top black ˚୨୧⋆｡˚ ⋆",
+  "title": "⋆ ˚｡⋆୨୧˚ off shoulder top black ˚୨୧⋆｡˚ ⋆",
   "kind": "shirt" | "pants" | "tshirt",
   "price": 5,
   "theme": "jiraikei" | "moe" | "vkei" | "emogirl" | "coquette" | "y2k" | "grunge" | "goth" | "matching" | "pjs",
@@ -1370,7 +1408,7 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fo
   "pattern": "solid" | "stripes" | "grunge" | "stars" | "acid_wash",
   "details": ["off-shoulder", "ribbon-bow", "lace-ruffles"],
   "description": "⋆ ˚｡⋆୨୧˚ ...",
-  "reply": "Explicação em português com a vibe Syn night shop..."
+  "reply": "Explicação em português para o usuário..."
 }`;
 
   try {
@@ -1389,16 +1427,16 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fo
           accentColor: parsed.accentColor || '#f472b6',
           pattern: parsed.pattern || 'solid',
           details: Array.isArray(parsed.details) ? parsed.details : ['off-shoulder', 'ribbon-bow'],
-          description: parsed.description || generateEnhancedSeoDescription(parsed.title),
-          reply: parsed.reply || `Criei o design de **${parsed.title}** seguindo a estética autêntica da **Syn night shop**!`,
+          description: parsed.description || generateEnhancedSeoDescription(parsed.title, undefined, targetGroupName),
+          reply: parsed.reply || `Criei o design de **${parsed.title}** especialmente para a sua loja!`,
         };
       }
     }
   } catch (err: any) {
-    addLog('warn', 'AI_UGC_CREATE', `Gemini fallback para criação UGC (Syn night shop): ${err.message}`);
+    addLog('warn', 'AI_UGC_CREATE', `Gemini fallback para criação UGC: ${err.message}`);
   }
 
-  // High-fidelity algorithmic fallback tuned for Syn night shop
+  // High-fidelity algorithmic fallback tuned for multi-groups
   const p = userPrompt.toLowerCase();
   const isPants = p.includes('calça') || p.includes('pants') || p.includes('cargo') || p.includes('saia') || p.includes('skirt');
   const isTshirt = p.includes('tshirt') || p.includes('estampa') || p.includes('decal');
@@ -1445,7 +1483,7 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fo
     }
   }
 
-  const cleanInput = userPrompt.replace(/cria|fazer|roupa|calça|camisa|uma|pra mim|no estilo syn night shop/gi, '').trim();
+  const cleanInput = userPrompt.replace(/cria|fazer|roupa|calça|camisa|uma|pra mim/gi, '').trim();
   if (cleanInput.length > 2 && !cleanInput.includes('http')) {
     title = `⋆ ˚｡⋆୨୧˚ ${cleanInput.slice(0, 32)} ˚୨୧⋆｡˚ ⋆`;
   }
@@ -1460,7 +1498,7 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fo
     accentColor,
     pattern,
     details,
-    description: generateEnhancedSeoDescription(title),
-    reply: `Desenvolvi o modelo **${title}** no estilo autêntico da **Syn night shop**, com corte off-shoulder detalhado, laço ribbon ୨୧ e paleta otimizada para o público Moe/Jirai Kei do Roblox por 5 Robux!`,
+    description: generateEnhancedSeoDescription(title, undefined, targetGroupName),
+    reply: `Desenvolvi o modelo **${title}** para **${brandName}**, com caimento impecável, detalhes estéticos de alta conversão e preço de 5 Robux!`,
   };
 }
