@@ -65,19 +65,19 @@ async function renderClassicRobloxShirt(ctx: CanvasRenderingContext2D, spec: Ugc
 
   // 1. TORSO
   const tx = 231;
-  const ty = 138;
+  const ty = 74;
   const torsoHeight = isCrop ? 76 : 128;
 
-  // A. Torso_Top (231, 74, 128, 64) - Shoulders & Neck Hole
+  // A. Torso_Top (231, 8, 128, 64) - Shoulders & Neck Hole
   ctx.fillStyle = baseColor;
-  ctx.fillRect(231, 74, 128, 64);
-  applyFabricTexture(ctx, 231, 74, 128, 64);
+  ctx.fillRect(231, 8, 128, 64);
+  applyFabricTexture(ctx, 231, 8, 128, 64);
 
-  // Cut transparent circular neck hole at center (295, 106)
+  // Cut transparent circular neck hole at center of Torso_Top (295, 40)
   ctx.save();
   ctx.globalCompositeOperation = "destination-out";
   ctx.beginPath();
-  ctx.arc(295, 106, 18, 0, Math.PI * 2);
+  ctx.arc(295, 40, 18, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
@@ -85,23 +85,23 @@ async function renderClassicRobloxShirt(ctx: CanvasRenderingContext2D, spec: Ugc
   ctx.strokeStyle = collarColor;
   ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.arc(295, 106, 19.5, 0, Math.PI * 2);
+  ctx.arc(295, 40, 19.5, 0, Math.PI * 2);
   ctx.stroke();
 
   // Shoulder seam stitch lines
-  drawDoubleStitch(ctx, 231, 75, 64, false, stitchColor);
-  drawDoubleStitch(ctx, 358, 75, 64, false, stitchColor);
+  drawDoubleStitch(ctx, 231, 8, 64, false, stitchColor);
+  drawDoubleStitch(ctx, 358, 8, 64, false, stitchColor);
 
-  // B. Torso_Front (231, 138, 128, torsoHeight)
+  // B. Torso_Front (231, 74, 128, torsoHeight)
   ctx.fillStyle = baseColor;
   ctx.fillRect(tx, ty, 128, torsoHeight);
   applyFabricTexture(ctx, tx, ty, 128, torsoHeight);
 
-  // Crewneck scoop cutout at top center of front torso
+  // Crewneck scoop cutout at top center of front torso (295, 74)
   ctx.save();
   ctx.globalCompositeOperation = "destination-out";
   ctx.beginPath();
-  ctx.ellipse(295, 138, 18, 7, 0, 0, Math.PI);
+  ctx.ellipse(295, 74, 18, 7, 0, 0, Math.PI);
   ctx.fill();
   ctx.restore();
 
@@ -109,23 +109,23 @@ async function renderClassicRobloxShirt(ctx: CanvasRenderingContext2D, spec: Ugc
   ctx.strokeStyle = collarColor;
   ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.ellipse(295, 138, 19, 8, 0, 0, Math.PI);
+  ctx.ellipse(295, 74, 19, 8, 0, 0, Math.PI);
   ctx.stroke();
 
-  // C. Torso_Back (423, 138, 128, torsoHeight)
+  // C. Torso_Back (427, 74, 128, torsoHeight)
   ctx.fillStyle = baseColor;
-  ctx.fillRect(423, ty, 128, torsoHeight);
-  applyFabricTexture(ctx, 423, ty, 128, torsoHeight);
+  ctx.fillRect(427, ty, 128, torsoHeight);
+  applyFabricTexture(ctx, 427, ty, 128, torsoHeight);
 
   // Subtle back collar trim curve
   ctx.strokeStyle = collarColor;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.ellipse(487, 138, 16, 3, 0, 0, Math.PI);
+  ctx.ellipse(491, 74, 16, 3, 0, 0, Math.PI);
   ctx.stroke();
 
-  // D. Torso_Left (367, 138, 64, torsoHeight) & Torso_Right (159, 138, 64, torsoHeight)
-  for (const sx of [159, 367]) {
+  // D. Torso_Left (361, 74, 64, torsoHeight) & Torso_Right (165, 74, 64, torsoHeight)
+  for (const sx of [165, 361]) {
     ctx.fillStyle = baseColor;
     ctx.fillRect(sx, ty, 64, torsoHeight);
     applyFabricTexture(ctx, sx, ty, 64, torsoHeight);
@@ -135,35 +135,51 @@ async function renderClassicRobloxShirt(ctx: CanvasRenderingContext2D, spec: Ugc
     ctx.fillRect(sx + 60, ty, 4, 20);
   }
 
+  // Torso_Down (underside/waist: 231, 204, 128, 64)
+  if (!isCrop) {
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(231, 204, 128, 64);
+    applyFabricTexture(ctx, 231, 204, 128, 64);
+  }
+
   // E. Waist Hem: Double-needle stitched hem across bottom of torso
   const hemY = ty + torsoHeight - 3;
-  for (const part of [{ x: 159, w: 64 }, { x: 231, w: 128 }, { x: 367, w: 64 }, { x: 423, w: 128 }]) {
+  for (const part of [{ x: 165, w: 64 }, { x: 231, w: 128 }, { x: 361, w: 64 }, { x: 427, w: 128 }]) {
     drawDoubleStitch(ctx, part.x, hemY, part.w, true, stitchColor);
   }
 
   // 2. ARMS & SLEEVES
-  // Shoulder tops (R_Top: 85, 342, 64, 64 | L_Top: 341, 342, 64, 64)
+  // Shoulder tops (R_Top: 217, 289, 64, 64 | L_Top: 308, 289, 64, 64)
   ctx.fillStyle = baseColor;
-  ctx.fillRect(85, 342, 64, 64);
-  ctx.fillRect(341, 342, 64, 64);
-  applyFabricTexture(ctx, 85, 342, 64, 64);
-  applyFabricTexture(ctx, 341, 342, 64, 64);
+  ctx.fillRect(217, 289, 64, 64);
+  ctx.fillRect(308, 289, 64, 64);
+  applyFabricTexture(ctx, 217, 289, 64, 64);
+  applyFabricTexture(ctx, 308, 289, 64, 64);
 
-  // Arm vertical panels (Right arm: 21, 85, 149, 213 | Left arm: 277, 341, 405, 469)
-  const armPanels = [21, 85, 149, 213, 277, 341, 405, 469];
-  const sleeveHeight = isLong ? 116 : 46;
+  // Arm vertical panels (Right arm: 19, 85, 151, 217 | Left arm: 308, 374, 440, 506)
+  const armPanels = [19, 85, 151, 217, 308, 374, 440, 506];
+  const sleeveHeight = isLong ? 128 : 52;
 
   for (const ax of armPanels) {
     ctx.fillStyle = baseColor;
-    ctx.fillRect(ax, 406, 64, sleeveHeight);
-    applyFabricTexture(ctx, ax, 406, 64, sleeveHeight);
+    ctx.fillRect(ax, 355, 64, sleeveHeight);
+    applyFabricTexture(ctx, ax, 355, 64, sleeveHeight);
 
     // Sleeve Hem with double stitching
-    drawDoubleStitch(ctx, ax, 406 + sleeveHeight - 3, 64, true, stitchColor);
+    drawDoubleStitch(ctx, ax, 355 + sleeveHeight - 3, 64, true, stitchColor);
 
     // Soft underarm fold shadow near top
     ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
-    ctx.fillRect(ax, 406, 64, 8);
+    ctx.fillRect(ax, 355, 64, 8);
+  }
+
+  // If long sleeve or hoodie, fill hand/wrist bottom (Down): 217, 485, 64, 64 and 308, 485, 64, 64
+  if (isLong) {
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(217, 485, 64, 64);
+    ctx.fillRect(308, 485, 64, 64);
+    applyFabricTexture(ctx, 217, 485, 64, 64);
+    applyFabricTexture(ctx, 308, 485, 64, 64);
   }
 
   // 3. PATTERNS
@@ -198,13 +214,13 @@ async function renderClassicRobloxShirt(ctx: CanvasRenderingContext2D, spec: Ugc
 
   // Subtle realistic edge shading
   applyRealisticShading(ctx, [
-    { x: 231, y: 74, w: 128, h: 64 },
+    { x: 231, y: 8, w: 128, h: 64 },
     { x: tx, y: ty, w: 128, h: torsoHeight },
-    { x: 423, y: ty, w: 128, h: torsoHeight },
-    { x: 159, y: ty, w: 64, h: torsoHeight },
-    { x: 367, y: ty, w: 64, h: torsoHeight },
-    { x: 85, y: 342, w: 64, h: 64 },
-    { x: 341, y: 342, w: 64, h: 64 },
+    { x: 427, y: ty, w: 128, h: torsoHeight },
+    { x: 165, y: ty, w: 64, h: torsoHeight },
+    { x: 361, y: ty, w: 64, h: torsoHeight },
+    { x: 217, y: 289, w: 64, h: 64 },
+    { x: 308, y: 289, w: 64, h: 64 },
   ]);
 }
 
@@ -217,7 +233,7 @@ async function renderClassicRobloxPants(ctx: CanvasRenderingContext2D, spec: Ugc
   const waistColor = spec.secondaryColor || "#09090b";
 
   const tx = 231;
-  const ty = 138;
+  const ty = 74;
   const t = (spec.title || "").toLowerCase();
   const d = spec.details || [];
   const isSkirt = d.some((i) => i.includes("skirt") || i.includes("pleated")) || t.includes("skirt") || t.includes("saia");
@@ -228,20 +244,21 @@ async function renderClassicRobloxPants(ctx: CanvasRenderingContext2D, spec: Ugc
     return;
   }
 
-  // Pelvis
+  // Pelvis Panels (Y = 74, Height = 128)
   ctx.fillStyle = baseColor;
-  ctx.fillRect(tx, ty, 128, 128);
-  ctx.fillRect(423, ty, 128, 128);
-  ctx.fillRect(159, ty, 64, 128);
-  ctx.fillRect(367, ty, 64, 128);
+  ctx.fillRect(tx, ty, 128, 128); // Front
+  ctx.fillRect(427, ty, 128, 128); // Back
+  ctx.fillRect(165, ty, 64, 128);  // Right
+  ctx.fillRect(361, ty, 64, 128);  // Left
+  ctx.fillRect(231, 204, 128, 64); // Crotch underside
   applyFabricTexture(ctx, tx, ty, 128, 128);
 
   // Waistband
   ctx.fillStyle = waistColor;
   ctx.fillRect(tx, ty, 128, 12);
-  ctx.fillRect(423, ty, 128, 12);
-  ctx.fillRect(159, ty, 64, 12);
-  ctx.fillRect(367, ty, 64, 12);
+  ctx.fillRect(427, ty, 128, 12);
+  ctx.fillRect(165, ty, 64, 12);
+  ctx.fillRect(361, ty, 64, 12);
 
   // Belt Buckle
   ctx.fillStyle = seamColor;
@@ -262,25 +279,41 @@ async function renderClassicRobloxPants(ctx: CanvasRenderingContext2D, spec: Ugc
   ctx.arc(tx + 106, ty + 12, 16, 0.5 * Math.PI, Math.PI);
   ctx.stroke();
 
-  // Legs
-  const legPanels = [21, 85, 149, 213, 277, 341, 405, 469];
-  const legHeight = isSkirt ? 56 : 110;
+  // Leg Tops (Thigh tops)
+  ctx.fillStyle = baseColor;
+  ctx.fillRect(217, 289, 64, 64);
+  ctx.fillRect(308, 289, 64, 64);
+  applyFabricTexture(ctx, 217, 289, 64, 64);
+  applyFabricTexture(ctx, 308, 289, 64, 64);
+
+  // Legs Panels (Y = 355)
+  const legPanels = [19, 85, 151, 217, 308, 374, 440, 506];
+  const legHeight = isSkirt ? 56 : 128;
 
   for (const lx of legPanels) {
     ctx.fillStyle = baseColor;
-    ctx.fillRect(lx, 406, 64, legHeight);
-    applyFabricTexture(ctx, lx, 406, 64, legHeight);
+    ctx.fillRect(lx, 355, 64, legHeight);
+    applyFabricTexture(ctx, lx, 355, 64, legHeight);
 
     // Ankle Cuff
-    drawDoubleStitch(ctx, lx, 406 + legHeight - 3, 64, true, seamColor);
+    drawDoubleStitch(ctx, lx, 355 + legHeight - 3, 64, true, seamColor);
 
     // Side seam
     ctx.strokeStyle = `${seamColor}44`;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(lx + 32, 406);
-    ctx.lineTo(lx + 32, 406 + legHeight);
+    ctx.moveTo(lx + 32, 355);
+    ctx.lineTo(lx + 32, 355 + legHeight);
     ctx.stroke();
+  }
+
+  // Feet / shoes bottom (if full pants)
+  if (!isSkirt) {
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(217, 485, 64, 64);
+    ctx.fillRect(308, 485, 64, 64);
+    applyFabricTexture(ctx, 217, 485, 64, 64);
+    applyFabricTexture(ctx, 308, 485, 64, 64);
   }
 
   if (isSkirt) {
@@ -300,7 +333,7 @@ async function renderClassicRobloxPants(ctx: CanvasRenderingContext2D, spec: Ugc
  */
 function drawChestEmblem(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
   const cx = 295; // Center of Torso_Front
-  const cy = 182; // Positioned high on upper chest for perfect avatar fit
+  const cy = 118; // Upper chest (Torso_Front Y: 74..202, collar scoop is 74..81)
   const t = (spec.title || "").toLowerCase();
   const d = spec.details || [];
   const th = (spec.theme || "").toLowerCase();
@@ -329,7 +362,7 @@ function drawChestEmblem(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
     t.includes("pajama") ||
     d.some((i) => i.includes("chain"))
   ) {
-    drawStreetwearChainAndPocket(ctx, 231, 138);
+    drawStreetwearChainAndPocket(ctx, 231, 74);
   } else if (t.includes("skull") || d.some((i) => i.includes("skull"))) {
     drawSkullGraphic(ctx, cx, cy, spec.accentColor || "#e4e4e7");
   } else if (t.includes("heart") || d.some((i) => i.includes("heart"))) {
@@ -663,7 +696,7 @@ export function drawKuromiGraphic(ctx: CanvasRenderingContext2D, cx: number, cy:
  */
 export function drawMinionPants(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
   const tx = 231;
-  const ty = 138;
+  const ty = 74;
 
   const denimGrad = ctx.createLinearGradient(tx, ty, tx, ty + 128);
   denimGrad.addColorStop(0, "#2563eb");
@@ -671,9 +704,10 @@ export function drawMinionPants(ctx: CanvasRenderingContext2D, spec: UgcDesignSp
 
   ctx.fillStyle = denimGrad;
   ctx.fillRect(tx, ty, 128, 128);
-  ctx.fillRect(423, ty, 128, 128);
-  ctx.fillRect(159, ty, 64, 128);
-  ctx.fillRect(367, ty, 64, 128);
+  ctx.fillRect(427, ty, 128, 128);
+  ctx.fillRect(165, ty, 64, 128);
+  ctx.fillRect(361, ty, 64, 128);
+  ctx.fillRect(231, 204, 128, 64); // Crotch underside
 
   ctx.fillStyle = "#1e40af";
   ctx.fillRect(tx, ty, 128, 12);
@@ -681,20 +715,31 @@ export function drawMinionPants(ctx: CanvasRenderingContext2D, spec: UgcDesignSp
   ctx.lineWidth = 1;
   ctx.strokeRect(tx, ty, 128, 12);
 
-  const legPanels = [21, 85, 149, 213, 277, 341, 405, 469];
+  // Thigh tops
+  ctx.fillStyle = denimGrad;
+  ctx.fillRect(217, 289, 64, 64);
+  ctx.fillRect(308, 289, 64, 64);
+
+  const legPanels = [19, 85, 151, 217, 308, 374, 440, 506];
   for (const lx of legPanels) {
     ctx.fillStyle = denimGrad;
-    ctx.fillRect(lx, 406, 64, 110);
+    ctx.fillRect(lx, 355, 64, 104);
 
     ctx.strokeStyle = "#fbbf24";
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(lx + 32, 406); ctx.lineTo(lx + 32, 406 + 96); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(lx + 32, 355); ctx.lineTo(lx + 32, 355 + 104); ctx.stroke();
 
+    // Yellow sock / cuff
     ctx.fillStyle = "#facc15";
-    ctx.fillRect(lx, 406 + 96, 64, 14);
+    ctx.fillRect(lx, 355 + 104, 64, 24);
     ctx.strokeStyle = "#fbbf24";
-    ctx.strokeRect(lx, 406 + 96, 64, 14);
+    ctx.strokeRect(lx, 355 + 104, 64, 24);
   }
+
+  // Black shoes bottom
+  ctx.fillStyle = "#18181b";
+  ctx.fillRect(217, 485, 64, 64);
+  ctx.fillRect(308, 485, 64, 64);
 }
 
 /**
@@ -940,7 +985,7 @@ export async function overlayReferenceImage(
       const targetW = 44;
       const targetH = 44;
       const targetX = 231 + (128 - targetW) / 2;
-      const targetY = 138 + 24;
+      const targetY = 74 + 20;
 
       ctx.beginPath();
       ctx.roundRect(targetX, targetY, targetW, targetH, 3);
@@ -1012,6 +1057,10 @@ export async function renderAvatarPreview(
       // Avatar Skin tone (Clean Studio White/Light Gray)
       const skinColor = "#e5e7eb";
 
+      // Neck (behind head and torso)
+      ctx.fillStyle = skinColor;
+      ctx.fillRect(141, 66, 18, 16);
+
       // 2. Head (centered at x: 150, y: 44, w: 48, h: 48)
       ctx.save();
       ctx.fillStyle = skinColor;
@@ -1041,13 +1090,8 @@ export async function renderAvatarPreview(
       ctx.shadowBlur = 8;
       ctx.shadowOffsetY = 3;
 
-      if (kind === "shirt" || kind === "tshirt") {
-        // Draw front torso slice from template: (231, 138, 128, 128) -> (116, 76, 68, 72)
-        ctx.drawImage(img, 231, 138, 128, 128, 116, 76, 68, 72);
-      } else {
-        // Pants: Torso front pelvis
-        ctx.drawImage(img, 231, 138, 128, 128, 116, 76, 68, 72);
-      }
+      // Draw front torso slice from template: (231, 74, 128, 128) -> (116, 76, 68, 72)
+      ctx.drawImage(img, 231, 74, 128, 128, 116, 76, 68, 72);
       ctx.restore();
 
       // 4. Arms (Avatar Right: 76, 76, 36, 72 | Avatar Left: 188, 76, 36, 72)
@@ -1056,8 +1100,8 @@ export async function renderAvatarPreview(
       ctx.fillStyle = skinColor;
       ctx.fillRect(76, 76, 36, 72); // Base bare arm
       if (kind === "shirt") {
-        // Short sleeve: only top 28px
-        ctx.drawImage(img, 85, 406, 64, 48, 76, 76, 36, 28);
+        // Draw from Right Limb Front: (217, 355, 64, 128) -> (76, 76, 36, 72)
+        ctx.drawImage(img, 217, 355, 64, 128, 76, 76, 36, 72);
       }
       ctx.strokeStyle = "rgba(0, 0, 0, 0.12)";
       ctx.lineWidth = 1;
@@ -1069,8 +1113,8 @@ export async function renderAvatarPreview(
       ctx.fillStyle = skinColor;
       ctx.fillRect(188, 76, 36, 72); // Base bare arm
       if (kind === "shirt") {
-        // Short sleeve: only top 28px
-        ctx.drawImage(img, 341, 406, 64, 48, 188, 76, 36, 28);
+        // Draw from Left Limb Front: (308, 355, 64, 128) -> (188, 76, 36, 72)
+        ctx.drawImage(img, 308, 355, 64, 128, 188, 76, 36, 72);
       }
       ctx.strokeStyle = "rgba(0, 0, 0, 0.12)";
       ctx.lineWidth = 1;
@@ -1079,14 +1123,16 @@ export async function renderAvatarPreview(
 
       // 5. Legs (Left: 116, 150, 33, 86 | Right: 151, 150, 33, 86)
       ctx.save();
-      const legColor = kind === "pants" ? "#1e293b" : "#f1f5f9";
-      ctx.fillStyle = legColor;
+      const legBaseColor = kind === "pants" ? skinColor : "#1e293b";
+      ctx.fillStyle = legBaseColor;
       ctx.fillRect(116, 150, 33, 86);
       ctx.fillRect(151, 150, 33, 86);
 
       if (kind === "pants") {
-        ctx.drawImage(img, 85, 406, 64, 112, 116, 150, 33, 86);
-        ctx.drawImage(img, 341, 406, 64, 112, 151, 150, 33, 86);
+        // Right Leg Front: (217, 355, 64, 128) -> (116, 150, 33, 86)
+        // Left Leg Front: (308, 355, 64, 128) -> (151, 150, 33, 86)
+        ctx.drawImage(img, 217, 355, 64, 128, 116, 150, 33, 86);
+        ctx.drawImage(img, 308, 355, 64, 128, 151, 150, 33, 86);
       }
 
       ctx.strokeStyle = "rgba(0, 0, 0, 0.15)";
