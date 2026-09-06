@@ -29,6 +29,7 @@ import {
   startDiscordLogin,
 } from "./auth.js";
 import { buildDashboard, bustDashboardCache, validateCookie } from "./dashboard.js";
+import { getTurnstileConfig, verifyTurnstile } from "./turnstile.js";
 import { buildAnalytics } from "./analytics.js";
 import { ripUgcAsset } from "./copy.js";
 import {
@@ -157,14 +158,15 @@ app.use((req, res, next) => {
   }
 
   const connectSrc = isHosted()
-    ? "connect-src 'self' https:"
-    : "connect-src 'self' http://127.0.0.1:8788 http://127.0.0.1:5174 ws://127.0.0.1:5174";
+    ? "connect-src 'self' https: https://challenges.cloudflare.com"
+    : "connect-src 'self' https://challenges.cloudflare.com http://127.0.0.1:8788 http://127.0.0.1:5174 ws://127.0.0.1:5174";
 
   res.setHeader(
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self'",
+      "script-src 'self' https://challenges.cloudflare.com",
+      "frame-src 'self' https://challenges.cloudflare.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "media-src 'self' https:",
@@ -549,6 +551,10 @@ app.get("/api/auth/discord/callback", (req, res) => {
 });
 app.post("/api/auth/logout", logoutSession);
 
+app.get("/api/turnstile/config", (_req, res) => {
+  res.json(getTurnstileConfig());
+});
+
 app.get("/api/account", (_req, res) => {
   res.json(publicAccount());
 });
@@ -559,6 +565,15 @@ app.post("/api/account", async (req, res) => {
     res.status(401).json({ error: "Sign in with Discord first." });
     return;
   }
+
+  // Cloudflare Turnstile anti-bot verification
+  const turnstileToken = req.body?.turnstileToken ? String(req.body.turnstileToken) : undefined;
+  const turnstileCheck = await verifyTurnstile(turnstileToken, req.ip);
+  if (!turnstileCheck.success) {
+    res.status(403).json({ error: turnstileCheck.error });
+    return;
+  }
+
   const cookie = cookieFromBody(req.body);
   if (!cookie || cookie.length < 20) {
     res.status(400).json({ error: "Paste your own .ROBLOSECURITY cookie value." });

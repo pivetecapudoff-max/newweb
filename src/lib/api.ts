@@ -329,11 +329,17 @@ function packSession(value: string): string {
   return btoa(binary);
 }
 
-export function connectAccount(cookie: string): Promise<AccountPublic> {
+export function connectAccount(
+  cookie: string,
+  turnstileToken?: string
+): Promise<AccountPublic> {
   return api("/api/account", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ session: packSession(cookie) }),
+    body: JSON.stringify({
+      session: packSession(cookie),
+      turnstileToken: turnstileToken || undefined,
+    }),
   }).then((res) => readJson<AccountPublic>(res));
 }
 

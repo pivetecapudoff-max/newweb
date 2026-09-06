@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { AuthForm } from "../components/ui/sign-in-1";
 import { discordLoginHref, fetchAccount } from "../lib/api";
 import { ArrowLeft } from "lucide-react";
+import { CloudflareTurnstile } from "../components/CloudflareTurnstile";
 
 const IconDiscord = (props: React.SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -61,6 +62,9 @@ export function LoginPage() {
         </Link>
       </div>
 
+      <div className="w-full max-w-sm mb-3">
+        <CloudflareTurnstile onSuccess={() => {}} />
+      </div>
 
       <AuthForm
         className="w-full"
