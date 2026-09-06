@@ -256,8 +256,8 @@ export function MassUploadPage() {
           </div>
         </section>
 
-        <section className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
-          <div className="min-w-0 rounded-[24px] border border-white/[0.08] bg-black/20 backdrop-blur-xl">
+        <section className="mt-5 flex flex-col lg:flex-row gap-5 items-start">
+          <div className="flex-1 min-w-0 w-full rounded-[24px] border border-white/[0.08] bg-black/20 backdrop-blur-xl">
             <div className="flex flex-col gap-4 border-b border-white/[0.07] p-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="flex items-center gap-2 text-sm font-semibold text-white">
@@ -308,7 +308,14 @@ export function MassUploadPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3 p-4">
+            <div
+              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 p-4"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+                gap: "12px",
+              }}
+            >
               {loading
                 ? Array.from({ length: 12 }).map((_, index) => (
                     <div key={index} className="h-64 animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.035]" />
@@ -321,18 +328,18 @@ export function MassUploadPage() {
                         type="button"
                         key={item.id}
                         onClick={() => toggleItem(item.id)}
-                        className={`group flex flex-col overflow-hidden rounded-2xl border text-left transition ${
+                        className={`group flex flex-col overflow-hidden rounded-2xl border text-left transition w-full ${
                           checked
                             ? "border-blue-400/50 bg-blue-500/[0.08] shadow-[0_0_0_1px_rgba(96,165,250,0.15)]"
                             : "border-white/[0.07] bg-white/[0.025] hover:border-white/[0.14] hover:bg-white/[0.045]"
                         }`}
                       >
-                        <div className="relative aspect-square w-full overflow-hidden rounded-t-2xl bg-black/40 p-2 flex items-center justify-center">
+                        <div className="relative aspect-square w-full max-h-48 overflow-hidden rounded-t-2xl bg-black/40 p-2 flex items-center justify-center">
                           {item.thumbnailUrl ? (
                             <img
                               src={item.thumbnailUrl}
                               alt={item.name}
-                              className="h-full w-full object-contain transition duration-300 group-hover:scale-105"
+                              className="h-full w-full max-h-44 object-contain transition duration-300 group-hover:scale-105"
                               loading="lazy"
                             />
                           ) : (
@@ -375,7 +382,7 @@ export function MassUploadPage() {
             </div>
           </div>
 
-          <aside className="h-fit rounded-[24px] border border-white/[0.08] bg-black/25 p-5 backdrop-blur-xl lg:sticky lg:top-4">
+          <aside className="w-full lg:w-[340px] shrink-0 h-fit rounded-[24px] border border-white/[0.08] bg-black/25 p-5 backdrop-blur-xl lg:sticky lg:top-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-white">
               <UploadCloud className="h-4 w-4 text-blue-400" />
               Configurar publicação
