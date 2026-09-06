@@ -339,7 +339,7 @@ export function Feed() {
             Relatórios &amp; Tendências de Mercado
           </h1>
           <p className="text-xs text-white/40 mt-1 font-medium">
-            Radar de inteligência com dados ao vivo do catálogo, análise de grupos concorrentes e blueprints gerados por IA.
+            Dados em tempo real do catálogo, análise de concorrentes e oportunidades de mercado.
           </p>
         </div>
 
@@ -394,19 +394,19 @@ export function Feed() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
-              <Brain className="w-5 h-5" />
+              <TrendingUp className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-white tracking-tight">
-                  Briefing Estratégico de Inteligência (IA)
+                  Análise de Mercado
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/25">
                   Tempo Real
                 </span>
               </div>
               <p className="text-xs text-white/50 mt-0.5">
-                Diagnóstico preditivo de catálogo, oportunidades de 5 R$ vs 3D e timing de lançamento.
+                Tendências do catálogo, oportunidades de 5 R$ vs 3D e melhores horários de lançamento.
               </p>
             </div>
           </div>
@@ -420,12 +420,12 @@ export function Feed() {
             {generatingReport ? (
               <>
                 <LoaderCircle className="w-4 h-4 animate-spin" />
-                <span>Compilando Mercado...</span>
+                <span>Gerando Relatório...</span>
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4 text-blue-200" />
-                <span>Gerar Relatório com IA</span>
+                <TrendingUp className="w-4 h-4 text-blue-200" />
+                <span>Gerar Relatório de Mercado</span>
               </>
             )}
           </button>
@@ -561,7 +561,7 @@ export function Feed() {
           }`}
         >
           <Lightbulb className="w-3.5 h-3.5" />
-          <span>Blueprints de Drops (IA)</span>
+          <span>Sugestões de Lançamento</span>
         </button>
       </div>
 
@@ -1113,13 +1113,13 @@ export function Feed() {
         <div className="space-y-5">
           <div className="rounded-[24px] bg-[#0a0a0a] p-5 sm:p-6 border border-white/[0.08] flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-white">Blueprints de Criação Imediata (Próximas 48h)</h3>
+              <h3 className="text-sm font-bold text-white">Ideias e Sugestões de Lançamento (Próximas 48h)</h3>
               <p className="text-xs text-white/40 mt-0.5">
-                Peças calculadas para maximizar algoritmo, CTR e margem líquida em Robux.
+                Peças com alto potencial de busca e margem de lucro em Robux.
               </p>
             </div>
             <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
-              Recomendado pela IA
+              Alta Procura
             </span>
           </div>
 
