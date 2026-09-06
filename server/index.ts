@@ -388,6 +388,29 @@ app.post("/api/ai/optimize-seo", requireAuth, async (req, res) => {
   }
 });
 
+app.post("/api/ai/describe", requireAuth, async (req, res) => {
+  try {
+    const { assetId, imageUrl, image, imageBase64, mimeType, title, groupName, styleHint } = req.body || {};
+    const result = await optimizeItemSeoMultimodal({
+      assetId,
+      imageUrl,
+      imageBase64: imageBase64 || image,
+      mimeType,
+      title,
+      groupName,
+      styleHint,
+    });
+    res.json({
+      success: true,
+      description: result.finalDescription,
+      title: result.bestTitle,
+      result,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Erro ao gerar descrição com IA." });
+  }
+});
+
 app.post("/api/ai/analyze-group", requireAuth, async (req, res) => {
   try {
     const groupId = req.body?.groupId ? Number(req.body.groupId) : undefined;

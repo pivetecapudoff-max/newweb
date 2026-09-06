@@ -21,6 +21,7 @@ import {
 import { ripUgcItem, type UgcRipResult } from "../lib/api";
 import { useNavigate } from "react-router-dom";
 import { LiquidMetalButton } from "@/components/ui/liquid-metal-button";
+import { SeoOptimizationModal } from "../components/SeoOptimizationModal";
 
 interface HistoryItem {
   assetId: string;
@@ -44,6 +45,7 @@ export function CopyPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<UgcRipResult | null>(null);
   const [showLogs, setShowLogs] = useState(false);
+  const [seoModalOpen, setSeoModalOpen] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>(() => {
     try {
       const saved = localStorage.getItem("farol_ugc_history");
@@ -277,8 +279,17 @@ export function CopyPage() {
                 </div>
               </div>
 
-              {/* Primary Download Button */}
-              <div className="flex items-center gap-3 w-full sm:w-auto">
+              {/* Primary Download Button & SEO Optimizer */}
+              <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setSeoModalOpen(true)}
+                  className="flex h-11 items-center gap-2 rounded-xl border border-blue-400/40 bg-blue-500/10 px-4 text-xs font-semibold text-blue-300 hover:bg-blue-500/20 transition-all shadow-lg"
+                >
+                  <Sparkles className="w-4 h-4 text-blue-400" />
+                  <span>Otimizar SEO &amp; Títulos</span>
+                </button>
+
                 <LiquidMetalButton
                   href={result.zipUrl}
                   download
@@ -450,6 +461,17 @@ export function CopyPage() {
             ))}
           </div>
         </div>
+      )}
+
+      {result && (
+        <SeoOptimizationModal
+          isOpen={seoModalOpen}
+          onClose={() => setSeoModalOpen(false)}
+          assetId={result.assetId}
+          imageUrl={result.thumbnailUrl}
+          currentTitle={result.name}
+          itemType={result.type}
+        />
       )}
     </div>
   );

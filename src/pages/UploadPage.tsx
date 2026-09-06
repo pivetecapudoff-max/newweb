@@ -28,7 +28,9 @@ import {
   Trash2,
   Plus,
   Tag,
+  Sparkles,
 } from "lucide-react";
+import { SeoOptimizationModal } from "../components/SeoOptimizationModal";
 
 const KINDS: { id: ClothingKind; label: string; hint: string }[] = [
   { id: "shirt", label: "Camisa (Shirt)", hint: "Template clássico de camisa &bull; 585×559" },
@@ -67,6 +69,16 @@ export function UploadPage() {
   const [optimizing, setOptimizing] = useState(false);
   const [optBanner, setOptBanner] = useState<string | null>(null);
   const [generatingDesc, setGeneratingDesc] = useState(false);
+  const [seoModalOpen, setSeoModalOpen] = useState(false);
+  const [seoModalProps, setSeoModalProps] = useState<{
+    assetId?: number | string;
+    imageUrl?: string;
+    imageBase64?: string;
+    currentTitle?: string;
+    itemType?: string;
+    groupName?: string;
+    onApply?: (data: { title: string; description: string; tags: string[] }) => void;
+  }>({});
 
   const loadUploads = () => {
     fetchUploads()
@@ -110,41 +122,30 @@ export function UploadPage() {
     setFile(next);
     setPreview(null);
     if (!next) return;
-    setPreview(await readFile(next));
+    const base64 = await readFile(next);
+    setPreview(base64);
     if (!name.trim()) {
       const cleanName = next.name
         .replace(/\.[^.]+$/, "")
         .replace(/[-_]/g, " ")
         .slice(0, 45);
       setName(cleanName);
-      generateAiDesc(cleanName);
     }
   }
 
-  async function generateAiDesc(titleToUse?: string) {
-    const t = (titleToUse || name || "Roupas Aesthetic").trim();
-    setGeneratingDesc(true);
-    try {
-      const res = await fetch("/api/ai/describe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: t,
-          assetType: kind === "tshirt" ? 2 : kind === "pants" ? 12 : 11,
-        }),
-      });
-      const data = await res.json();
-      if (data.description) {
-        setDescription(data.description);
-        return;
-      }
-    } catch {
-      // Fallback
-    } finally {
-      setGeneratingDesc(false);
-    }
-    const desc = `— ⚡ ${t} ⚡ —\n\n★ High quality aesthetic fit with clean custom shading & realistic details.\n★ Looks great with matching outfits! Try it on in Catalog Avatar Creator (CAC).\n★ Join our group for more high-quality clothing drops!\n\ntags: aesthetic y2k streetwear grunge vintage cyber dark emo baggy fit hood drip cool thrift anime preppy matching gothic opium 5robux`;
-    setDescription(desc);
+  function generateAiDesc(titleToUse?: string) {
+    const t = (titleToUse || name || file?.name?.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ") || "UGC Clothing").trim();
+    setSeoModalProps({
+      imageBase64: preview || undefined,
+      currentTitle: t,
+      itemType: kind === "tshirt" ? "Classic T-Shirt" : kind === "pants" ? "Classic Pants" : "Classic Shirt",
+      groupName,
+      onApply: (d) => {
+        setName(d.title);
+        setDescription(d.description);
+      },
+    });
+    setSeoModalOpen(true);
   }
 
   async function onSubmit(event: FormEvent) {
@@ -416,6 +417,23 @@ export function UploadPage() {
                       </span>
 
                       <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setSeoModalProps({
+                              assetId: item.id,
+                              imageUrl: item.thumbnailUrl,
+                              currentTitle: item.name,
+                              itemType: typeLabel,
+                              groupName,
+                            });
+                            setSeoModalOpen(true);
+                          }}
+                          title="Analisar Imagem & Otimizar SEO com IA"
+                          className="p-1 rounded-md hover:bg-blue-500/20 text-blue-400/80 hover:text-blue-300 transition-colors"
+                        >
+                          <Sparkles className="w-3 h-3" />
+                        </button>
+
                         <button
                           onClick={() => handleCopy(item.id)}
                           title="Copiar ID"
@@ -697,6 +715,12 @@ export function UploadPage() {
           )}
         </div>
       )}
+
+      <SeoOptimizationModal
+        isOpen={seoModalOpen}
+        onClose={() => setSeoModalOpen(false)}
+        {...seoModalProps}
+      />
     </div>
   );
 }
