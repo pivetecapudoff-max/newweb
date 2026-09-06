@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { ripUgcItem, type UgcRipResult } from "../lib/api";
 import { useNavigate } from "react-router-dom";
+import { LiquidMetalButton } from "@/components/ui/liquid-metal-button";
 
 interface HistoryItem {
   assetId: string;
@@ -153,23 +154,21 @@ export function CopyPage() {
                 />
               </div>
 
-              <button
-                onClick={() => handleRip()}
-                disabled={loading}
-                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
-              >
-                {loading ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Extraindo 3D...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    <span>Copiar / Ripar Item</span>
-                  </>
-                )}
-              </button>
+              <div className="shrink-0 flex items-center justify-center">
+                <LiquidMetalButton
+                  onClick={() => handleRip()}
+                  disabled={loading}
+                  width={200}
+                  icon={
+                    loading ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />
+                    ) : (
+                      <Sparkles className="w-4 h-4 text-blue-400" />
+                    )
+                  }
+                  label={loading ? "Extraindo 3D..." : "Copiar / Ripar Item"}
+                />
+              </div>
             </div>
           </div>
 
@@ -280,14 +279,13 @@ export function CopyPage() {
 
               {/* Primary Download Button */}
               <div className="flex items-center gap-3 w-full sm:w-auto">
-                <a
+                <LiquidMetalButton
                   href={result.zipUrl}
                   download
-                  className="w-full sm:w-auto px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <FolderArchive className="w-4 h-4" />
-                  <span>Baixar Pacote .ZIP</span>
-                </a>
+                  width={195}
+                  icon={<FolderArchive className="w-4 h-4 text-emerald-400" />}
+                  label="Baixar Pacote .ZIP"
+                />
               </div>
             </div>
 
