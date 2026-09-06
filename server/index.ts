@@ -23,6 +23,7 @@ import {
   generateAiItemDescription,
   generateUgcDesignData,
   analyzeGroupSalesPerformance,
+  optimizeItemSeoMultimodal,
 } from "./ai.js";
 import { isHosted, isSecureRequest, listenTarget } from "./host.js";
 import {
@@ -366,6 +367,24 @@ app.post("/api/ai/optimize", requireAuth, async (req, res) => {
     res.json({ success: true, result, logs: getLogs() });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Falha na otimização" });
+  }
+});
+
+app.post("/api/ai/optimize-seo", requireAuth, async (req, res) => {
+  try {
+    const { assetId, imageUrl, imageBase64, mimeType, title, groupName, styleHint } = req.body || {};
+    const result = await optimizeItemSeoMultimodal({
+      assetId,
+      imageUrl,
+      imageBase64,
+      mimeType,
+      title,
+      groupName,
+      styleHint,
+    });
+    res.json({ success: true, result });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Erro ao gerar SEO multimodal com IA." });
   }
 });
 

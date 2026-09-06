@@ -290,13 +290,294 @@ export function generateSeoDescription(title: string, assetType?: number | strin
   return generateEnhancedSeoDescription(title, assetType, groupName);
 }
 
+// Fetch Roblox Asset Thumbnail as Base64 for Multimodal Vision
+export async function fetchAssetThumbnailBase64(
+  assetId: number | string
+): Promise<{ mimeType: 'image/png' | 'image/jpeg' | 'image/webp'; data: string } | null> {
+  try {
+    const res = await fetch(
+      `https://thumbnails.roblox.com/v1/assets?assetIds=${assetId}&size=420x420&format=Png&isCircular=false`,
+      {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+          Accept: 'application/json',
+        },
+      }
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as any;
+    const imageUrl = json.data?.[0]?.imageUrl;
+    if (!imageUrl || json.data?.[0]?.state !== 'Completed') return null;
+
+    const imgRes = await fetch(imageUrl);
+    if (!imgRes.ok) return null;
+    const arrayBuffer = await imgRes.arrayBuffer();
+    return {
+      mimeType: 'image/png',
+      data: Buffer.from(arrayBuffer).toString('base64'),
+    };
+  } catch (err: any) {
+    addLog('warn', 'THUMB_FETCH', `Não foi possível baixar thumbnail do asset ${assetId}: ${err.message}`);
+    return null;
+  }
+}
+
+export async function fetchImageBase64FromUrl(
+  url: string
+): Promise<{ mimeType: 'image/png' | 'image/jpeg' | 'image/webp'; data: string } | null> {
+  try {
+    const imgRes = await fetch(url);
+    if (!imgRes.ok) return null;
+    const contentType = imgRes.headers.get('content-type') || 'image/png';
+    const mimeType: 'image/png' | 'image/jpeg' | 'image/webp' = contentType.includes('jpeg') || contentType.includes('jpg')
+      ? 'image/jpeg'
+      : contentType.includes('webp')
+      ? 'image/webp'
+      : 'image/png';
+    const arrayBuffer = await imgRes.arrayBuffer();
+    return {
+      mimeType,
+      data: Buffer.from(arrayBuffer).toString('base64'),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export interface SeoOptimizationResult {
+  visualAnalysis: string;
+  strongKeywords: string[];
+  titleOptions: { title: string; score: number; reason: string }[];
+  bestTitle: string;
+  finalDescription: string;
+  tags: string[];
+  rawText: string;
+}
+
+// Multimodal Visual SEO & Title Optimizer (Roblox Marketplace Specialist)
+export async function optimizeItemSeoMultimodal(options: {
+  assetId?: number | string;
+  imageUrl?: string;
+  imageBase64?: string;
+  mimeType?: 'image/png' | 'image/jpeg' | 'image/webp';
+  title?: string;
+  groupName?: string;
+  styleHint?: string;
+}): Promise<SeoOptimizationResult> {
+  let attachment: AiImageAttachment | null = null;
+
+  if (options.imageBase64) {
+    const cleanBase64 = options.imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+    attachment = {
+      name: 'item_preview.png',
+      mimeType: options.mimeType || 'image/png',
+      data: cleanBase64,
+    };
+  } else if (options.imageUrl) {
+    const fetched = await fetchImageBase64FromUrl(options.imageUrl);
+    if (fetched) {
+      attachment = {
+        name: 'item_preview.png',
+        mimeType: fetched.mimeType,
+        data: fetched.data,
+      };
+    }
+  } else if (options.assetId) {
+    const fetched = await fetchAssetThumbnailBase64(options.assetId);
+    if (fetched) {
+      attachment = {
+        name: `asset_${options.assetId}.png`,
+        mimeType: fetched.mimeType,
+        data: fetched.data,
+      };
+    }
+  }
+
+  const prompt = `Você é especialista em Roblox UGC, Marketplace, SEO, tendências de avatar e otimização de títulos para aumentar descoberta e vendas.
+
+Sua tarefa é criar um TÍTULO e uma DESCRIÇÃO com o maior potencial possível de descoberta no Roblox Marketplace.
+
+Analise a imagem anexada cuidadosamente antes de responder.
+Quero que você pense como um especialista em marketing de UGC, não apenas descreva literalmente o item.
+
+Contexto adicional:
+- Título/Nome atual ou referência: "${options.title || 'Roblox UGC Item'}"
+- Loja/Grupo: "${options.groupName || 'Roblox Store'}"
+${options.styleHint ? `- Dica de estilo: "${options.styleHint}"` : ''}
+
+REGRAS OBRIGATÓRIAS:
+
+1. Analise visualmente:
+- tipo do item
+- cor
+- estilo
+- formato
+- estética
+- características mais chamativas
+- público que provavelmente usaria
+- possíveis estilos relacionados (anime, kawaii, Y2K, cute, doll, soft etc.), mas SOMENTE se realmente combinarem com a imagem.
+
+2. Pense em como usuários realmente pesquisariam esse tipo de item no Roblox.
+
+3. O título deve:
+- estar preferencialmente em inglês, porque o Marketplace é global
+- ter no máximo 50 caracteres
+- colocar as palavras mais importantes primeiro
+- usar palavras que descrevam exatamente o item
+- ser fácil de pesquisar
+- parecer natural
+- NÃO usar palavras irrelevantes apenas para SEO
+- NÃO usar emoji no título
+- NÃO desperdiçar caracteres
+- NÃO fazer clickbait enganoso
+
+4. A descrição deve:
+- começar com uma frase curta e atraente
+- explicar o estilo do item
+- mencionar estéticas realmente compatíveis
+- conter naturalmente palavras que podem ajudar na busca
+- terminar com algumas tags relevantes
+- evitar spam de palavras
+- não colocar tags que não tenham relação com o item
+- Pode usar símbolos como ♡ ou ⋆ na descrição, mas não no título.
+
+5. Gere 5 opções de título. Depois dê uma nota de 0 a 10 para cada uma considerando:
+- potencial de busca
+- clareza
+- aparência profissional
+- compatibilidade com a imagem
+- potencial comercial
+
+6. Escolha UMA opção como vencedora e explique rapidamente por que ela é melhor.
+
+FORMATO OBRIGATÓRIO DA RESPOSTA:
+
+ANÁLISE VISUAL:
+[análise visual detalhada do item e da imagem]
+
+PALAVRAS-CHAVE MAIS FORTES:
+[keywords separadas por vírgula]
+
+TÍTULOS:
+1. [Título 1] - Nota: X/10 - [motivo]
+2. [Título 2] - Nota: X/10 - [motivo]
+3. [Título 3] - Nota: X/10 - [motivo]
+4. [Título 4] - Nota: X/10 - [motivo]
+5. [Título 5] - Nota: X/10 - [motivo]
+
+MELHOR TÍTULO:
+[título vencedor de até 50 caracteres, em inglês, sem emoji]
+
+DESCRIÇÃO FINAL:
+[descrição formatada completa pronta para publicar no Roblox]
+
+TAGS:
+[tags relevantes separadas por espaço]
+
+Priorize a combinação entre SEO + tendência + fidelidade à imagem + chance de clique.`;
+
+  const attachments = attachment ? [attachment] : [];
+  const rawText = await callGemini(prompt, '', { effort: 'Detalhada', attachments });
+
+  let visualAnalysis = '';
+  let strongKeywords: string[] = [];
+  const titleOptions: { title: string; score: number; reason: string }[] = [];
+  let bestTitle = '';
+  let finalDescription = '';
+  let tags: string[] = [];
+
+  const analysisMatch = rawText.match(/ANÁLISE VISUAL:\s*([\s\S]*?)(?=PALAVRAS-CHAVE MAIS FORTES:|$)/i);
+  if (analysisMatch) visualAnalysis = analysisMatch[1].trim();
+
+  const keywordsMatch = rawText.match(/PALAVRAS-CHAVE MAIS FORTES:\s*([\s\S]*?)(?=TÍTULOS:|$)/i);
+  if (keywordsMatch) {
+    strongKeywords = keywordsMatch[1]
+      .split(/[,;\n]+/)
+      .map((s) => s.trim().replace(/^[-*•]\s*/, ''))
+      .filter(Boolean);
+  }
+
+  const titlesMatch = rawText.match(/TÍTULOS:\s*([\s\S]*?)(?=MELHOR TÍTULO:|$)/i);
+  if (titlesMatch) {
+    const lines = titlesMatch[1].split('\n').map((l) => l.trim()).filter((l) => /^\d+\./.test(l));
+    for (const line of lines) {
+      const parts = line.replace(/^\d+\.\s*/, '');
+      const noteMatch = parts.match(/^(.*?)(?:\s*[-–—]\s*Nota:\s*(\d+(?:\.\d+)?)\/10)?(?:\s*[-–—]\s*(.*))?$/i);
+      if (noteMatch) {
+        titleOptions.push({
+          title: noteMatch[1].trim().replace(/^["']|["']$/g, ''),
+          score: noteMatch[2] ? parseFloat(noteMatch[2]) : 9,
+          reason: noteMatch[3]?.trim() || '',
+        });
+      } else {
+        titleOptions.push({ title: parts, score: 9, reason: '' });
+      }
+    }
+  }
+
+  const bestMatch = rawText.match(/MELHOR TÍTULO:\s*([\s\S]*?)(?=DESCRIÇÃO FINAL:|$)/i);
+  if (bestMatch) {
+    bestTitle = bestMatch[1].trim().replace(/^["']|["']$/g, '').slice(0, 50);
+  } else if (titleOptions.length > 0) {
+    bestTitle = titleOptions[0].title.slice(0, 50);
+  } else {
+    bestTitle = (options.title || 'Roblox UGC Item').slice(0, 50);
+  }
+
+  const descMatch = rawText.match(/DESCRIÇÃO FINAL:\s*([\s\S]*?)(?=TAGS:|$)/i);
+  if (descMatch) {
+    finalDescription = descMatch[1].trim();
+  } else {
+    finalDescription = rawText.trim();
+  }
+
+  const tagsMatch = rawText.match(/TAGS:\s*([\s\S]*?)$/i);
+  if (tagsMatch) {
+    tags = tagsMatch[1]
+      .split(/[\s,]+/)
+      .map((t) => t.trim().replace(/^#/, ''))
+      .filter(Boolean);
+  }
+
+  return {
+    visualAnalysis,
+    strongKeywords,
+    titleOptions,
+    bestTitle,
+    finalDescription,
+    tags,
+    rawText,
+  };
+}
+
 // Ultra-Intelligent AI Description Generator (Powered by Gemini, English High-Converting SEO)
 export async function generateAiItemDescription(
   title: string,
   assetType?: number | string,
   styleHint?: string,
-  groupName?: string
+  groupName?: string,
+  assetId?: number | string,
+  imageUrl?: string
 ): Promise<string> {
+  // If asset ID or image URL is available, leverage multimodal visual SEO!
+  if (assetId || imageUrl) {
+    try {
+      const visualSeo = await optimizeItemSeoMultimodal({
+        assetId,
+        imageUrl,
+        title,
+        groupName,
+        styleHint,
+      });
+      if (visualSeo.finalDescription && visualSeo.finalDescription.length >= 35) {
+        return visualSeo.finalDescription;
+      }
+    } catch (err: any) {
+      addLog('warn', 'AI_DESC_VISION_FALLBACK', `Fallback textual ativado para "${title}": ${err.message}`);
+    }
+  }
+
   const isUgc =
     Number(assetType) >= 41 ||
     String(title).toLowerCase().includes('hair') ||
@@ -405,8 +686,8 @@ export async function optimizeGroupCatalog(groupId?: number): Promise<{
 
       if (!needsUpdate) continue;
 
-      addLog('info', 'SEO_OPTIMIZE', `🤖 Gerando descrição de alta conversão com IA para "${asset.Name}" [ID: ${item.id}]...`);
-      const newDesc = await generateAiItemDescription(asset.Name, asset.AssetTypeId);
+      addLog('info', 'SEO_OPTIMIZE', `🤖 Analisando imagem e gerando SEO multimodal com IA para "${asset.Name}" [ID: ${item.id}]...`);
+      const newDesc = await generateAiItemDescription(asset.Name, asset.AssetTypeId, undefined, undefined, item.id);
 
       const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
       const metadata = JSON.stringify({
