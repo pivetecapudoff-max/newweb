@@ -374,18 +374,34 @@ export async function optimizeGroupCatalog(groupId?: number): Promise<{
 
       let itemSuccess = false;
       for (let attempt = 1; attempt <= 3; attempt++) {
-        const patchRes = await fetch(
-          `https://apis.roblox.com/assets/user-auth/v1/assets/${item.id}?updateMask=description`,
-          {
-            method: 'PATCH',
-            headers: {
-              Cookie: `.ROBLOSECURITY=${cookie}`,
-              'x-csrf-token': csrf,
-              'Content-Type': 'multipart/form-data; boundary=' + boundary,
-            },
-            body: payload,
-          }
-        );
+        // Attempt 1: develop.roblox.com (Standard for Classic Clothing: Shirts, Pants, T-Shirts)
+        let patchRes = await fetch(`https://develop.roblox.com/v1/assets/${item.id}`, {
+          method: 'PATCH',
+          headers: {
+            Cookie: `.ROBLOSECURITY=${cookie}`,
+            'x-csrf-token': csrf,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            description: newDesc,
+          }),
+        });
+
+        // Attempt 2: apis.roblox.com Open Cloud (For UGC 3D Accessories)
+        if (!patchRes.ok && patchRes.status !== 429) {
+          patchRes = await fetch(
+            `https://apis.roblox.com/assets/user-auth/v1/assets/${item.id}?updateMask=description`,
+            {
+              method: 'PATCH',
+              headers: {
+                Cookie: `.ROBLOSECURITY=${cookie}`,
+                'x-csrf-token': csrf,
+                'Content-Type': 'multipart/form-data; boundary=' + boundary,
+              },
+              body: payload,
+            }
+          );
+        }
 
         if (patchRes.ok) {
           addLog('success', 'SEO_OPTIMIZE', `✅ "${asset.Name}" atualizado com sucesso no Roblox!`);
@@ -401,7 +417,11 @@ export async function optimizeGroupCatalog(groupId?: number): Promise<{
           await new Promise((r) => setTimeout(r, 5000));
         } else {
           const errBody = await patchRes.text();
-          addLog('error', 'SEO_OPTIMIZE', `❌ Erro HTTP ${patchRes.status} em "${asset.Name}": ${errBody}`);
+          if (patchRes.status === 403 || patchRes.status === 401) {
+            addLog('error', 'SEO_OPTIMIZE', `❌ Sem permissão (HTTP ${patchRes.status}) em "${asset.Name}". A conta Roblox precisa de cargo com permissão "Configurar itens do grupo".`);
+          } else {
+            addLog('error', 'SEO_OPTIMIZE', `❌ Erro HTTP ${patchRes.status} em "${asset.Name}": ${errBody}`);
+          }
           errorCount++;
           break;
         }
