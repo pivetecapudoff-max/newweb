@@ -22,6 +22,9 @@ import {
   TrendingUp,
   ShoppingBag,
   Zap,
+  Users,
+  DollarSign,
+  Building2,
 } from "lucide-react";
 
 // Shared Primitives
@@ -94,7 +97,6 @@ export function Landing() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [discordEnabled, setDiscordEnabled] = useState(false);
   const [yearly, setYearly] = useState(false);
-  const [selectedMessage, setSelectedMessage] = useState(0);
 
   function enter(path = "/painel") {
     navigate(path);
@@ -107,61 +109,9 @@ export function Landing() {
   }, []);
 
   const navLinks = [
-      { label: "Catálogo", href: "#mockup" },
-      { label: "Radar de Vendas", href: "#triage" },
-      { label: "Depoimentos", href: "#testimonials" },
-      { label: "Preços", href: "#pricing" },
-  ];
-
-  const messages = [
-    {
-      sender: "Seu Grupo Roblox",
-      subject: "Relatório Semanal de Receita",
-      preview: "Seu grupo faturou 24.415 R$ com 102 vendas líquidas nesta semana...",
-      time: "9:41 AM",
-      unread: true,
-      category: "Shirts",
-    },
-    {
-      sender: "Cyberpunk Jacket",
-      subject: "Nicho em explosão no CAC",
-      preview: "Alta procura no Catalog Avatar Creator: +180% em buscas orgânicas...",
-      time: "8:12 AM",
-      unread: true,
-      category: "Shirts",
-    },
-    {
-      sender: "Baggy Cargo Pants",
-      subject: "Estoque reposto com sucesso",
-      preview: "Nova cor Black/Grey indexada com preço fixo de 5 Robux...",
-      time: "Ontem",
-      unread: false,
-      category: "Pants",
-    },
-    {
-      sender: "Roblox Open Cloud",
-      subject: "Webhook de venda confirmada",
-      preview: "Item #10354649 comprado por usuário VIP na loja do grupo...",
-      time: "Ontem",
-      unread: false,
-      category: "Limiteds",
-    },
-    {
-      sender: "Varredura de Integridade",
-      subject: "Catálogo seguro e verificado",
-      preview: "Zero infrações de copyright e proteção ativa contra cópias...",
-      time: "Seg",
-      unread: false,
-      category: "Shirts",
-    },
-    {
-      sender: "Syn Strategy Bot",
-      subject: "Meta 1.000 R$/dia aprovada",
-      preview: "Recomendação de novos drops temáticos para o próximo fim de semana...",
-      time: "Seg",
-      unread: false,
-      category: "Outfits CAC",
-    },
+    { label: "Radar de Vendas", href: "#triage" },
+    { label: "Depoimentos", href: "#testimonials" },
+    { label: "Preços", href: "#pricing" },
   ];
 
   return (
@@ -304,246 +254,274 @@ export function Landing() {
         </motion.div>
       </section>
 
-      {/* Section 4 — Realistic App Mockup */}
-      <section id="mockup" className="relative z-10 max-w-6xl mx-auto px-6 py-16 md:py-24">
+      {/* Section 4 — Realistic App Dashboard Mockup */}
+      <section id="mockup" className="relative z-10 max-w-6xl mx-auto px-6 py-12 md:py-20">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.9, delay: 0.2 }}
-          className="relative rounded-2xl overflow-hidden  bg-[#0e1014]/90 backdrop-blur-2xl shadow-[0_25px_70px_rgba(0,0,0,0.95)]"
+          className="relative rounded-2xl overflow-hidden bg-[#000000] border border-white/[0.08] backdrop-blur-2xl shadow-[0_25px_70px_rgba(0,0,0,0.95)]"
         >
           {/* Title Bar */}
-          <div className="h-10 px-4 bg-black/40  flex items-center justify-between">
+          <div className="h-10 px-4 bg-black/60 border-b border-white/[0.06] flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-[#ff5f57] inline-block" />
               <span className="w-3 h-3 rounded-full bg-[#febc2e] inline-block" />
               <span className="w-3 h-3 rounded-full bg-[#28c840] inline-block" />
             </div>
-            <span className="text-xs text-white/50 font-mono">
-              Illusions UGC — Radar de Catálogo & Receita
+            <span className="text-xs text-white/50 font-mono flex items-center gap-1.5">
+              <span>Dashboard • Welcome, why</span>
             </span>
-            <div className="w-12" />
+            <div className="flex items-center gap-1.5 text-[11px] text-white/40">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="hidden sm:inline font-mono">Live</span>
+            </div>
           </div>
 
-          {/* Mockup Body */}
-          <div className="grid grid-cols-12 h-[520px] text-xs">
-            {/* Column 1: Sidebar (col-span-3) */}
-            <div className="col-span-3  bg-black/30 p-3.5 flex flex-col justify-between">
-              <div className="space-y-4">
+          {/* Real Dashboard Representation */}
+          <div className="p-4 sm:p-7 space-y-6 text-left bg-[#000000] select-none">
+            {/* Dashboard Subheader */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                  <span>Dashboard • Welcome,</span>
+                  <span className="text-blue-400">why</span>
+                </h2>
+                <p className="text-xs text-white/40 mt-0.5">
+                  why • Loja Principal • Visão Global
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2 bg-[#121212] border border-white/[0.08] px-3.5 py-1.5 rounded-full text-xs text-white/80 font-medium">
+                  <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                  <span>why</span>
+                  <span className="text-[10px] text-white/40 font-mono">(1458096)</span>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => enter("/painel/upload")}
-                  className="rounded-lg bg-white text-black text-xs font-semibold px-3 py-2 flex items-center justify-center gap-1.5 w-full cursor-pointer hover:bg-neutral-200 transition-all shadow-md"
+                  onClick={() => enter("/painel")}
+                  className="inline-flex items-center gap-1.5 bg-white text-black font-semibold text-xs px-3.5 py-1.5 rounded-full shadow-lg hover:bg-neutral-200 transition cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-black" />
-                  <span>Publicar no Catálogo</span>
+                  <span>Otimizar Catálogo</span>
                 </button>
-
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-white/10 text-white font-medium">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="w-3.5 h-3.5 text-blue-500" />
-                      <span>Radar de Nichos</span>
-                    </div>
-                    <span className="text-[10px] font-mono bg-white/15 px-1.5 py-0.2 rounded-full">
-                      12
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-white/60 hover:bg-white/5 cursor-pointer">
-                    <div className="flex items-center gap-2">
-                      <BarChart3 className="w-3.5 h-3.5" />
-                      <span>Receita & Vendas</span>
-                    </div>
-                    <span className="text-[10px] font-mono text-blue-500">3</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-white/60 hover:bg-white/5 cursor-pointer">
-                    <ShoppingBag className="w-3.5 h-3.5" />
-                    <span>Roupas Publicadas</span>
-                  </div>
-
-                  <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-white/60 hover:bg-white/5 cursor-pointer">
-                    <div className="flex items-center gap-2">
-                      <Layers className="w-3.5 h-3.5" />
-                      <span>Fila de Upload</span>
-                    </div>
-                    <span className="text-[10px] font-mono text-white/40">2</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-white/60 hover:bg-white/5 cursor-pointer">
-                    <Shield className="w-3.5 h-3.5" />
-                    <span>Grupos Vinculados (22)</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-white/60 hover:bg-white/5 cursor-pointer">
-                    <Archive className="w-3.5 h-3.5" />
-                    <span>Histórico / Arquivo</span>
-                  </div>
-                </div>
-
-                {/* Categories */}
-                <div className="pt-2  space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 px-2 font-mono">
-                    CATEGORIAS
-                  </span>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 px-2 py-1 text-white/70">
-                      <span className="w-2 h-2 rounded-full bg-[#2563eb]" />
-                      <span>Shirts</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-2 py-1 text-white/70">
-                      <span className="w-2 h-2 rounded-full bg-[#A4F4FD]" />
-                      <span>Pants</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-2 py-1 text-white/70">
-                      <span className="w-2 h-2 rounded-full bg-[#f59e0b]" />
-                      <span>Outfits CAC</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-2 py-1 text-white/70">
-                      <span className="w-2 h-2 rounded-full bg-[#10b981]" />
-                      <span>Limiteds</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-2  flex items-center justify-between text-[11px] text-white/40 font-mono">
-                <span>Seu Catálogo</span>
-                <span className="text-emerald-400">● 24.415 R$</span>
               </div>
             </div>
 
-            {/* Column 2: Message/Item List (col-span-4) */}
-            <div className="col-span-4  flex flex-col">
-              {/* Search Header */}
-              <div className="p-2.5  flex items-center gap-2 bg-black/20">
-                <Search className="w-3.5 h-3.5 text-white/40" />
-                <input
-                  type="text"
-                  placeholder="Buscar no catálogo Roblox..."
-                  readOnly
-                  value=""
-                  className="bg-transparent text-xs text-white placeholder-white/40 focus:outline-none w-full cursor-default"
-                />
+            {/* 4 KPI Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+              {/* Card 1 */}
+              <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-white/[0.06] space-y-1">
+                <div className="flex items-center gap-2 text-white/50 text-xs">
+                  <div className="w-6 h-6 rounded-lg bg-white/[0.05] flex items-center justify-center">
+                    <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
+                  <span className="font-semibold">Receita Robux</span>
+                </div>
+                <div className="text-2xl font-extrabold text-white pt-1 tracking-tight">0 R$</div>
+                <div className="text-[11px] text-white/35 font-medium">+0 R$ hoje • 321 R$ (7 dias)</div>
               </div>
 
-              {/* Items List */}
-              <div className="overflow-y-auto flex-1">
-                {messages.map((item, idx) => (
-                  <div
-                    key={item.subject}
-                    onClick={() => setSelectedMessage(idx)}
-                    className={`p-3 transition-colors cursor-pointer text-left ${
-                      selectedMessage === idx
-                        ? "bg-white/10"
-                        : "hover:bg-white/5"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span
-                        className={`font-semibold text-xs ${
-                          item.unread ? "text-white" : "text-white/70"
-                        }`}
-                      >
-                        {item.sender}
-                      </span>
-                      <span className="text-[10px] text-white/40 font-mono">{item.time}</span>
-                    </div>
-                    <p
-                      className={`text-xs truncate ${
-                        item.unread ? "text-white font-medium" : "text-white/60"
-                      }`}
-                    >
-                      {item.subject}
-                    </p>
-                    <p className="text-[11px] text-white/40 truncate mt-0.5">{item.preview}</p>
+              {/* Card 2 */}
+              <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-white/[0.06] space-y-1">
+                <div className="flex items-center gap-2 text-white/50 text-xs">
+                  <div className="w-6 h-6 rounded-lg bg-white/[0.05] flex items-center justify-center">
+                    <Users className="w-3.5 h-3.5 text-blue-400" />
                   </div>
-                ))}
+                  <span className="font-semibold">Membros do Grupo</span>
+                </div>
+                <div className="text-2xl font-extrabold text-white pt-1 tracking-tight">12.480</div>
+                <div className="text-[11px] text-white/35 font-medium">why • Loja Principal</div>
+                <div className="text-[10px] text-white/20">Total consolidado de membros</div>
+              </div>
+
+              {/* Card 3 */}
+              <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-white/[0.06] space-y-1">
+                <div className="flex items-center gap-2 text-white/50 text-xs">
+                  <div className="w-6 h-6 rounded-lg bg-white/[0.05] flex items-center justify-center">
+                    <ShoppingBag className="w-3.5 h-3.5 text-purple-400" />
+                  </div>
+                  <span className="font-semibold">Vendas (Roupas &amp; UGC)</span>
+                </div>
+                <div className="text-2xl font-extrabold text-white pt-1 tracking-tight">13.370</div>
+                <div className="text-[11px] text-white/35 font-medium">+42 hoje • transações Roblox</div>
+                <div className="text-[10px] text-white/20">Histórico acumulado de vendas</div>
+              </div>
+
+              {/* Card 4 */}
+              <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-white/[0.06] space-y-1">
+                <div className="flex items-center gap-2 text-white/50 text-xs">
+                  <div className="w-6 h-6 rounded-lg bg-white/[0.05] flex items-center justify-center">
+                    <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
+                  </div>
+                  <span className="font-semibold">Catálogo Ativo</span>
+                </div>
+                <div className="text-2xl font-extrabold text-white pt-1 tracking-tight">8 peças</div>
+                <div className="text-[11px] text-white/35 font-medium">8 roupas 2D • 0 itens 3D</div>
+                <div className="text-[10px] text-white/20">Catálogo do grupo principal (why)</div>
               </div>
             </div>
 
-            {/* Column 3: Reader (col-span-5) */}
-            <div className="col-span-5 flex flex-col bg-[#0b0c10]/95">
-              {/* Reader Toolbar */}
-              <div className="h-10 px-4  flex items-center justify-between text-white/50">
-                <div className="flex items-center gap-1">
-                  <button className="w-7 h-7 rounded-md hover:bg-white/5 flex items-center justify-center hover:text-white transition-colors">
-                    <Reply className="w-3.5 h-3.5" />
-                  </button>
-                  <button className="w-7 h-7 rounded-md hover:bg-white/5 flex items-center justify-center hover:text-white transition-colors">
-                    <Forward className="w-3.5 h-3.5" />
-                  </button>
-                  <button className="w-7 h-7 rounded-md hover:bg-white/5 flex items-center justify-center hover:text-white transition-colors">
-                    <Archive className="w-3.5 h-3.5" />
-                  </button>
-                  <button className="w-7 h-7 rounded-md hover:bg-white/5 flex items-center justify-center hover:text-white transition-colors">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <button className="w-7 h-7 rounded-md hover:bg-white/5 flex items-center justify-center hover:text-white transition-colors">
-                  <MoreHorizontal className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {/* Reader Content */}
-              <div className="p-5 overflow-y-auto space-y-4 flex-1 text-left">
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-sm font-bold text-white">Relatório Semanal de Receita</h3>
-                    <div className="flex items-center gap-2 mt-2">
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#2563eb] to-[#0B2551] flex items-center justify-center text-[10px] font-bold text-white shadow-md">
-                        S
-                      </div>
-                      <div>
-                        <div className="font-semibold text-xs text-white">Seu Grupo no Roblox</div>
-                        <div className="text-[10px] text-white/40 font-mono">
-                          to Criador • 9:41 AM
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-600/10 text-blue-400  font-mono">
-                    Shirts
+            {/* Glowing Wave Chart Card */}
+            <div className="p-5 rounded-2xl bg-[#0a0a0a] border border-white/[0.06] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-white/[0.06] text-white/90 flex items-center gap-1.5 border border-white/[0.08]">
+                    <span>Receita Robux</span>
+                    <ChevronRight className="w-3 h-3 text-white/40" />
+                    <span className="text-blue-400">Catálogo Sincronizado</span>
+                    <span className="text-white/30">•</span>
+                    <span className="text-amber-400">Meta: 1.000 R$/dia</span>
                   </span>
                 </div>
+                <span className="text-[11px] text-white/40 font-mono bg-white/[0.04] px-3 py-1 rounded-full w-fit">
+                  Últimos 7 dias
+                </span>
+              </div>
 
-                {/* AI / Radar Summary Card */}
-                <div className="p-3.5 rounded-xl bg-blue-600/5  space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-blue-500 font-semibold text-[11px]">
-                    <Sparkles className="w-3.5 h-3.5 text-[#A4F4FD]" />
-                    <span>Resumo do Radar de Mercado</span>
+              {/* SVG Wave Chart Matching media_1788662500987.png */}
+              <div className="relative w-full h-48 sm:h-56">
+                <svg
+                  className="w-full h-full overflow-visible"
+                  viewBox="0 0 900 220"
+                  preserveAspectRatio="none"
+                >
+                  <defs>
+                    <linearGradient id="dashWaveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#3b82f6" />
+                      <stop offset="35%" stopColor="#60a5fa" />
+                      <stop offset="70%" stopColor="#f59e0b" />
+                      <stop offset="100%" stopColor="#ffffff" />
+                    </linearGradient>
+
+                    <linearGradient id="dashAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.32" />
+                      <stop offset="60%" stopColor="#3b82f6" stopOpacity="0.08" />
+                      <stop offset="100%" stopColor="#000000" stopOpacity="0" />
+                    </linearGradient>
+
+                    <radialGradient id="peakGlow" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.7" />
+                      <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
+                    </radialGradient>
+
+                    <filter id="waveGlow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="3" result="blur" />
+                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                  </defs>
+
+                  {/* Horizontal Grid lines */}
+                  <line x1="40" y1="25" x2="880" y2="25" stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />
+                  <text x="25" y="28" fill="rgba(255,255,255,0.25)" fontSize="10" fontFamily="monospace" textAnchor="end">208</text>
+
+                  <line x1="40" y1="65" x2="880" y2="65" stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />
+                  <text x="25" y="68" fill="rgba(255,255,255,0.25)" fontSize="10" fontFamily="monospace" textAnchor="end">156</text>
+
+                  <line x1="40" y1="105" x2="880" y2="105" stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />
+                  <text x="25" y="108" fill="rgba(255,255,255,0.25)" fontSize="10" fontFamily="monospace" textAnchor="end">104</text>
+
+                  <line x1="40" y1="145" x2="880" y2="145" stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />
+                  <text x="25" y="148" fill="rgba(255,255,255,0.25)" fontSize="10" fontFamily="monospace" textAnchor="end">52</text>
+
+                  <line x1="40" y1="185" x2="880" y2="185" stroke="rgba(255,255,255,0.08)" />
+                  <text x="25" y="188" fill="rgba(255,255,255,0.25)" fontSize="10" fontFamily="monospace" textAnchor="end">0</text>
+
+                  {/* Warm Peak Ambient Halo Glow at 05 de set (x=730, y=65) */}
+                  <circle cx="730" cy="65" r="50" fill="url(#peakGlow)" />
+
+                  {/* Shaded Area Under Wave */}
+                  <path
+                    d="M 60 148 C 120 148, 140 185, 190 185 C 240 185, 270 180, 320 180 C 370 180, 400 162, 450 162 C 500 162, 530 168, 580 168 C 640 168, 680 65, 730 65 C 780 65, 820 188, 860 188 L 860 195 L 60 195 Z"
+                    fill="url(#dashAreaGradient)"
+                  />
+
+                  {/* Main Glowing Bezier Wave Path */}
+                  <path
+                    d="M 60 148 C 120 148, 140 185, 190 185 C 240 185, 270 180, 320 180 C 370 180, 400 162, 450 162 C 500 162, 530 168, 580 168 C 640 168, 680 65, 730 65 C 780 65, 820 188, 860 188"
+                    fill="none"
+                    stroke="url(#dashWaveGradient)"
+                    strokeWidth="3.2"
+                    strokeLinecap="round"
+                    filter="url(#waveGlow)"
+                  />
+
+                  {/* Data Point Dots */}
+                  <circle cx="60" cy="148" r="4" fill="#ffffff" stroke="#3b82f6" strokeWidth="2" />
+                  <circle cx="190" cy="185" r="3.5" fill="#ffffff" stroke="#3b82f6" strokeWidth="2" />
+                  <circle cx="320" cy="180" r="3.5" fill="#ffffff" stroke="#60a5fa" strokeWidth="2" />
+                  <circle cx="450" cy="162" r="3.5" fill="#ffffff" stroke="#93c5fd" strokeWidth="2" />
+                  <circle cx="580" cy="168" r="3.5" fill="#ffffff" stroke="#f59e0b" strokeWidth="2" />
+                  
+                  {/* Peak Point: Highlight Dot */}
+                  <circle cx="730" cy="65" r="5.5" fill="#ffffff" stroke="#f59e0b" strokeWidth="2.5" />
+                  <circle cx="860" cy="188" r="3.5" fill="#ffffff" stroke="#ffffff" strokeWidth="2" />
+                </svg>
+              </div>
+
+              {/* X Axis Dates */}
+              <div className="grid grid-cols-7 text-center text-[11px] font-mono text-white/40 pt-1 border-t border-white/[0.04]">
+                <span>31 de ago</span>
+                <span>01 de set</span>
+                <span>02 de set</span>
+                <span>03 de set</span>
+                <span>04 de set</span>
+                <span className="text-amber-300 font-semibold">05 de set</span>
+                <span className="text-white/80">Hoje</span>
+              </div>
+            </div>
+
+            {/* Recent Sales Live Feed */}
+            <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-white/[0.06] space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-white/70 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Atividades Recentes de Vendas • Transações Roblox</span>
+                </span>
+                <span className="text-[11px] text-white/40 font-mono">why</span>
+              </div>
+
+              <div className="grid sm:grid-cols-3 gap-2.5 pt-1">
+                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0 font-bold text-xs">
+                      ⚡
+                    </div>
+                    <div className="truncate">
+                      <p className="text-xs font-semibold text-white truncate">Cyberpunk Tactical Jacket</p>
+                      <p className="text-[10px] text-white/40">why • há 4 min</p>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-white/80 leading-relaxed">
-                    Seu grupo fechou a semana com 102 vendas líquidas, 24.415 R$ acumulados e 2
-                    novas peças indexadas no top 5 do CAC. Peça mais vendida: Cyberpunk Jacket. Nenhuma
-                    ação manual necessária.
-                  </p>
+                  <span className="text-xs font-bold text-emerald-400 shrink-0 font-mono">+5 R$</span>
                 </div>
 
-                {/* Message Body */}
-                <div className="space-y-2 text-xs text-white/70 leading-relaxed font-sans">
-                  <p>Olá Criador,</p>
-                  <p>
-                    Aqui está o consolidado semanal do seu grupo no Roblox. Esta foi uma
-                    semana de forte aceleração rumo à meta de 1.000 Robux/dia.
-                  </p>
-                  <p>
-                    Cento e duas vendas foram concretizadas, o ticket médio manteve-se em 5 Robux e as
-                    tags comunitárias geraram mais de 4.800 impressões orgânicas no Catalog Avatar
-                    Creator.
-                  </p>
-                  <p className="text-white/40 pt-2">— Equipe Illusions UGC</p>
+                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400 shrink-0 font-bold text-xs">
+                      ⚡
+                    </div>
+                    <div className="truncate">
+                      <p className="text-xs font-semibold text-white truncate">Baggy Y2K Grunge Cargo</p>
+                      <p className="text-[10px] text-white/40">why • há 14 min</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-emerald-400 shrink-0 font-mono">+5 R$</span>
                 </div>
 
-                {/* Attachment */}
-                <div className="pt-2">
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5  text-xs text-white/70 hover:bg-white/10 cursor-pointer transition-colors">
-                    <Paperclip className="w-3 h-3 text-blue-500" />
-                    <span>relatorio-vendas-syn.pdf</span>
+                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 shrink-0 font-bold text-xs">
+                      ⚡
+                    </div>
+                    <div className="truncate">
+                      <p className="text-xs font-semibold text-white truncate">Oversized Vintage Hoodie</p>
+                      <p className="text-[10px] text-white/40">why • há 28 min</p>
+                    </div>
                   </div>
+                  <span className="text-xs font-bold text-emerald-400 shrink-0 font-mono">+5 R$</span>
                 </div>
               </div>
             </div>
