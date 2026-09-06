@@ -284,6 +284,7 @@ export interface DashboardData {
     name: string;
     role: string;
     rank: number;
+    isOwner?: boolean;
     canPost?: boolean;
     canViewSales?: boolean;
     reason?: "Owner" | "Create items" | null;

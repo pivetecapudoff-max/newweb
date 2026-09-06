@@ -1081,8 +1081,14 @@ app.use(express.static(distDir));
 app.get("*", (req, res, next) => {
   if (req.path.startsWith("/api")) return next();
   res.sendFile(path.join(distDir, "index.html"), (err) => {
-    if (err) next();
+    if (err) next(err);
   });
+});
+
+app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("[Unhandled Express Error]:", err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: err?.message || "Internal Server Error" });
 });
 
 bootScheduler();

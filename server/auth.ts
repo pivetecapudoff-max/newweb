@@ -3,7 +3,7 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { loadAccountForDiscordUser } from "./account.js";
 import { cloudConfigured, fetchCloudAccount, touchDiscordProfile } from "./cloud.js";
 import { runAuthStore, type DiscordIdentity } from "./context.js";
-import { isSecureRequest, requestOrigin } from "./host.js";
+import { isHosted, isSecureRequest, requestOrigin } from "./host.js";
 
 const SESSION_COOKIE = "illusions_session";
 const STATE_COOKIE = "illusions_oauth";
@@ -138,28 +138,34 @@ export async function authContext(req: Request, res: Response, next: NextFunctio
 }
 
 export function startDiscordLogin(req: Request, res: Response): void {
-  const origin = requestOrigin(req);
-  if (!discordConfigured()) {
-    res.redirect(`${origin}/painel/conta?discord=not-configured`);
-    return;
-  }
-  const cookies = readCookies(req);
-  if (process.env.CLOUDFLARE_TURNSTILE_ENABLED !== "false" && isHosted(req)) {
-    if (cookies["illusions_cf_verified"] !== "true") {
-      res.redirect(`${origin}/login?error=turnstile_required`);
+  try {
+    const origin = requestOrigin(req);
+    if (!discordConfigured()) {
+      res.redirect(`${origin}/painel/conta?discord=not-configured`);
       return;
     }
+    const cookies = readCookies(req);
+    if (process.env.CLOUDFLARE_TURNSTILE_ENABLED !== "false" && isHosted(req)) {
+      if (cookies["illusions_cf_verified"] !== "true") {
+        res.redirect(`${origin}/login?error=turnstile_required`);
+        return;
+      }
+    }
+    const state = randomBytes(16).toString("hex");
+    setCookie(res, STATE_COOKIE, state, 600, req);
+    const url = new URL("https://discord.com/api/oauth2/authorize");
+    url.searchParams.set("client_id", process.env.DISCORD_CLIENT_ID || "");
+    url.searchParams.set("redirect_uri", `${origin}/api/auth/discord/callback`);
+    url.searchParams.set("response_type", "code");
+    const scopes = (process.env.DISCORD_OAUTH_SCOPES || "identify guilds gdm.join guilds.join").trim();
+    url.searchParams.set("scope", scopes);
+    url.searchParams.set("state", state);
+    res.redirect(url.toString());
+  } catch (err) {
+    console.error("[startDiscordLogin error]:", err);
+    const origin = requestOrigin(req);
+    res.redirect(`${origin}/login?error=auth_init_failed`);
   }
-  const state = randomBytes(16).toString("hex");
-  setCookie(res, STATE_COOKIE, state, 600, req);
-  const url = new URL("https://discord.com/api/oauth2/authorize");
-  url.searchParams.set("client_id", process.env.DISCORD_CLIENT_ID || "");
-  url.searchParams.set("redirect_uri", `${origin}/api/auth/discord/callback`);
-  url.searchParams.set("response_type", "code");
-  const scopes = (process.env.DISCORD_OAUTH_SCOPES || "identify guilds gdm.join guilds.join").trim();
-  url.searchParams.set("scope", scopes);
-  url.searchParams.set("state", state);
-  res.redirect(url.toString());
 }
 
 export async function finishDiscordLogin(req: Request, res: Response): Promise<void> {
