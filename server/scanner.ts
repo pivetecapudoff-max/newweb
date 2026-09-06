@@ -76,6 +76,7 @@ async function fetchRobloxCatalog(params: {
   creatorType?: string;
   sortType: string;
   sortAggregation?: string;
+  maxPrice?: number;
   limit: number;
 }): Promise<any[]> {
   const url = new URL(BASE_URL);
@@ -88,6 +89,7 @@ async function fetchRobloxCatalog(params: {
   }
   url.searchParams.set("sortType", params.sortType);
   if (params.sortAggregation) url.searchParams.set("sortAggregation", params.sortAggregation);
+  if (typeof params.maxPrice === "number") url.searchParams.set("maxPrice", String(params.maxPrice));
 
   // Roblox catalog details endpoint strictly accepts limit of 10, 28, or 30
   const apiLimit = params.limit <= 10 ? "10" : params.limit <= 28 ? "28" : "30";
@@ -122,11 +124,17 @@ export async function scanMarketCatalog(options: MarketScanOptions): Promise<Mar
   const ratio = typeof options.shirtPantsRatio === "number" ? Math.max(0, Math.min(100, options.shirtPantsRatio)) : 50;
 
   // Map strategy to Roblox sortType
-  let sortType = "5"; // Bestselling
+  // Roblox Catalog Search API SortTypes:
+  // 1 = Most Favorited
+  // 2 = Bestselling / Top Sales (trending)
+  // 0 = Relevance
+  // 4 = Recently Updated
+  // (Note: sortType "5" is Price High to Low in Roblox, which caused 999,999,999 R$ placeholder items!)
+  let sortType = "2"; // Default: Bestselling
   if (strategy === "favorited") sortType = "1";
   else if (strategy === "recent") sortType = "4";
-  else if (strategy === "price_asc") sortType = "2";
-  else if (strategy === "sales" || strategy === "bestselling") sortType = "5";
+  else if (strategy === "price_asc") sortType = "0";
+  else if (strategy === "sales" || strategy === "bestselling") sortType = "2";
 
   // Map timePeriod to Roblox sortAggregation
   let sortAggregation: string | undefined = "5"; // All Time
@@ -134,6 +142,9 @@ export async function scanMarketCatalog(options: MarketScanOptions): Promise<Mar
   else if (timePeriod === "week") sortAggregation = "2";
   else if (timePeriod === "month") sortAggregation = "3";
   else if (timePeriod === "all") sortAggregation = "5";
+
+  // Clothing items price cap to guarantee real 5-10 Robux items and eliminate placeholder 999999999 items
+  const clothingMaxPrice = assetType === "ugc" ? undefined : 100;
 
   // Keywords handling (Fixed Amount or Rotation)
   let keywordsList: string[] = [];
@@ -163,6 +174,7 @@ export async function scanMarketCatalog(options: MarketScanOptions): Promise<Mar
           creatorTargetId: options.groupId,
           sortType,
           sortAggregation,
+          maxPrice: clothingMaxPrice,
           limit: shirtQuota,
         }),
         fetchRobloxCatalog({
@@ -172,18 +184,19 @@ export async function scanMarketCatalog(options: MarketScanOptions): Promise<Mar
           creatorTargetId: options.groupId,
           sortType,
           sortAggregation,
+          maxPrice: clothingMaxPrice,
           limit: pantsQuota,
         }),
       ]);
 
       for (const item of shirts.slice(0, shirtQuota)) {
-        if (!seenIds.has(item.id)) {
+        if (!seenIds.has(item.id) && (item.price == null || item.price <= 1000)) {
           seenIds.add(item.id);
           rawAccumulator.push({ ...item, _subcat: "ClassicShirts" });
         }
       }
       for (const item of pants.slice(0, pantsQuota)) {
-        if (!seenIds.has(item.id)) {
+        if (!seenIds.has(item.id) && (item.price == null || item.price <= 1000)) {
           seenIds.add(item.id);
           rawAccumulator.push({ ...item, _subcat: "ClassicPants" });
         }
@@ -196,10 +209,11 @@ export async function scanMarketCatalog(options: MarketScanOptions): Promise<Mar
         creatorTargetId: options.groupId,
         sortType,
         sortAggregation,
+        maxPrice: clothingMaxPrice,
         limit: requestedLimit,
       });
       for (const item of shirts) {
-        if (!seenIds.has(item.id)) {
+        if (!seenIds.has(item.id) && (item.price == null || item.price <= 1000)) {
           seenIds.add(item.id);
           rawAccumulator.push({ ...item, _subcat: "ClassicShirts" });
         }
@@ -212,10 +226,11 @@ export async function scanMarketCatalog(options: MarketScanOptions): Promise<Mar
         creatorTargetId: options.groupId,
         sortType,
         sortAggregation,
+        maxPrice: clothingMaxPrice,
         limit: requestedLimit,
       });
       for (const item of pants) {
-        if (!seenIds.has(item.id)) {
+        if (!seenIds.has(item.id) && (item.price == null || item.price <= 1000)) {
           seenIds.add(item.id);
           rawAccumulator.push({ ...item, _subcat: "ClassicPants" });
         }
@@ -228,10 +243,11 @@ export async function scanMarketCatalog(options: MarketScanOptions): Promise<Mar
         creatorTargetId: options.groupId,
         sortType,
         sortAggregation,
+        maxPrice: clothingMaxPrice,
         limit: requestedLimit,
       });
       for (const item of tshirts) {
-        if (!seenIds.has(item.id)) {
+        if (!seenIds.has(item.id) && (item.price == null || item.price <= 1000)) {
           seenIds.add(item.id);
           rawAccumulator.push({ ...item, _subcat: "ClassicTShirts" });
         }
@@ -246,7 +262,7 @@ export async function scanMarketCatalog(options: MarketScanOptions): Promise<Mar
         limit: requestedLimit,
       });
       for (const item of ugcs) {
-        if (!seenIds.has(item.id)) {
+        if (!seenIds.has(item.id) && (item.price == null || item.price <= 50000)) {
           seenIds.add(item.id);
           rawAccumulator.push({ ...item, _subcat: "Accessories" });
         }

@@ -1429,7 +1429,7 @@ DIRETRIZES DE DESIGN BASEADO NO CATÁLOGO REAL (MUITO IMPORTANTE):
 3. PREÇO: ESTRITAMENTE 5 Robux (padrão oficial clássico para estimular compras em lote).
 
 4. RESPOSTA AO USUÁRIO (reply):
-   Em português. DEVE começar citando a pesquisa realizada no catálogo do Roblox sobre "${searchKeyword}" e os itens de sucesso encontrados antes de detalhar o design criado para "${brandName}".
+   Em português. DEVE ser CURTO E DIRETO (máximo 1 a 2 frases curtas). Exemplo: "🔍 Pesquisei as tendências do catálogo e criei a T-Shirt básica [Nome] para sua loja!"
 
 5. TEMAS E PERSONAGENS:
    - Minions: primaryColor: "#111111" ou "#facc15", graphicTheme: "minion_face", details: ["short-sleeve", "crewneck", "minion-graphic"]
@@ -1453,7 +1453,7 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fo
   "pattern": "solid" | "stripes" | "grunge" | "stars" | "acid_wash",
   "details": ["short-sleeve", "crewneck", "minion-graphic"],
   "description": "...",
-  "reply": "🔍 **Pesquisa no Catálogo Roblox:** Analisei os itens mais vendidos sobre..."
+  "reply": "🔍 Pesquisei o catálogo e desenvolvi a T-Shirt básica [Nome] para a sua loja!"
 }`;
 
   try {
@@ -1477,8 +1477,8 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fo
           details: Array.isArray(parsed.details) ? parsed.details : ['short-sleeve', 'crewneck'],
           description: parsed.description || generateEnhancedSeoDescription(parsed.title, undefined, targetGroupName),
           reply: parsed.reply || (catalogResearch.length > 0
-            ? `🔍 **Pesquisa no Catálogo Roblox:** Analisei os itens mais populares sobre **${searchKeyword}** (como *${catalogResearch[0].name}* com ${catalogResearch[0].favoriteCount.toLocaleString()} favoritos). Desenvolvi uma **T-Shirt Básica** com caimento oficial e estampa de alta conversão para a sua loja!`
-            : `Desenvolvi uma **T-Shirt Básica** com caimento oficial e estampa limpa especialmente para a sua loja!`),
+            ? `🔍 Analisei as tendências do catálogo oficial e desenvolvi a **T-Shirt básica ${parsed.title}** para a sua loja!`
+            : `✨ Desenvolvi a **T-Shirt básica ${parsed.title}** com caimento oficial para a sua loja!`),
           catalogResearch,
         };
       }

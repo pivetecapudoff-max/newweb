@@ -36,7 +36,11 @@ import {
   type UploadJob,
   type GroupSalesAnalysis,
 } from "../lib/api";
-import { renderRobloxTemplate, type UgcDesignSpec } from "../lib/ugcTemplate";
+import {
+  renderRobloxTemplate,
+  renderAvatarPreview,
+  type UgcDesignSpec,
+} from "../lib/ugcTemplate";
 
 interface UgcChatMessage {
   id: string;
@@ -53,6 +57,7 @@ interface UgcChatMessage {
   }>;
   design?: UgcDesignSpec & {
     templateDataUrl: string;
+    avatarPreviewDataUrl?: string;
     uploadJob?: UploadJob | null;
     uploading?: boolean;
     uploadError?: string | null;
@@ -66,10 +71,12 @@ export function UgcCreatorView() {
     {
       id: "welcome",
       role: "assistant",
-      text: "Olá! Eu sou o seu **Designer de Moda & UGC com IA** para o Roblox, 100% adaptado para **funcionar com qualquer grupo ou loja**. Você pode selecionar o seu grupo no topo, escolher o estilo estético (como T-Shirt Básica, Y2K Streetwear, Gothic ou Coquette) e a IA vai pesquisar o catálogo do Roblox em tempo real e gerar o molde oficial 2D, as tags e a descrição personalizada para a **sua própria marca** por 5 Robux!\n\nDescreva a peça desejada, clique em um dos atalhos de inspiração abaixo ou anexe uma foto de referência:",
+      text: "Olá! Sou a sua IA de Design UGC para Roblox, adaptada para criar peças comerciais para qualquer grupo ou loja por 5 Robux.\n\nEscolha um estilo ou descreva a peça que deseja criar:",
       timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
+  const [previewTabs, setPreviewTabs] = useState<Record<string, "avatar" | "template">>({});
+  const [expandedDesc, setExpandedDesc] = useState<Record<string, boolean>>({});
   const [inputVal, setInputVal] = useState("");
   const [loading, setLoading] = useState(false);
   const [isAnalyzingGroup, setIsAnalyzingGroup] = useState(false);
@@ -177,6 +184,12 @@ export function UgcCreatorView() {
       };
 
       const templateDataUrl = await renderRobloxTemplate(spec);
+      let avatarPreviewDataUrl = templateDataUrl;
+      try {
+        avatarPreviewDataUrl = await renderAvatarPreview(templateDataUrl, spec.kind);
+      } catch (previewErr) {
+        console.warn("Avatar preview render error:", previewErr);
+      }
 
       let initialJob: UploadJob | null = null;
       let uploadErr: string | null = null;
@@ -207,6 +220,7 @@ export function UgcCreatorView() {
         design: {
           ...spec,
           templateDataUrl,
+          avatarPreviewDataUrl,
           uploadJob: initialJob,
           uploading: false,
           uploadError: uploadErr,
@@ -483,136 +497,183 @@ export function UgcCreatorView() {
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="rounded-2xl bg-[#080808] border border-purple-500/30 p-5 space-y-4 shadow-2xl backdrop-blur-xl max-w-xl"
+                  className="rounded-2xl bg-[#0a0a0a] border border-white/10 p-4 space-y-3 shadow-2xl backdrop-blur-xl w-full max-w-[380px] sm:max-w-[420px] mx-auto text-left"
                 >
-                  {/* Card Header */}
-                  <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] pb-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                          {msg.design.kind === "shirt" ? "Camisa 2D" : msg.design.kind === "pants" ? "Calça 2D" : "T-Shirt 2D"}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                          {msg.design.price} Robux
-                        </span>
-                        <span className="text-[10px] text-white/40 font-mono uppercase">
-                          {msg.design.theme}
-                        </span>
-                      </div>
-                      <h3 className="text-base font-bold text-white mt-1">{msg.design.title}</h3>
+                  {/* Card Header matching Roblox Item Card */}
+                  <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] pb-2.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded bg-black/60 border border-white/10 text-[10px] font-bold text-white/75 uppercase tracking-wider">
+                        {msg.design.kind === "shirt" ? "SHIRT" : msg.design.kind === "pants" ? "PANTS" : "T-SHIRT"}
+                      </span>
+                      <span className="text-[10px] text-white/40 font-mono uppercase truncate max-w-[120px]">
+                        {msg.design.theme}
+                      </span>
+                    </div>
+                    <div className="text-emerald-400 font-mono font-bold text-xs tracking-wider bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                      {msg.design.price} R$
                     </div>
                   </div>
 
-                  {/* Live Roblox Catalog Market Intelligence */}
+                  {/* Title & Creator Subtitle */}
+                  <div>
+                    <h3 className="text-sm sm:text-base font-bold text-white truncate">{msg.design.title}</h3>
+                    <p className="text-[11px] text-white/50 truncate">
+                      por {groups.find((g) => g.id === selectedGroupId)?.name || "Minha Loja Roblox"} • 5 Robux
+                    </p>
+                  </div>
+
+                  {/* Preview Selector Tabs & Visual Box */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-[11px] px-0.5">
+                      <div className="flex items-center gap-1 bg-black/60 p-0.5 rounded-lg border border-white/10">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewTabs((prev) => ({ ...prev, [msg.id]: "avatar" }))}
+                          className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer ${
+                            (previewTabs[msg.id] || "avatar") === "avatar"
+                              ? "bg-purple-600/30 text-purple-300 border border-purple-500/40 shadow-sm"
+                              : "text-white/40 hover:text-white/70"
+                          }`}
+                        >
+                          👤 Avatar 3D
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewTabs((prev) => ({ ...prev, [msg.id]: "template" }))}
+                          className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer ${
+                            previewTabs[msg.id] === "template"
+                              ? "bg-purple-600/30 text-purple-300 border border-purple-500/40 shadow-sm"
+                              : "text-white/40 hover:text-white/70"
+                          }`}
+                        >
+                          📐 Molde 2D
+                        </button>
+                      </div>
+                      <span className="text-[10px] font-mono text-white/40">
+                        {previewTabs[msg.id] === "template" ? "585 × 559 px" : "Mannequin R6/R15"}
+                      </span>
+                    </div>
+
+                    {/* Preview Image Container */}
+                    <div className="w-full aspect-square max-w-[260px] mx-auto rounded-xl overflow-hidden bg-black/80 border border-white/10 shadow-2xl flex items-center justify-center p-1 relative group">
+                      <img
+                        src={
+                          previewTabs[msg.id] === "template"
+                            ? msg.design.templateDataUrl
+                            : msg.design.avatarPreviewDataUrl || msg.design.templateDataUrl
+                        }
+                        alt={msg.design.title}
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 rounded-lg"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Market Research (Compact Single-Row Strip) */}
                   {msg.catalogResearch && msg.catalogResearch.length > 0 && (
-                    <div className="rounded-xl bg-purple-950/20 border border-purple-500/20 p-3 space-y-2">
-                      <div className="flex items-center justify-between text-xs text-purple-300 font-semibold">
-                        <span className="flex items-center gap-1.5">
-                          <Search className="w-3.5 h-3.5 text-purple-400" />
-                          <span>Pesquisa ao Vivo no Catálogo Roblox</span>
-                        </span>
-                        <span className="text-[10px] text-purple-400/60 font-mono">
-                          {msg.catalogResearch.length} campeões analisados
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {msg.catalogResearch.map((item) => (
-                          <a
-                            key={item.id}
-                            href={item.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/40 hover:bg-white/10 border border-white/5 text-[11px] text-white/80 hover:text-white transition-colors"
-                            title={`Criado por ${item.creatorName}`}
-                          >
-                            <span className="truncate max-w-[170px]">{item.name}</span>
-                            <span className="text-amber-400 text-[10px] flex items-center font-mono font-bold">
-                              ⭐ {(item.favoriteCount || 0).toLocaleString()}
-                            </span>
-                            <ExternalLink className="w-2.5 h-2.5 text-white/40" />
-                          </a>
-                        ))}
-                      </div>
+                    <div className="flex items-center gap-1.5 overflow-x-auto py-1 text-[10px] [scrollbar-width:none] border-t border-white/[0.04] pt-2">
+                      <span className="text-purple-400/70 shrink-0 font-semibold flex items-center gap-1">
+                        <Search className="w-3 h-3 text-purple-400" />
+                        <span>Catálogo:</span>
+                      </span>
+                      {msg.catalogResearch.slice(0, 3).map((item) => (
+                        <a
+                          key={item.id}
+                          href={item.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="shrink-0 px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white flex items-center gap-1 transition-all"
+                          title={item.name}
+                        >
+                          <span className="truncate max-w-[90px]">{item.name}</span>
+                          <span className="text-amber-400 font-mono font-bold">
+                            ★{item.favoriteCount > 1000 ? `${(item.favoriteCount / 1000).toFixed(1)}k` : item.favoriteCount}
+                          </span>
+                          <ExternalLink className="w-2.5 h-2.5 text-white/40" />
+                        </a>
+                      ))}
                     </div>
                   )}
 
-                  {/* Template Visual Preview */}
-                  <div className="relative rounded-xl overflow-hidden bg-black/60 border border-white/[0.06] p-3 flex flex-col items-center justify-center">
-                    <div className="text-[11px] font-mono text-white/40 mb-2 flex items-center gap-2">
-                      <Layers className="w-3.5 h-3.5 text-purple-400" />
-                      <span>Molde Oficial Roblox (585 × 559 px)</span>
-                    </div>
-                    <img
-                      src={msg.design.templateDataUrl}
-                      alt={msg.design.title}
-                      className="w-full max-w-sm rounded-lg object-contain shadow-inner border border-white/10 hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-
-                  {/* English SEO Description & Tags Box */}
-                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="font-semibold text-white/60 flex items-center gap-1.5">
+                  {/* English SEO Description & Tags (Collapsible) */}
+                  <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] overflow-hidden text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedDesc((prev) => ({ ...prev, [msg.id]: !prev[msg.id] }))}
+                      className="w-full px-3 py-2 flex items-center justify-between text-left hover:bg-white/[0.02] transition-colors cursor-pointer"
+                    >
+                      <span className="text-[11px] font-semibold text-white/60 flex items-center gap-1.5">
                         <Tag className="w-3 h-3 text-purple-400" />
-                        <span>Descrição & Tags Virais (Inglês Global)</span>
+                        <span>Descrição & Tags Virais (SEO)</span>
                       </span>
-                      <button
-                        onClick={() => handleCopyText(msg.id, msg.design!.description)}
-                        className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer font-medium"
-                      >
-                        {copiedId === msg.id ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                        <span>{copiedId === msg.id ? "Copiado!" : "Copiar"}</span>
-                      </button>
-                    </div>
-                    <pre className="text-[11px] text-white/70 font-mono whitespace-pre-wrap leading-relaxed max-h-28 overflow-y-auto bg-black/40 p-2.5 rounded-lg border border-white/[0.04]">
-                      {msg.design.description}
-                    </pre>
+                      <span className="text-[10px] text-purple-400 font-mono">
+                        {expandedDesc[msg.id] ? "Ocultar ▲" : "Ver Tags ▼"}
+                      </span>
+                    </button>
+                    {expandedDesc[msg.id] && (
+                      <div className="p-2.5 pt-0 space-y-2 border-t border-white/[0.04]">
+                        <div className="flex justify-end pt-1">
+                          <button
+                            type="button"
+                            onClick={() => handleCopyText(msg.id, msg.design!.description)}
+                            className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer font-medium"
+                          >
+                            {copiedId === msg.id ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                            <span>{copiedId === msg.id ? "Copiado!" : "Copiar Tags"}</span>
+                          </button>
+                        </div>
+                        <pre className="text-[10px] text-white/70 font-mono whitespace-pre-wrap leading-relaxed max-h-24 overflow-y-auto bg-black/40 p-2 rounded border border-white/[0.04]">
+                          {msg.design.description}
+                        </pre>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Publish Status or Manual Action */}
-                  <div className="pt-2 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-3">
+                  {/* Publish & Download Actions */}
+                  <div className="pt-2 border-t border-white/[0.06] flex items-center gap-2">
                     {msg.design.uploadJob ? (
-                      <div className="flex items-center gap-2 text-xs text-emerald-400 font-semibold w-full sm:w-auto">
+                      <div className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <span>Na fila de publicação Roblox!</span>
+                        <span>Postado no Grupo!</span>
                         {msg.design.uploadJob.catalogUrl && (
                           <a
                             href={msg.design.uploadJob.catalogUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="ml-2 underline flex items-center gap-1 text-white hover:text-emerald-300"
+                            className="underline flex items-center gap-1 text-white hover:text-emerald-300 ml-1"
                           >
-                            <span>Ver no Catálogo</span>
+                            <span>Ver</span>
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         )}
                       </div>
                     ) : msg.design.uploading ? (
-                      <div className="flex items-center gap-2 text-xs text-purple-400 font-semibold">
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Enviando para o Roblox...</span>
+                      <div className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold">
+                        <RefreshCw className="w-4 h-4 animate-spin text-purple-400" />
+                        <span>Postando no Grupo...</span>
                       </div>
                     ) : (
-                      <LiquidMetalButton
-                        label="Publicar no Roblox"
+                      <button
+                        type="button"
                         onClick={() => handleManualPublish(msg.id)}
-                        width={180}
-                        icon={<UploadCloud className="w-4 h-4 text-purple-400" />}
-                      />
+                        className="flex-1 py-2 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.15)]"
+                      >
+                        <UploadCloud className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Copiar &amp; Postar no Grupo</span>
+                      </button>
                     )}
 
-                    {/* Download Template Button */}
                     <button
+                      type="button"
                       onClick={() => handleDownloadTemplate(msg.design!.templateDataUrl, msg.design!.title)}
-                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.08] text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                      className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-all cursor-pointer shrink-0"
+                      title="Baixar Molde PNG (585x559)"
                     >
-                      <Download className="w-3.5 h-3.5 text-white/60" />
-                      <span>Baixar Molde (.PNG)</span>
+                      <Download className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
                   {msg.design.uploadError && (
-                    <div className="text-[11px] text-rose-300 bg-rose-500/10 p-2.5 rounded-lg border border-rose-500/20 flex items-start gap-2">
+                    <div className="text-[10px] text-rose-300 bg-rose-500/10 p-2 rounded-lg border border-rose-500/20 flex items-start gap-1.5">
                       <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
                       <span>{msg.design.uploadError}</span>
                     </div>
