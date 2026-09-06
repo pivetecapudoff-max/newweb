@@ -14,6 +14,7 @@ export interface GroupAccess {
   isOwner: boolean;
   createItems: boolean;
   manageItems: boolean;
+  memberCount: number;
 }
 
 let csrfToken: string | null = null;
@@ -83,6 +84,7 @@ function decide(input: {
   createItems?: boolean;
   manageItems?: boolean;
   viewGroupPayouts?: boolean;
+  memberCount?: number;
 }): GroupAccess {
   const isOwner = Boolean(input.isOwner) || input.rank === 255;
   const createItems = Boolean(input.createItems);
@@ -100,6 +102,7 @@ function decide(input: {
     isOwner,
     createItems,
     manageItems,
+    memberCount: Number(input.memberCount || 0),
   };
 }
 
@@ -153,7 +156,7 @@ export async function listGroupAccess(cookie: string, userId: number): Promise<G
   const rows =
     (roles.json as {
       data?: {
-        group?: { id: number; name: string };
+        group?: { id: number; name: string; memberCount?: number };
         role?: { id?: number; name?: string; rank?: number };
       }[];
     } | null)?.data || [];
@@ -176,6 +179,7 @@ export async function listGroupAccess(cookie: string, userId: number): Promise<G
         createItems: flags?.createItems,
         manageItems: flags?.manageItems,
         viewGroupPayouts: flags?.viewGroupPayouts,
+        memberCount: typeof row.group?.memberCount === "number" ? row.group.memberCount : 0,
       })
     );
   }

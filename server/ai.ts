@@ -4,9 +4,9 @@ import { fileURLToPath } from 'node:url';
 import { loadState, latestCycle } from './store.js';
 import { buildDashboard } from './dashboard.js';
 import { lookupGroupStore } from './lookup.js';
+import { loadAccount } from './account.js';
 
 const rootDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const accountPath = path.join(rootDir, 'data', 'account.json');
 const geminiConfigPath = path.join(rootDir, 'data', 'gemini.json');
 
 export interface AiLog {
@@ -97,9 +97,7 @@ export function clearLogs(): void {
 
 function getCookie(): string | null {
   try {
-    if (!fs.existsSync(accountPath)) return null;
-    const acc = JSON.parse(fs.readFileSync(accountPath, 'utf8'));
-    return acc?.cookie || null;
+    return loadAccount()?.cookie || null;
   } catch {
     return null;
   }
@@ -300,7 +298,7 @@ export async function optimizeGroupCatalog(groupId?: number): Promise<{
   let targetGroupId = groupId;
   if (!targetGroupId) {
     try {
-      const acc = JSON.parse(fs.readFileSync(accountPath, 'utf8'));
+      const acc = loadAccount() as any;
       targetGroupId = acc?.groupId || acc?.groups?.[0]?.id;
     } catch {
       targetGroupId = undefined;

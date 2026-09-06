@@ -116,17 +116,21 @@ export function DashboardPage() {
   }, [selectedGroupId]);
 
   useEffect(() => {
-    if (selectedGroupId === "all") {
+    const targetGid = selectedGroupId === "all"
+      ? (data?.groups.find((g) => g.canPost)?.id || data?.groups[0]?.id)
+      : selectedGroupId;
+
+    if (!targetGid) {
       setGroupStore(null);
       return;
     }
     const loadGroupStore = () => {
-      lookupGroupStore(selectedGroupId).then(setGroupStore).catch(() => setGroupStore(null));
+      lookupGroupStore(String(targetGid)).then(setGroupStore).catch(() => setGroupStore(null));
     };
     loadGroupStore();
-    const interval = setInterval(loadGroupStore, 300000);
+    const interval = setInterval(loadGroupStore, 120000);
     return () => clearInterval(interval);
-  }, [selectedGroupId]);
+  }, [selectedGroupId, data?.groups]);
 
   const handleSelectGroup = (gid: string) => {
     setSelectedGroupId(gid);
@@ -267,7 +271,9 @@ export function DashboardPage() {
   const weeklyRev = data?.weekly?.reduce((acc, w) => acc + (w.revenue || 0), 0) ?? 0;
   const totalRev = salesAvailable ? k?.totalRevenue ?? 0 : null;
   const totalSales = salesAvailable ? k?.totalSales ?? 0 : null;
-  const totalMembers = groupStore?.memberCount ?? null;
+  const totalMembers = isAllGroups
+    ? (allGroups.reduce((acc, g) => acc + (g.memberCount || 0), 0) || groupStore?.memberCount || null)
+    : (activeGroup?.memberCount ?? groupStore?.memberCount ?? null);
   const totalItems = groupStore?.itemCount ?? null;
   const clothingCount = groupStore?.items.filter((item) => [2, 11, 12].includes(item.assetTypeId)).length ?? null;
   const ugcCount = groupStore && clothingCount != null ? groupStore.itemCount - clothingCount : null;
@@ -560,10 +566,12 @@ export function DashboardPage() {
               {totalMembers == null ? "—" : totalMembers.toLocaleString("pt-BR")}
             </h3>
             <p className="text-[11px] text-white/35 mt-1 font-medium">
-              {activeGroupName} &bull; {activeGroupRole}
+              {isAllGroups
+                ? `${allGroups.length} ${allGroups.length === 1 ? "grupo vinculado" : "grupos vinculados"} · Visão Global`
+                : `${activeGroupName} • ${activeGroupRole}`}
             </p>
             <p className="text-[10px] text-white/20 mt-0.5">
-              Grupo oficial no Roblox
+              {isAllGroups ? "Total consolidado de membros" : "Grupo oficial no Roblox"}
             </p>
           </div>
         </motion.div>
@@ -618,10 +626,14 @@ export function DashboardPage() {
               {totalItems == null ? "—" : `${totalItems} peças`}
             </h3>
             <p className="text-[11px] text-white/35 mt-1 font-medium">
-              {clothingCount == null || ugcCount == null ? "Catálogo indisponível" : `${clothingCount} roupas 2D · ${ugcCount} itens 3D`}
+              {clothingCount == null || ugcCount == null
+                ? (isAllGroups && allGroups.length === 0 ? "Nenhum grupo com catálogo" : "Catálogo indisponível")
+                : `${clothingCount} roupas 2D · ${ugcCount} itens 3D`}
             </p>
             <p className="text-[10px] text-white/20 mt-0.5">
-              Contagem retornada pelo catálogo Roblox
+              {isAllGroups && groupStore
+                ? `Catálogo do grupo principal (${groupStore.groupName})`
+                : "Contagem retornada pelo catálogo Roblox"}
             </p>
           </div>
         </motion.div>

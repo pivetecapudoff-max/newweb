@@ -1,5 +1,6 @@
 import { tokenize } from "./nlp.js";
 import { loadAccount, type StoredOps } from "./account.js";
+import { currentDiscord } from "./context.js";
 import { isHosted } from "./host.js";
 import { listGroupAccess, type GroupAccess } from "./groups.js";
 import { latestCycle, loadState } from "./store.js";
@@ -44,6 +45,7 @@ export interface DashboardGroup {
   canPost: boolean;
   canViewSales: boolean;
   reason: "Owner" | "Create items" | null;
+  memberCount: number;
 }
 
 export interface DashboardPayload {
@@ -220,6 +222,7 @@ function toDashboardGroup(group: GroupAccess): DashboardGroup {
     canPost: group.canPost,
     canViewSales: group.canViewSales,
     reason: group.reason,
+    memberCount: group.memberCount || 0,
   };
 }
 
@@ -351,15 +354,17 @@ function emptyPayload(ops: StoredOps, notes: string[]): DashboardPayload {
 
 export async function buildDashboard(groupIdRaw?: string): Promise<DashboardPayload> {
   const account = loadAccount();
+  const discord = currentDiscord();
   const ops = account?.ops || { sessionUploads: 0, failed: 0, moderated: 0 };
   const groupKey = groupIdRaw && /^\d+$/.test(groupIdRaw) ? Number(groupIdRaw) : "all";
-  const cacheKey = `${account?.userId || "none"}:${groupKey}`;
+  const discordKey = discord?.id || "anon";
+  const cacheKey = `${discordKey}:${account?.userId || "none"}:${groupKey}`;
   const hit = cache.get(cacheKey);
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.payload;
 
-  if (!account) {
+  if (!account || !discord) {
     const payload = emptyPayload(ops, [
-      "Connect your own Roblox cookie on Account to load live sales.",
+      "Conecte sua conta Roblox no menu Conta para carregar seus dados.",
     ]);
     cache.set(cacheKey, { at: Date.now(), payload });
     return payload;

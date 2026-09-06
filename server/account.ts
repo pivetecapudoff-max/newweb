@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { cloudConfigured, fetchCloudAccount, upsertCloudAccount } from "./cloud.js";
@@ -14,7 +14,7 @@ export type { StoredAccount, StoredOps };
 
 const rootDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dataDir = path.join(rootDir, "data");
-const accountPath = path.join(dataDir, "account.json");
+const accountsDir = path.join(dataDir, "accounts");
 
 const EMPTY_OPS: StoredOps = {
   sessionUploads: 0,
@@ -46,9 +46,17 @@ export function cookieFromBody(body: unknown): string {
   return sanitizeCookie(String(raw.cookie || ""));
 }
 
-export function loadLocalAccount(): StoredAccount | null {
+function userAccountPath(discordId: string): string {
+  const safeId = String(discordId).replace(/[^0-9a-zA-Z_-]/g, "");
+  return path.join(accountsDir, `${safeId}.json`);
+}
+
+export function loadAccountForDiscordUser(discordId?: string | null): StoredAccount | null {
+  if (!discordId) return null;
   try {
-    const raw = JSON.parse(readFileSync(accountPath, "utf8")) as StoredAccount;
+    const file = userAccountPath(discordId);
+    if (!existsSync(file)) return null;
+    const raw = JSON.parse(readFileSync(file, "utf8")) as StoredAccount;
     if (!raw?.cookie || !raw.userId) return null;
     return {
       ...raw,
@@ -59,59 +67,71 @@ export function loadLocalAccount(): StoredAccount | null {
   }
 }
 
-function saveLocalAccount(account: StoredAccount): void {
-  mkdirSync(dataDir, { recursive: true });
-  writeFileSync(accountPath, JSON.stringify(account, null, 2), "utf8");
+export function saveAccountForDiscordUser(discordId: string, account: StoredAccount): void {
+  if (!discordId) return;
+  mkdirSync(accountsDir, { recursive: true });
+  writeFileSync(userAccountPath(discordId), JSON.stringify(account, null, 2), "utf8");
 }
 
-function clearLocalAccount(): void {
+export function deleteAccountForDiscordUser(discordId: string): void {
+  if (!discordId) return;
   try {
-    unlinkSync(accountPath);
-  } catch {
-    // already gone
-  }
+    const file = userAccountPath(discordId);
+    if (existsSync(file)) unlinkSync(file);
+  } catch {}
 }
 
 export function loadAccount(): StoredAccount | null {
   const store = getAuthStore();
-  if (store) return store.account;
-  return loadLocalAccount();
+  if (!store) return null;
+  if (store.account) return store.account;
+  if (store.discord?.id) {
+    const acc = loadAccountForDiscordUser(store.discord.id);
+    store.account = acc;
+    return acc;
+  }
+  return null;
 }
 
 export async function loadAccountForOwner(ownerDiscordId?: string | null): Promise<StoredAccount | null> {
-  if (ownerDiscordId && cloudConfigured()) {
+  if (!ownerDiscordId) return null;
+  if (cloudConfigured()) {
     return fetchCloudAccount(ownerDiscordId);
   }
-  if (cloudConfigured()) return null;
-  return loadLocalAccount();
+  return loadAccountForDiscordUser(ownerDiscordId);
 }
 
 export async function saveAccount(account: StoredAccount): Promise<void> {
   const store = getAuthStore();
-  if (store) store.account = account;
   const discord = store?.discord || currentDiscord();
-  if (discord && cloudConfigured()) {
+  if (!discord?.id) {
+    throw new Error("Faça login com o Discord primeiro para conectar sua conta Roblox.");
+  }
+  if (store) store.account = account;
+  if (cloudConfigured()) {
     await upsertCloudAccount(discord, account);
     return;
   }
-  saveLocalAccount(account);
+  saveAccountForDiscordUser(discord.id, account);
 }
 
 export async function clearAccount(): Promise<void> {
   const store = getAuthStore();
   const discord = store?.discord || currentDiscord();
   if (store) store.account = null;
-  if (discord && cloudConfigured()) {
-    await upsertCloudAccount(discord, null);
-    return;
+  if (discord?.id) {
+    if (cloudConfigured()) {
+      await upsertCloudAccount(discord, null);
+    } else {
+      deleteAccountForDiscordUser(discord.id);
+    }
   }
-  clearLocalAccount();
 }
 
 export function publicAccount() {
   const account = loadAccount();
   const discord = currentDiscord();
-  if (!account) {
+  if (!account || !discord) {
     return {
       connected: false,
       userId: null,
@@ -120,7 +140,7 @@ export function publicAccount() {
       connectedAt: null,
       ops: { ...EMPTY_OPS },
       discordEnabled: true,
-      discord,
+      discord: discord || null,
       hosted: isHosted(),
     };
   }

@@ -287,6 +287,7 @@ export interface DashboardData {
     canPost?: boolean;
     canViewSales?: boolean;
     reason?: "Owner" | "Create items" | null;
+    memberCount?: number;
   }[];
   kpis: {
     todayRevenue: number;

@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { loadLocalAccount } from "./account.js";
+import { loadAccountForDiscordUser } from "./account.js";
 import { cloudConfigured, fetchCloudAccount, touchDiscordProfile } from "./cloud.js";
 import { runAuthStore, type DiscordIdentity } from "./context.js";
 import { isSecureRequest, requestOrigin } from "./host.js";
@@ -121,11 +121,16 @@ export function authStatus(req: Request) {
 export async function authContext(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const discord = readSession(req);
-    if (!cloudConfigured()) {
-      runAuthStore({ discord, account: loadLocalAccount() }, () => next());
+    if (!discord) {
+      runAuthStore({ discord: null, account: null }, () => next());
       return;
     }
-    const account = discord ? await fetchCloudAccount(discord.id) : null;
+    if (cloudConfigured()) {
+      const account = await fetchCloudAccount(discord.id);
+      runAuthStore({ discord, account }, () => next());
+      return;
+    }
+    const account = loadAccountForDiscordUser(discord.id);
     runAuthStore({ discord, account }, () => next());
   } catch (error) {
     next(error);
