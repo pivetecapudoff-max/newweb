@@ -222,7 +222,7 @@ export async function finishDiscordLogin(req: Request, res: Response): Promise<v
     console.log(`[OAuth] Discord user logged in successfully: @${discord.name} (${discord.id})`);
 
     // Auto-join member to Discord server via guilds.join scope
-    const targetGuildId = process.env.DISCORD_GUILD_ID || "1502761858673672283";
+    const targetGuildId = process.env.DISCORD_GUILD_ID || "1458096843526377565";
     const botToken = process.env.DISCORD_BOT_TOKEN;
     if (targetGuildId && botToken && token.access_token && me.id) {
       try {
