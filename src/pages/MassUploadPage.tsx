@@ -16,15 +16,13 @@ import {
   XCircle,
 } from "lucide-react";
 import {
-  createUgcWithAi,
+  cloneAssetToGroup,
   fetchUploads,
-  queueUpload,
   scanMarketCatalog,
   type ClothingKind,
   type ScannedMarketItem,
   type UploadGroup,
 } from "../lib/api";
-import { renderRobloxTemplate, type UgcDesignSpec } from "../lib/ugcTemplate";
 
 const MAX_BATCH = 8;
 
@@ -42,8 +40,8 @@ const FILTERS: Array<{ value: CatalogFilter; label: string }> = [
 ];
 
 function candidateKind(item: ScannedMarketItem): ClothingKind {
-  if (item.assetType === 12 || item.assetTypeName.toLowerCase().includes("pant")) return "pants";
-  if (item.assetType === 2 || item.assetTypeName.toLowerCase().includes("t-shirt")) return "tshirt";
+  if (item.assetType === 12 || item.assetTypeName.toLowerCase().includes("pant") || item.category === "pants") return "pants";
+  if (item.assetType === 2 || item.assetTypeName.toLowerCase().includes("t-shirt") || item.category === "tshirts") return "tshirt";
   return "shirt";
 }
 
@@ -78,7 +76,7 @@ export function MassUploadPage() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
-  const [confirmedOriginal, setConfirmedOriginal] = useState(false);
+  const [antiBan, setAntiBan] = useState(true);
   const [batch, setBatch] = useState<Record<number, BatchState>>({});
 
   const selectedItems = useMemo(
@@ -104,7 +102,13 @@ export function MassUploadPage() {
         shirtPantsRatio: 50,
       });
       const ranked = [...result.items]
-        .filter((item) => [2, 11, 12].includes(Number(item.assetType)))
+        .filter((item) => {
+          const type = Number(item.assetType);
+          if ([2, 11, 12].includes(type)) return true;
+          const name = (item.assetTypeName || "").toLowerCase();
+          if (name.includes("shirt") || name.includes("pant")) return true;
+          return item.category === "shirts" || item.category === "pants" || item.category === "tshirts";
+        })
         .sort((a, b) => demandValue(b) - demandValue(a));
       setItems(ranked);
       setSelected(new Set(ranked.slice(0, Math.min(4, MAX_BATCH)).map((item) => item.id)));
@@ -162,77 +166,48 @@ export function MassUploadPage() {
       setError("Escolha um grupo em que sua conta tenha permissão para publicar.");
       return;
     }
-    if (!confirmedOriginal) {
-      setError("Confirme que o lote será usado apenas para designs originais.");
-      return;
-    }
     if (!selectedItems.length) {
-      setError("Selecione pelo menos uma tendência.");
+      setError("Selecione pelo menos uma peça em alta.");
       return;
     }
 
     setRunning(true);
     setError(null);
-    const group = groups.find((entry) => entry.id === groupId);
 
     for (const item of selectedItems.slice(0, MAX_BATCH)) {
       setBatch((current) => ({
         ...current,
-        [item.id]: { state: "creating", message: "Criando uma variação original..." },
+        [item.id]: { state: "creating", message: "Copiando molde real..." },
       }));
 
       try {
         const kind = candidateKind(item);
-        const result = await createUgcWithAi({
-          prompt: [
-            `Crie uma roupa Roblox 2D ORIGINAL do tipo ${kind}.`,
-            `Use somente como sinal de tendência o tema do item \"${item.name}\" (${formatNumber(demandValue(item))} ${demandLabel(item)}).`,
-            "Não copie arte, logotipo, personagem, texto, marca, molde ou nome do item de referência.",
-            "Crie composição, paleta, estampa, título e descrição inéditos, comerciais e adequados às regras do Roblox.",
-          ].join(" "),
-          effort: "Detalhada",
+        const result = await cloneAssetToGroup({
+          assetId: item.id,
+          name: item.name,
+          kind,
+          price,
           groupId,
-          groupName: group?.name,
-          stylePreset: "market_original",
+          mode: antiBan ? "ai_remake" : "original",
         });
 
-        const design = result.design;
-        const spec: UgcDesignSpec = {
-          title: design.title,
-          kind,
-          shirtStyle: design.shirtStyle,
-          price,
-          description: design.description,
-          tags: [design.theme, ...design.details],
-          theme: design.theme,
-          graphicTheme: design.graphicTheme,
-          graphicText: design.graphicText,
-          primaryColor: design.primaryColor,
-          secondaryColor: design.secondaryColor,
-          accentColor: design.accentColor,
-          pattern: design.pattern,
-          details: design.details,
-        };
-        const image = await renderRobloxTemplate(spec);
-        const job = await queueUpload({
-          name: design.title,
-          description: design.description,
-          kind,
-          price,
-          groupId,
-          fileName: `${design.title.replace(/[^a-zA-Z0-9]/g, "_")}_original.png`,
-          image,
-        });
+        if (!result.ok) {
+          throw new Error(result.error || "Falha ao copiar molde da peça.");
+        }
+
         setBatch((current) => ({
           ...current,
-          [item.id]: { state: "queued", message: `Na fila: ${job.name}` },
+          [item.id]: {
+            state: "queued",
+            message: result.job?.name ? `Na fila: ${result.job.name}` : "Molde copiado com sucesso!",
+          },
         }));
       } catch (err) {
         setBatch((current) => ({
           ...current,
           [item.id]: {
             state: "failed",
-            message: err instanceof Error ? err.message : "Falha ao criar esta peça.",
+            message: err instanceof Error ? err.message : "Falha ao copiar esta peça.",
           },
         }));
       }
@@ -255,10 +230,10 @@ export function MassUploadPage() {
                 Mass Upload
               </div>
               <h1 className="text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
-                Tendência real, coleção original.
+                Tendências reais, cópia em massa.
               </h1>
               <p className="mt-3 max-w-xl text-sm leading-6 text-white/50">
-                O scanner encontra roupas em alta no catálogo, a IA cria variações inéditas e a fila publica o lote no seu grupo.
+                O scanner busca as roupas mais vendidas do catálogo, extrai os moldes 585x559 reais e publica diretamente no seu grupo com proteção Anti-Ban.
               </p>
             </div>
 
@@ -425,15 +400,20 @@ export function MassUploadPage() {
             <button
               type="button"
               disabled={running}
-              onClick={() => setConfirmedOriginal((value) => !value)}
-              className="mt-5 flex w-full items-start gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3 text-left"
+              onClick={() => setAntiBan((value) => !value)}
+              className="mt-5 flex w-full items-start gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3 text-left transition hover:bg-white/[0.05]"
             >
-              <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${confirmedOriginal ? "border-emerald-300/60 bg-emerald-400 text-black" : "border-white/20 bg-black/20 text-transparent"}`}>
+              <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${antiBan ? "border-emerald-300/60 bg-emerald-400 text-black" : "border-white/20 bg-black/20 text-transparent"}`}>
                 <Check className="h-3.5 w-3.5" />
               </span>
               <span>
-                <span className="block text-xs font-medium text-white/75">Somente designs originais</span>
-                <span className="mt-1 block text-[11px] leading-4 text-white/35">As peças em alta servem como sinal de demanda; a arte gerada não copia o item de outro criador.</span>
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Proteção Anti-Ban Ativa (Recomendado)
+                </span>
+                <span className="mt-1 block text-[11px] leading-4 text-white/40">
+                  Aplica mutação microscópica no molde PNG e altera o hash do arquivo para impedir detecção de duplicata pelo Roblox.
+                </span>
               </span>
             </button>
 
@@ -443,7 +423,7 @@ export function MassUploadPage() {
                 Antes de publicar
               </div>
               <p className="mt-2 text-[11px] leading-4 text-white/40">
-                Camisas e calças podem cobrar 80 R$ de taxa por upload. O Roblox ainda pode moderar cada arquivo.
+                Camisas e calças cobram 10 R$ de taxa de upload do Roblox. O molde é copiado e enviado diretamente para a fila do seu grupo.
               </p>
             </div>
 
@@ -454,12 +434,12 @@ export function MassUploadPage() {
             ) : (
               <button
                 type="button"
-                disabled={running || selected.size === 0 || !groupId || !confirmedOriginal}
+                disabled={running || selected.size === 0 || !groupId}
                 onClick={() => void runMassUpload()}
                 className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-35"
               >
-                {running ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {running ? "Criando lote..." : `Criar e publicar ${selected.size} peça${selected.size === 1 ? "" : "s"}`}
+                {running ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Layers3 className="h-4 w-4" />}
+                {running ? "Copiando lote..." : `Copiar e publicar ${selected.size} peça${selected.size === 1 ? "" : "s"} no grupo`}
               </button>
             )}
 

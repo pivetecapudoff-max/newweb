@@ -2,6 +2,7 @@ import "./env.js";
 import cors from "cors";
 import express from "express";
 import path from "node:path";
+import * as zlib from "node:zlib";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
@@ -1015,6 +1016,105 @@ app.post("/api/copy/download", requireAuth, async (req, res) => {
   }
 });
 
+function calcPngCrc(typeStr: string, dataBuf: Buffer): number {
+  const typeBuf = Buffer.from(typeStr, "ascii");
+  const combined = Buffer.concat([typeBuf, dataBuf]);
+  return zlib.crc32(combined);
+}
+
+function applyAntiBanTransform(buf: Buffer): Buffer {
+  if (buf.length < 8 || buf[0] !== 0x89 || buf[1] !== 0x50 || buf[2] !== 0x4E || buf[3] !== 0x47) {
+    return buf;
+  }
+
+  let offset = 8;
+  let ihdrChunk: Buffer | null = null;
+  const idatChunks: Buffer[] = [];
+
+  while (offset < buf.length) {
+    if (offset + 8 > buf.length) break;
+    const len = buf.readUInt32BE(offset);
+    const type = buf.subarray(offset + 4, offset + 8).toString("ascii");
+    const totalChunkLen = 12 + len;
+
+    if (offset + totalChunkLen > buf.length) break;
+
+    if (type === "IHDR") {
+      ihdrChunk = buf.subarray(offset, offset + totalChunkLen);
+    } else if (type === "IDAT") {
+      idatChunks.push(buf.subarray(offset + 8, offset + 8 + len));
+    }
+    offset += totalChunkLen;
+  }
+
+  if (!ihdrChunk || idatChunks.length === 0) return buf;
+
+  const width = ihdrChunk.readUInt32BE(8);
+  const height = ihdrChunk.readUInt32BE(12);
+  const bitDepth = ihdrChunk.readUInt8(16);
+  const colorType = ihdrChunk.readUInt8(17);
+
+  const sig = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+  const iendData = Buffer.alloc(0);
+  const iendLen = Buffer.alloc(4);
+  iendLen.writeUInt32BE(0);
+  const iendCrcVal = calcPngCrc("IEND", iendData);
+  const iendCrc = Buffer.alloc(4);
+  iendCrc.writeUInt32BE(iendCrcVal >>> 0);
+  const iendChunk = Buffer.concat([iendLen, Buffer.from("IEND", "ascii"), iendData, iendCrc]);
+
+  if (bitDepth === 8 && (colorType === 6 || colorType === 2)) {
+    try {
+      const rawDecomp = zlib.inflateSync(Buffer.concat(idatChunks));
+      const bpp = colorType === 6 ? 4 : 3;
+      const stride = 1 + width * bpp;
+
+      if (rawDecomp.length === stride * height) {
+        // Mutate 60-100 random non-transparent pixels by +/- 1 (completely invisible to human eye, breaks hash & deduplication)
+        const mutations = 60 + Math.floor(Math.random() * 40);
+        for (let m = 0; m < mutations; m++) {
+          const y = Math.floor(Math.random() * height);
+          const x = Math.floor(Math.random() * width);
+          const px = y * stride + 1 + x * bpp;
+          if (bpp === 4 && rawDecomp[px + 3] < 20) continue;
+          const ch = Math.floor(Math.random() * 3);
+          const delta = Math.random() > 0.5 ? 1 : -1;
+          rawDecomp[px + ch] = Math.max(0, Math.min(255, rawDecomp[px + ch] + delta));
+        }
+
+        const recomp = zlib.deflateSync(rawDecomp, { level: 9 });
+        const newIdatLen = Buffer.alloc(4);
+        newIdatLen.writeUInt32BE(recomp.length);
+        const newIdatCrc = Buffer.alloc(4);
+        newIdatCrc.writeUInt32BE(calcPngCrc("IDAT", recomp) >>> 0);
+        const newIdatChunk = Buffer.concat([newIdatLen, Buffer.from("IDAT", "ascii"), recomp, newIdatCrc]);
+
+        return Buffer.concat([sig, ihdrChunk, newIdatChunk, iendChunk]);
+      }
+    } catch (e) {
+      console.warn("[AntiBan] Decompression error, falling back to clean rebuild:", e);
+    }
+  }
+
+  // Fallback: strip metadata and insert unique salt chunk
+  const salt = Buffer.from(`AntiBan_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+  const textPayload = Buffer.concat([Buffer.from("Comment\0", "ascii"), salt]);
+  const textLen = Buffer.alloc(4);
+  textLen.writeUInt32BE(textPayload.length);
+  const textCrc = Buffer.alloc(4);
+  textCrc.writeUInt32BE(calcPngCrc("tEXt", textPayload) >>> 0);
+  const textChunk = Buffer.concat([textLen, Buffer.from("tEXt", "ascii"), textPayload, textCrc]);
+
+  const rawCompressed = Buffer.concat(idatChunks);
+  const idatLen = Buffer.alloc(4);
+  idatLen.writeUInt32BE(rawCompressed.length);
+  const idatCrc = Buffer.alloc(4);
+  idatCrc.writeUInt32BE(calcPngCrc("IDAT", rawCompressed) >>> 0);
+  const idatChunk = Buffer.concat([idatLen, Buffer.from("IDAT", "ascii"), rawCompressed, idatCrc]);
+
+  return Buffer.concat([sig, ihdrChunk, idatChunk, textChunk, iendChunk]);
+}
+
 app.post("/api/market-scanner/clone-asset", requireAuth, async (req, res) => {
   try {
     const assetId = Number(req.body?.assetId);
@@ -1056,57 +1156,67 @@ app.post("/api/market-scanner/clone-asset", requireAuth, async (req, res) => {
     let templateBuffer: Buffer | null = null;
     let mime = "image/png";
 
-    if (mode === "original") {
-      if (cookie) {
-        try {
-          const headers: Record<string, string> = {
-            "User-Agent": "Roblox/WinInet",
-            "Cookie": `.ROBLOSECURITY=${cookie}`,
-            "Accept": "text/xml, application/xml, */*",
-          };
-          const deliveryRes = await fetch(`https://assetdelivery.roblox.com/v1/asset/?id=${assetId}`, { headers });
-          if (deliveryRes.ok) {
-            const xmlText = await deliveryRes.text();
-            const match = xmlText.match(/<url>.*?id=(\d+).*?<\/url>/i) || xmlText.match(/id=(\d+)/i);
-            if (match && match[1] && match[1] !== String(assetId)) {
-              const subId = match[1];
-              const subRes = await fetch(`https://assetdelivery.roblox.com/v1/asset/?id=${subId}`, { headers });
-              if (subRes.ok) {
-                const subBuf = Buffer.from(await subRes.arrayBuffer());
-                if (subBuf.length > 500 && (subBuf[0] === 0x89 || subBuf[0] === 0xff)) {
-                  templateBuffer = subBuf;
-                  mime = subBuf[0] === 0xff ? "image/jpeg" : "image/png";
-                }
-              }
-            }
+    // 1. Direct Roblox Asset Delivery with cookie
+    if (cookie) {
+      try {
+        const headers: Record<string, string> = {
+          "User-Agent": "Roblox/WinInet",
+          "Cookie": `.ROBLOSECURITY=${cookie}`,
+          "Accept": "text/xml, application/xml, */*",
+        };
+        let currentId = String(assetId);
+        for (let depth = 0; depth < 3; depth++) {
+          const deliveryRes = await fetch(`https://assetdelivery.roblox.com/v1/asset/?id=${currentId}`, { headers });
+          if (!deliveryRes.ok) break;
+          const buf = Buffer.from(await deliveryRes.arrayBuffer());
+          if (buf.length > 500 && (buf[0] === 0x89 || buf[0] === 0xff)) {
+            templateBuffer = buf;
+            mime = buf[0] === 0xff ? "image/jpeg" : "image/png";
+            break;
           }
-        } catch (e) {
-          console.warn("[CloneAsset] Direct cookie delivery error:", e);
-        }
-      }
-
-      if (!templateBuffer) {
-        try {
-          const ripResult = await ripUgcAsset({ urlOrId: String(assetId), cookie });
-          if (ripResult?.files) {
-            for (const f of ripResult.files) {
-              if ((f.type === "texture" || f.name.toLowerCase().includes("template")) && f.url) {
-                const filePath = path.join(downloadsDir, path.basename(f.url));
-                if (existsSync(filePath)) {
-                  templateBuffer = readFileSync(filePath);
-                  mime = filePath.endsWith(".jpg") || filePath.endsWith(".jpeg") ? "image/jpeg" : "image/png";
-                  break;
-                }
-              }
-            }
+          const xmlText = buf.toString("utf-8");
+          const match = xmlText.match(/<url>.*?(?:id=|\/\/)(\d+).*?<\/url>/i) || xmlText.match(/id=(\d+)/i);
+          if (match && match[1] && match[1] !== currentId) {
+            currentId = match[1];
+          } else {
+            break;
           }
-        } catch (e) {
-          console.warn("[CloneAsset] Rip fallback error:", e);
         }
+      } catch (e) {
+        console.warn("[CloneAsset] Direct cookie delivery error:", e);
       }
     }
 
-    if (!templateBuffer && thumbnail) {
+    // 2. Python downloader fallback
+    if (!templateBuffer) {
+      try {
+        const ripResult = await ripUgcAsset({ urlOrId: String(assetId), cookie });
+        if (ripResult?.files) {
+          for (const f of ripResult.files) {
+            if ((f.type === "texture" || f.name.toLowerCase().includes("template")) && f.url) {
+              const relPath = decodeURIComponent(f.url.replace(/^\/downloads\//, ""));
+              const filePath = path.join(downloadsDir, relPath);
+              if (existsSync(filePath)) {
+                templateBuffer = readFileSync(filePath);
+                mime = filePath.endsWith(".jpg") || filePath.endsWith(".jpeg") ? "image/jpeg" : "image/png";
+                break;
+              }
+              const flatPath = path.join(downloadsDir, path.basename(f.url));
+              if (existsSync(flatPath)) {
+                templateBuffer = readFileSync(flatPath);
+                mime = flatPath.endsWith(".jpg") || flatPath.endsWith(".jpeg") ? "image/jpeg" : "image/png";
+                break;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[CloneAsset] Rip fallback error:", e);
+      }
+    }
+
+    // 3. Fallback for T-Shirts only (since T-shirts are single decal images)
+    if (!templateBuffer && kind === "tshirt" && thumbnail) {
       try {
         const thumbRes = await fetch(thumbnail, { headers: { "User-Agent": "Mozilla/5.0" } });
         if (thumbRes.ok) {
@@ -1121,9 +1231,18 @@ app.post("/api/market-scanner/clone-asset", requireAuth, async (req, res) => {
     if (!templateBuffer) {
       res.status(404).json({
         ok: false,
-        error: "Não foi possível extrair o molde da peça automaticamente. Conecte sua conta do Roblox na aba Conta ou verifique o item.",
+        error: "Não foi possível extrair o molde original 585x559 desta roupa. Conecte sua conta Roblox com cookie (.ROBLOSECURITY) válido na aba Conta para liberar a extração direta do catálogo.",
       });
       return;
+    }
+
+    // Anti-ban pixel mutation when mode is ai_remake (breaks hash & duplicate detection while keeping visual appearance 100% identical)
+    if (mode === "ai_remake" && mime === "image/png") {
+      try {
+        templateBuffer = applyAntiBanTransform(templateBuffer);
+      } catch (err) {
+        console.warn("[CloneAsset] Anti-ban transform error:", err);
+      }
     }
 
     const templateDataUrl = `data:${mime};base64,${templateBuffer.toString("base64")}`;

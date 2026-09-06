@@ -279,7 +279,7 @@ export async function scanMarketCatalog(options: MarketScanOptions): Promise<Mar
   const catalogItems: CatalogItem[] = selectedRaw.map((raw) => ({
     id: raw.id,
     itemType: raw.itemType || "Asset",
-    assetType: raw.assetType ?? null,
+    assetType: raw.assetType ?? (raw._subcat === "ClassicPants" ? 12 : raw._subcat === "ClassicShirts" ? 11 : raw._subcat === "ClassicTShirts" ? 2 : 11),
     name: String(raw.name || "Item Roblox").trim(),
     creatorId: raw.creatorTargetId || 0,
     creatorName: raw.creatorName || "Desconhecido",
