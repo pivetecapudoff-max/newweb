@@ -136,7 +136,7 @@ export function ClusterPage() {
 
           <div className="p-3.5 rounded-xl bg-[#121212]">
             <div className="flex items-center gap-1.5 text-white/40 text-[11px] font-medium mb-1">
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+              <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
               <span>Aceleração</span>
             </div>
             <div className="text-xl font-extrabold text-white">
@@ -308,7 +308,7 @@ export function ClusterPage() {
                   </td>
                   <td className="py-3 px-3 text-white/60">{row.metrics.size}</td>
                   <td className="py-3 px-3 text-white/60">{row.metrics.velocity}</td>
-                  <td className="py-3 px-3 text-emerald-400 font-semibold">
+                  <td className="py-3 px-3 text-blue-400 font-semibold">
                     {row.metrics.acceleration.toFixed(2)}x
                   </td>
                   <td className="py-3 px-3 text-white/60">{row.metrics.purity.toFixed(2)}</td>

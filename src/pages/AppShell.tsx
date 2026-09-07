@@ -142,7 +142,7 @@ export function AppShell() {
               </NavLink>
 
               <NavLink to="/painel/ugc-creator" className={() => navItemClass("/painel/ugc-creator", true)}>
-                <Wand2 className="w-4 h-4 text-purple-400" />
+                <Wand2 className="w-4 h-4 text-blue-400" />
                 <span>UGC AI</span>
               </NavLink>
 
@@ -188,7 +188,7 @@ export function AppShell() {
                   )
                 }
               >
-                <Radar className="w-4 h-4 text-emerald-400" />
+                <Radar className="w-4 h-4 text-blue-400" />
                 <span>Market Scanner</span>
               </NavLink>
 
@@ -205,9 +205,9 @@ export function AppShell() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setShowOnboarding(true)}
-              className="w-full py-2.5 px-4 rounded-full font-semibold text-xs text-purple-300 hover:text-white bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 backdrop-blur-md transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-2.5 px-4 rounded-full font-semibold text-xs text-blue-300 hover:text-white bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 backdrop-blur-md transition-all cursor-pointer flex items-center justify-center gap-2"
             >
-              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <Sparkles className="w-3.5 h-3.5 text-blue-400" />
               <span>Guia da Plataforma</span>
             </motion.button>
 

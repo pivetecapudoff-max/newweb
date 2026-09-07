@@ -151,12 +151,12 @@ export function ToastProvider({ children }: { children?: React.ReactNode }) {
             const isError = t.type === "error";
             const isLoading = t.type === "loading";
             const accentBg = isSuccess
-              ? "bg-emerald-500 shadow-[0_0_8px_#10b981]"
+              ? "bg-blue-500 shadow-[0_0_8px_#3b82f6]"
               : isError
               ? "bg-rose-500 shadow-[0_0_8px_#f43f5e]"
               : isLoading
-              ? "bg-blue-500 shadow-[0_0_8px_#3b82f6]"
-              : "bg-purple-500 shadow-[0_0_8px_#a855f7]";
+              ? "bg-sky-500 shadow-[0_0_8px_#0ea5e9]"
+              : "bg-blue-400 shadow-[0_0_8px_#60a5fa]";
 
             return (
               <motion.div
@@ -171,7 +171,7 @@ export function ToastProvider({ children }: { children?: React.ReactNode }) {
 
                 <div className="shrink-0 mt-0.5 pl-1">
                   {isSuccess && (
-                    <CircleCheck className="w-5 h-5 text-emerald-400 drop-shadow-[0_0_6px_rgba(16,185,129,0.4)]" />
+                    <CircleCheck className="w-5 h-5 text-blue-400 drop-shadow-[0_0_6px_rgba(59,130,246,0.4)]" />
                   )}
                   {isError && (
                     <AlertCircle className="w-5 h-5 text-rose-400 drop-shadow-[0_0_6px_rgba(244,63,94,0.4)]" />
@@ -180,7 +180,7 @@ export function ToastProvider({ children }: { children?: React.ReactNode }) {
                     <LoaderCircle className="w-5 h-5 text-blue-400 animate-spin" />
                   )}
                   {!isSuccess && !isError && !isLoading && (
-                    <Sparkles className="w-5 h-5 text-purple-400" />
+                    <Sparkles className="w-5 h-5 text-blue-400" />
                   )}
                 </div>
 

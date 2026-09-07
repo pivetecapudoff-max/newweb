@@ -26,12 +26,12 @@ import {
 const STATUS_BADGE: Record<string, { label: string; color: string }> = {
   queued: { label: "Na Fila", color: "bg-yellow-500/15 border-yellow-500/30 text-yellow-400" },
   processing: { label: "Processando", color: "bg-blue-500/15 border-blue-500/30 text-blue-400" },
-  completed: { label: "Concluído", color: "bg-emerald-500/15 border-emerald-500/30 text-emerald-400" },
+  completed: { label: "Concluído", color: "bg-blue-500/15 border-blue-500/30 text-blue-400" },
   failed: { label: "Falhou", color: "bg-rose-500/15 border-rose-500/30 text-rose-400" },
   partial: { label: "Parcial", color: "bg-amber-500/15 border-amber-500/30 text-amber-400" },
   pending: { label: "Pendente", color: "bg-zinc-500/15 border-zinc-500/30 text-zinc-400" },
-  success: { label: "Concluído", color: "bg-emerald-500/15 border-emerald-500/30 text-emerald-400" },
-  skipped_regional: { label: "Regional", color: "bg-purple-500/15 border-purple-500/30 text-purple-400" },
+  success: { label: "Concluído", color: "bg-blue-500/15 border-blue-500/30 text-blue-400" },
+  skipped_regional: { label: "Regional", color: "bg-blue-500/15 border-blue-500/30 text-blue-400" },
 };
 
 function formatDate(iso: string) {
@@ -136,7 +136,7 @@ export function GamepassAutoPage() {
       {/* Nova Tarefa Card */}
       <div className="rounded-2xl bg-black/50 backdrop-blur-xl border border-white/[0.08] p-6 lg:p-8 space-y-6 shadow-2xl">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400">
+          <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
             <Gamepad2 className="w-5 h-5" />
           </div>
           <h2 className="text-base font-bold text-white">Nova tarefa</h2>
@@ -162,7 +162,7 @@ export function GamepassAutoPage() {
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold text-white truncate">{account.displayName || account.name}</div>
                 <div className="text-xs text-white/40 font-mono">
-                  ID {account.id} — <span className="text-emerald-400 font-semibold">{account.robux.toLocaleString("pt-BR")} Robux</span>
+                  ID {account.id} — <span className="text-blue-400 font-semibold">{account.robux.toLocaleString("pt-BR")} Robux</span>
                 </div>
               </div>
               <ChevronDown className="w-4 h-4 text-white/30 shrink-0" />
@@ -188,7 +188,7 @@ export function GamepassAutoPage() {
             onChange={(e) => setLinksText(e.target.value)}
             placeholder="Para mais de uma gamepass, coloque em linhas separadas."
             rows={4}
-            className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-all resize-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-purple-500/30 transition-all resize-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           />
         </div>
 
@@ -228,7 +228,7 @@ export function GamepassAutoPage() {
                 max={120}
                 value={delaySeconds}
                 onChange={(e) => setDelaySeconds(Math.max(1, Number(e.target.value) || 5))}
-                className="w-16 px-2 py-1 rounded-lg bg-white/[0.05] border border-white/[0.1] text-xs text-white text-center focus:outline-none focus:border-purple-500/40"
+                className="w-16 px-2 py-1 rounded-lg bg-white/[0.05] border border-white/[0.1] text-xs text-white text-center focus:outline-none focus:border-blue-500/40"
               />
             )}
             <button
@@ -357,7 +357,7 @@ export function GamepassAutoPage() {
                           <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/[0.06]" />
                           <circle
                             cx="10" cy="10" r="8" fill="none" stroke="currentColor" strokeWidth="2"
-                            className={`${job.status === "completed" ? "text-emerald-500" : job.status === "failed" ? "text-rose-500" : "text-blue-500"}`}
+                            className={`${job.status === "completed" ? "text-blue-500" : job.status === "failed" ? "text-rose-500" : "text-blue-500"}`}
                             strokeDasharray={`${job.totalPasses > 0 ? (job.completedPasses / job.totalPasses) * 50.26 : 0} 50.26`}
                             strokeLinecap="round"
                           />

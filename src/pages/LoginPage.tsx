@@ -134,7 +134,7 @@ export function LoginPage() {
           <div className="space-y-3">
             <p className="text-xs text-white/40 leading-relaxed">
               {turnstileToken ? (
-                <span className="text-emerald-400 flex items-center justify-center gap-1.5 font-medium">
+                <span className="text-blue-400 flex items-center justify-center gap-1.5 font-medium">
                   <CheckCircle2 className="w-3.5 h-3.5" /> Verificação concluída. Clique acima para entrar.
                 </span>
               ) : (

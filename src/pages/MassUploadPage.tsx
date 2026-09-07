@@ -255,7 +255,7 @@ export function MassUploadPage() {
         <section className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a0a0a] p-6 shadow-2xl backdrop-blur-xl sm:p-8">
           <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-2xl">
-              <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-400">
+              <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-blue-400">
                 <Layers3 className="h-4 w-4" />
                 Mass Upload
               </div>
@@ -270,7 +270,7 @@ export function MassUploadPage() {
             <div className="grid min-w-full grid-cols-3 gap-2 sm:min-w-[430px]">
               <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3">
                 <div className="text-[10px] uppercase tracking-wider text-white/40">Selecionadas</div>
-                <div className="mt-1 text-xl font-semibold text-emerald-400">{selected.size}/{MAX_BATCH}</div>
+                <div className="mt-1 text-xl font-semibold text-blue-400">{selected.size}/{MAX_BATCH}</div>
               </div>
               <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3">
                 <div className="text-[10px] uppercase tracking-wider text-white/40">Taxa total</div>
@@ -289,7 +289,7 @@ export function MassUploadPage() {
             <div className="flex flex-col gap-4 border-b border-white/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                  <TrendingUp className="h-4 w-4 text-emerald-400" />
+                  <TrendingUp className="h-4 w-4 text-blue-400" />
                   Mais vendidos do catálogo
                 </div>
                 <p className="mt-1 text-xs text-white/40">
@@ -305,7 +305,7 @@ export function MassUploadPage() {
                     setFilter(value);
                     void refreshTrends(value);
                   }}
-                  className="rounded-xl border border-white/[0.08] bg-[#121212] px-3 py-2 text-xs text-white/80 outline-none focus:border-emerald-500/50"
+                  className="rounded-xl border border-white/[0.08] bg-[#121212] px-3 py-2 text-xs text-white/80 outline-none focus:border-blue-500/50"
                 >
                   {FILTERS.map((entry) => <option key={entry.value} value={entry.value}>{entry.label}</option>)}
                 </select>
@@ -322,7 +322,7 @@ export function MassUploadPage() {
                   type="button"
                   disabled={running || !items.length}
                   onClick={selectTop}
-                  className="rounded-xl border border-emerald-500/30 bg-emerald-500/15 hover:bg-emerald-500/25 px-3 py-2 text-xs font-medium text-emerald-300 transition disabled:opacity-40"
+                  className="rounded-xl border border-blue-500/30 bg-blue-500/15 hover:bg-blue-500/25 px-3 py-2 text-xs font-medium text-blue-300 transition disabled:opacity-40"
                 >
                   Selecionar {Math.min(MAX_BATCH, items.length)} itens
                 </button>
@@ -358,7 +358,7 @@ export function MassUploadPage() {
                         onClick={() => toggleItem(item.id)}
                         className={`rounded-2xl bg-[#0a0a0a] p-3 flex flex-col justify-between gap-2.5 transition-all text-left w-full group relative overflow-hidden border cursor-pointer ${
                           checked
-                            ? "border-emerald-500/80 ring-1 ring-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.15)]"
+                            ? "border-blue-500/80 ring-1 ring-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.15)]"
                             : "border-white/[0.08] hover:border-white/[0.18]"
                         }`}
                       >
@@ -381,7 +381,7 @@ export function MassUploadPage() {
                           </div>
 
                           {/* Price Badge - Top Right */}
-                          <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-emerald-950/80 backdrop-blur-md text-[10px] font-bold text-emerald-400 border border-emerald-500/30">
+                          <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-emerald-950/80 backdrop-blur-md text-[10px] font-bold text-blue-400 border border-blue-500/30">
                             {item.price != null ? `${item.price} R$` : "5 R$"}
                           </div>
 
@@ -393,7 +393,7 @@ export function MassUploadPage() {
                           {/* Selection Checkmark - Bottom Right */}
                           <div className={`absolute bottom-2 right-2 flex h-5 w-5 items-center justify-center rounded-full border transition-all ${
                             checked
-                              ? "border-emerald-400 bg-emerald-500 text-black shadow-sm scale-110"
+                              ? "border-blue-400 bg-blue-600 text-white shadow-sm scale-110"
                               : "border-white/20 bg-black/60 text-transparent group-hover:border-white/40"
                           }`}>
                             <Check className="h-3 w-3 stroke-[3]" />
@@ -403,7 +403,7 @@ export function MassUploadPage() {
                         {/* Item Metadata */}
                         <div className="space-y-1">
                           <h4
-                            className="text-xs font-semibold text-white/90 line-clamp-2 leading-tight group-hover:text-purple-300 transition-colors"
+                            className="text-xs font-semibold text-white/90 line-clamp-2 leading-tight group-hover:text-blue-300 transition-colors"
                             title={item.name}
                           >
                             {item.name}
@@ -424,18 +424,18 @@ export function MassUploadPage() {
                           <div
                             className={`p-2 rounded-lg transition-all flex items-center justify-center gap-1.5 text-[10px] font-bold shadow-sm ${
                               checked
-                                ? "bg-emerald-500/25 text-emerald-200 border border-emerald-500/50"
-                                : "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 hover:text-emerald-100 border border-emerald-500/30 hover:border-emerald-500/50"
+                                ? "bg-blue-500/25 text-blue-200 border border-blue-500/50"
+                                : "bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 hover:text-blue-100 border border-blue-500/30 hover:border-blue-500/50"
                             }`}
                           >
                             {checked ? (
                               <>
-                                <Check className="w-3 h-3 text-emerald-400" />
+                                <Check className="w-3 h-3 text-blue-400" />
                                 <span>Selecionada</span>
                               </>
                             ) : (
                               <>
-                                <Plus className="w-3 h-3 text-emerald-400" />
+                                <Plus className="w-3 h-3 text-blue-400" />
                                 <span>Selecionar</span>
                               </>
                             )}
@@ -444,7 +444,7 @@ export function MassUploadPage() {
                           {status && (
                             <div className={`mt-1 flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] ${
                               status.state === "queued"
-                                ? "bg-emerald-400/10 border-emerald-500/30 text-emerald-300"
+                                ? "bg-blue-400/10 border-blue-500/30 text-blue-300"
                                 : status.state === "failed"
                                 ? "bg-rose-400/10 border-rose-500/30 text-rose-300"
                                 : "bg-blue-400/10 border-blue-500/30 text-blue-200"
@@ -462,7 +462,7 @@ export function MassUploadPage() {
 
           <aside className="w-full lg:w-[340px] shrink-0 h-fit rounded-2xl border border-white/[0.08] bg-[#0a0a0a] p-5 space-y-4 lg:sticky lg:top-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-white">
-              <UploadCloud className="h-4 w-4 text-emerald-400" />
+              <UploadCloud className="h-4 w-4 text-blue-400" />
               Configurar publicação
             </div>
 
@@ -472,7 +472,7 @@ export function MassUploadPage() {
                 value={groupId ?? ""}
                 disabled={running || !connected}
                 onChange={(event) => setGroupId(event.target.value ? Number(event.target.value) : null)}
-                className="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#121212] px-3.5 py-3 text-sm text-white/80 outline-none focus:border-emerald-500/50 disabled:opacity-50"
+                className="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#121212] px-3.5 py-3 text-sm text-white/80 outline-none focus:border-blue-500/50 disabled:opacity-50"
               >
                 <option value="">Selecione um grupo</option>
                 {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
@@ -491,7 +491,7 @@ export function MassUploadPage() {
                   onChange={(event) => setPrice(Math.max(5, Math.floor(Number(event.target.value) || 5)))}
                   className="min-w-0 flex-1 bg-transparent py-3 text-sm text-white outline-none"
                 />
-                <span className="text-xs font-semibold text-emerald-400">Robux</span>
+                <span className="text-xs font-semibold text-blue-400">Robux</span>
               </div>
             </div>
 
@@ -501,11 +501,11 @@ export function MassUploadPage() {
               onClick={() => setAntiBan((value) => !value)}
               className="flex w-full items-start gap-3 rounded-xl border border-white/[0.08] bg-white/[0.025] hover:bg-white/[0.05] p-3 text-left transition"
             >
-              <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${antiBan ? "border-emerald-400 bg-emerald-500 text-black" : "border-white/20 bg-black/40 text-transparent"}`}>
+              <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${antiBan ? "border-blue-400 bg-blue-600 text-white" : "border-white/20 bg-black/40 text-transparent"}`}>
                 <Check className="h-3.5 w-3.5 stroke-[3]" />
               </span>
               <span>
-                <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-blue-400">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   Proteção Anti-Ban
                 </span>
@@ -526,7 +526,7 @@ export function MassUploadPage() {
             </div>
 
             {!connected ? (
-              <Link to="/painel/conta" className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-3.5 text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98]">
+              <Link to="/painel/conta" className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-3.5 text-sm font-bold shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98]">
                 Conectar conta Roblox <ExternalLink className="h-4 w-4" />
               </Link>
             ) : (
@@ -534,7 +534,7 @@ export function MassUploadPage() {
                 type="button"
                 disabled={running || selected.size === 0 || !groupId}
                 onClick={() => void runMassUpload()}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-3.5 text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-3.5 text-sm font-bold shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed"
               >
                 {running ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Layers3 className="h-4 w-4" />}
                 {running ? "Enviando lote..." : `Publicar ${selected.size} peça${selected.size === 1 ? "" : "s"} no grupo`}
@@ -545,10 +545,10 @@ export function MassUploadPage() {
               <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-3.5 text-xs text-white/55">
                 <div className="font-medium text-white/80">Lote processado</div>
                 <div className="mt-2 flex gap-4">
-                  <span className="text-emerald-300 font-semibold">{queuedCount} na fila</span>
+                  <span className="text-blue-300 font-semibold">{queuedCount} na fila</span>
                   {failedCount > 0 && <span className="text-rose-300 font-semibold">{failedCount} falharam</span>}
                 </div>
-                <Link to="/painel/upload" className="mt-2.5 inline-flex items-center gap-1 font-medium text-emerald-400 hover:text-emerald-300">
+                <Link to="/painel/upload" className="mt-2.5 inline-flex items-center gap-1 font-medium text-blue-400 hover:text-blue-300">
                   Acompanhar fila <ExternalLink className="h-3 w-3" />
                 </Link>
               </div>

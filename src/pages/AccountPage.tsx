@@ -222,7 +222,7 @@ export function AccountPage() {
                     </div>
                   )}
                   <div
-                    className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 ring-4 ring-[#0a0a0a] flex items-center justify-center"
+                    className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-blue-600 ring-4 ring-[#0a0a0a] flex items-center justify-center"
                     title="Sessão ativa"
                   >
                     <Check className="w-3 h-3 text-black stroke-[3]" />
@@ -253,7 +253,7 @@ export function AccountPage() {
                     >
                       <span>ID: {userId || "—"}</span>
                       {copied ? (
-                        <Check className="w-3 h-3 text-emerald-400" />
+                        <Check className="w-3 h-3 text-blue-400" />
                       ) : (
                         <Copy className="w-3 h-3 text-white/40" />
                       )}
@@ -301,7 +301,7 @@ export function AccountPage() {
                     {primaryGroup?.name || "Nenhum grupo detectado"}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
+                <div className="flex items-center gap-1.5 text-xs text-blue-400 font-medium">
                   <Check className="w-3.5 h-3.5" />
                   <span>Sincronizado</span>
                 </div>
@@ -319,14 +319,14 @@ export function AccountPage() {
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-white/50">Receita Total</span>
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-400">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-400">
                   <Coins className="w-4 h-4" />
                 </div>
               </div>
               <p className="text-2xl sm:text-3xl font-bold tracking-tight text-white mt-3 [font-variant-numeric:tabular-nums]">
                 {dashboard?.sources.sales === "live" || dashboard?.sources.sales === "empty" ? `${(kpis?.totalRevenue ?? 0).toLocaleString("pt-BR")} R$` : "—"}
               </p>
-              <span className="text-[11px] text-emerald-400/80 font-medium block mt-1">
+              <span className="text-[11px] text-blue-400/80 font-medium block mt-1">
                 Faturamento confirmado
               </span>
             </motion.div>
@@ -379,14 +379,14 @@ export function AccountPage() {
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-white/50">Lojas Conectadas</span>
-                <div className="w-8 h-8 rounded-xl bg-purple-500/15 flex items-center justify-center text-purple-400">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-400">
                   <ShieldCheck className="w-4 h-4" />
                 </div>
               </div>
               <p className="text-2xl sm:text-3xl font-bold tracking-tight text-white mt-3 [font-variant-numeric:tabular-nums]">
                 {dashboard?.sources.groups === "live" || dashboard?.sources.groups === "empty" ? groups.filter((g) => g.canPost).length : "—"}
               </p>
-              <span className="text-[11px] text-purple-300/80 font-medium block mt-1">
+              <span className="text-[11px] text-blue-300/80 font-medium block mt-1">
                 Com permissão de upload
               </span>
             </motion.div>
@@ -515,7 +515,7 @@ export function AccountPage() {
                                 isOwner
                                   ? "bg-amber-500/20 text-amber-300"
                                   : g.canPost
-                                  ? "bg-purple-500/20 text-purple-300"
+                                  ? "bg-blue-500/20 text-blue-300"
                                   : "bg-[#161616] text-white/50"
                               }`}
                             >
@@ -558,7 +558,7 @@ export function AccountPage() {
                         <td className="py-3.5 px-3">
                           <div className="flex flex-wrap items-center gap-1.5">
                             {g.canPost ? (
-                              <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 text-[10px] font-semibold">
+                              <span className="px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-300 text-[10px] font-semibold">
                                 Publicar UGC / Roupas
                               </span>
                             ) : (
@@ -628,7 +628,7 @@ export function AccountPage() {
               {cookie.trim() && (
                 <div className="mt-2 text-[11px]">
                   {cookie.trim().length >= 500 ? (
-                    <span className="text-emerald-400 flex items-center gap-1 font-medium">
+                    <span className="text-blue-400 flex items-center gap-1 font-medium">
                       <CheckCircle2 className="w-3 h-3" />
                       Tamanho compatível ({cookie.trim().length} caracteres)
                     </span>
@@ -644,15 +644,15 @@ export function AccountPage() {
             {/* Step-by-Step Instructions Box */}
             <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-2 text-[11px] text-white/60 leading-relaxed">
               <div className="flex items-center gap-2 font-semibold text-white/80">
-                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                <Sparkles className="w-3.5 h-3.5 text-blue-400" />
                 <span>Como copiar seu cookie sem truncar:</span>
               </div>
               <ol className="list-decimal list-inside space-y-1 pl-1 text-white/50">
                 <li>Abra o <strong className="text-white/80">roblox.com</strong> logado na sua conta.</li>
-                <li>Pressione <strong className="text-white/80">F12</strong> &gt; aba <strong className="text-white/80">Application</strong> (ou Armazenamento) &gt; <strong className="text-white/80">Cookies</strong> &gt; <code className="text-purple-300">https://www.roblox.com</code>.</li>
+                <li>Pressione <strong className="text-white/80">F12</strong> &gt; aba <strong className="text-white/80">Application</strong> (ou Armazenamento) &gt; <strong className="text-white/80">Cookies</strong> &gt; <code className="text-blue-300">https://www.roblox.com</code>.</li>
                 <li>Dê <strong className="text-white/80">dois cliques</strong> no valor de <strong className="text-white/80">.ROBLOSECURITY</strong>.</li>
                 <li>Pressione <strong className="text-white/80">Ctrl + A</strong> (para selecionar tudo sem cortar) e <strong className="text-white/80">Ctrl + C</strong>.</li>
-                <li>O valor deve começar com <code className="text-purple-300">_|WARNING:-DO-NOT-SHARE-THIS...</code> e ter mais de 800 caracteres.</li>
+                <li>O valor deve começar com <code className="text-blue-300">_|WARNING:-DO-NOT-SHARE-THIS...</code> e ter mais de 800 caracteres.</li>
               </ol>
             </div>
 

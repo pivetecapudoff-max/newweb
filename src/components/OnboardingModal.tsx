@@ -56,7 +56,7 @@ export function OnboardingModal({
       title: `Bem-vindo ao Illusions AI${discordName ? `, @${discordName}` : ""}!`,
       subtitle: "Sua central definitiva de inteligência UGC, métricas de vendas e automação no Roblox.",
       icon: Sparkles,
-      iconColor: "text-purple-400 bg-purple-500/15 border-purple-500/30",
+      iconColor: "text-blue-400 bg-blue-500/15 border-blue-500/30",
       content: (
         <div className="space-y-4 text-left">
           <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
@@ -65,7 +65,7 @@ export function OnboardingModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
             <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-start gap-3">
-              <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 shrink-0">
+              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 shrink-0">
                 <TrendingUp className="w-4 h-4" />
               </div>
               <div>
@@ -95,7 +95,7 @@ export function OnboardingModal({
             </div>
 
             <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-start gap-3">
-              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 shrink-0">
+              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 shrink-0">
                 <ShieldCheck className="w-4 h-4" />
               </div>
               <div>
@@ -167,7 +167,7 @@ export function OnboardingModal({
       title: "Otimizador de SEO & Tags",
       subtitle: "Melhore títulos e descrições para posicionar seus itens no topo das buscas.",
       icon: Bot,
-      iconColor: "text-purple-400 bg-purple-500/15 border-purple-500/30",
+      iconColor: "text-blue-400 bg-blue-500/15 border-blue-500/30",
       content: (
         <div className="space-y-4 text-left">
           <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
@@ -177,7 +177,7 @@ export function OnboardingModal({
           <div className="space-y-3">
             <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
               <div className="flex items-center gap-2 text-xs font-semibold text-white">
-                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                <Sparkles className="w-3.5 h-3.5 text-blue-400" />
                 <span>Motor Duplo de Publicação</span>
               </div>
               <p className="text-[11px] text-white/60 mt-1">
@@ -203,10 +203,10 @@ export function OnboardingModal({
       title: "Tudo Pronto para Começar!",
       subtitle: "Sua conta do Discord está conectada. Agora é só sincronizar o Roblox.",
       icon: CheckCircle2,
-      iconColor: "text-emerald-400 bg-emerald-500/15 border-emerald-500/30",
+      iconColor: "text-blue-400 bg-blue-500/15 border-blue-500/30",
       content: (
         <div className="space-y-4 text-center py-2">
-          <div className="w-16 h-16 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400 shadow-lg shadow-emerald-500/10">
+          <div className="w-16 h-16 rounded-full bg-blue-500/15 border border-blue-500/30 flex items-center justify-center mx-auto text-blue-400 shadow-lg shadow-blue-500/10">
             <CheckCircle2 className="w-8 h-8" />
           </div>
 
@@ -247,7 +247,7 @@ export function OnboardingModal({
           className="relative w-full max-w-xl rounded-[28px] bg-[#0a0a0a] border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.85)] p-6 sm:p-8 overflow-hidden text-white flex flex-col max-h-[90vh]"
         >
           {/* Subtle Ambient Light */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
 
           {/* Header Row */}
@@ -257,7 +257,7 @@ export function OnboardingModal({
                 <IconComponent className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400 block">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 block">
                   {current.badge}
                 </span>
                 <h3 className="text-sm sm:text-base font-bold text-white tracking-tight leading-tight">
@@ -345,7 +345,7 @@ export function OnboardingModal({
                 type="checkbox"
                 checked={dontShowAgain}
                 onChange={(e) => setDontShowAgain(e.target.checked)}
-                className="w-3.5 h-3.5 rounded bg-white/10 border-white/20 text-purple-600 focus:ring-0 cursor-pointer"
+                className="w-3.5 h-3.5 rounded bg-white/10 border-white/20 text-blue-600 focus:ring-0 cursor-pointer"
               />
               <span>Não exibir este guia automaticamente no login</span>
             </label>

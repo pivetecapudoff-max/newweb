@@ -187,7 +187,7 @@ export function CloudflareGate({ children }: CloudflareGateProps) {
           </p>
           <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-snug">
             {verifiedSuccess ? (
-              <span className="inline-flex items-center gap-2 text-emerald-400">
+              <span className="inline-flex items-center gap-2 text-blue-400">
                 <CheckCircle2 className="w-7 h-7" />
                 <span>Verificação concluída com sucesso!</span>
               </span>
@@ -252,7 +252,7 @@ export function CloudflareGate({ children }: CloudflareGateProps) {
           <code className="text-white/50 font-mono">{rayId}</code>
           <span className="mx-2">•</span>
           <span>Sua conexão: </span>
-          <span className="text-emerald-400/80 font-mono">TLS 1.3 / HSTS</span>
+          <span className="text-blue-400/80 font-mono">TLS 1.3 / HSTS</span>
         </div>
 
         <div className="flex items-center gap-1.5">

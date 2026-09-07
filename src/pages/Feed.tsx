@@ -524,15 +524,15 @@ export function Feed() {
             className="flex items-center gap-2.5 cursor-pointer select-none group"
             title={isConfigCollapsed ? "Clique para expandir configurações" : "Clique para minimizar configurações"}
           >
-            <div className="p-2 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white/70 group-hover:text-emerald-400 group-hover:border-emerald-500/30 transition-all">
-              <SlidersHorizontal className="w-4 h-4 text-emerald-400" />
+            <div className="p-2 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white/70 group-hover:text-blue-400 group-hover:border-blue-500/30 transition-all">
+              <SlidersHorizontal className="w-4 h-4 text-blue-400" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-white tracking-wide group-hover:text-emerald-300 transition-colors">
+                <span className="text-sm font-bold text-white tracking-wide group-hover:text-blue-300 transition-colors">
                   Filtros &amp; Configurações do Scanner
                 </span>
-                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold">
+                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 font-semibold">
                   Live Engine
                 </span>
               </div>
@@ -551,17 +551,17 @@ export function Feed() {
               type="button"
               onClick={handleMarketScan}
               disabled={isScanningMarket}
-              className="relative group px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 hover:from-emerald-300 hover:to-teal-300 text-black font-black text-xs sm:text-sm tracking-wider uppercase shadow-[0_0_25px_rgba(52,211,153,0.4)] hover:shadow-[0_0_35px_rgba(52,211,153,0.7)] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer shrink-0"
+              className="relative group px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-blue-500 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white font-black text-xs sm:text-sm tracking-wider uppercase shadow-[0_0_25px_rgba(59,130,246,0.4)] hover:shadow-[0_0_35px_rgba(59,130,246,0.7)] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer shrink-0"
               title="Iniciar varredura do catálogo do Roblox"
             >
               {isScanningMarket ? (
                 <>
-                  <LoaderCircle className="w-4 h-4 animate-spin text-black" />
+                  <LoaderCircle className="w-4 h-4 animate-spin text-white" />
                   <span className="font-extrabold">ESCANEANDO...</span>
                 </>
               ) : (
                 <>
-                  <Radar className="w-4 h-4 text-black animate-pulse" />
+                  <Radar className="w-4 h-4 text-white animate-pulse" />
                   <span className="font-extrabold">INICIAR SCANNER</span>
                 </>
               )}
@@ -578,7 +578,7 @@ export function Feed() {
                 {isConfigCollapsed ? "Expandir" : "Minimizar"}
               </span>
               {isConfigCollapsed ? (
-                <ChevronDown className="w-4 h-4 text-emerald-400" />
+                <ChevronDown className="w-4 h-4 text-blue-400" />
               ) : (
                 <ChevronUp className="w-4 h-4 text-white/70" />
               )}
@@ -601,17 +601,17 @@ export function Feed() {
               Período: <strong className="text-white capitalize">{timePeriod}</strong>
             </span>
             <span className="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/80 font-medium">
-              Nicho: <strong className="text-emerald-300">"{keywords}"</strong>
+              Nicho: <strong className="text-blue-300">"{keywords}"</strong>
             </span>
             <span className="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/80 font-medium">
               Modo: <strong className="text-white">{scanMode === "fixed" ? `${totalItems} itens` : "Rotação"}</strong>
             </span>
             {groupId && (
-              <span className="px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300 font-medium font-mono">
+              <span className="px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300 font-medium font-mono">
                 Grupo: {groupId}
               </span>
             )}
-            <span className="text-[11px] text-emerald-400 font-semibold underline ml-1">
+            <span className="text-[11px] text-blue-400 font-semibold underline ml-1">
               (Clique para abrir)
             </span>
           </div>
@@ -847,16 +847,16 @@ export function Feed() {
                   type="button"
                   onClick={handleMarketScan}
                   disabled={isScanningMarket}
-                  className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 hover:from-emerald-300 hover:to-teal-300 text-black font-black text-sm tracking-widest uppercase shadow-[0_0_30px_rgba(52,211,153,0.35)] hover:shadow-[0_0_45px_rgba(52,211,153,0.6)] transition-all active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3 cursor-pointer"
+                  className="w-full py-4 rounded-xl bg-gradient-to-r from-blue-600 via-blue-500 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white font-black text-sm tracking-widest uppercase shadow-[0_0_30px_rgba(59,130,246,0.35)] hover:shadow-[0_0_45px_rgba(59,130,246,0.6)] transition-all active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3 cursor-pointer"
                 >
                   {isScanningMarket ? (
                     <>
-                      <LoaderCircle className="w-5 h-5 animate-spin text-black" />
+                      <LoaderCircle className="w-5 h-5 animate-spin text-white" />
                       <span className="tracking-wider">ESCANEANDO CATÁLOGO DO ROBLOX...</span>
                     </>
                   ) : (
                     <>
-                      <Radar className="w-5 h-5 text-black animate-pulse" />
+                      <Radar className="w-5 h-5 text-white animate-pulse" />
                       <span className="tracking-wider">INICIAR SCANNER DE MERCADO</span>
                     </>
                   )}
@@ -944,7 +944,7 @@ export function Feed() {
               className="p-4 sm:p-5 rounded-2xl bg-[#0a0a0a] border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
                   <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <div>
@@ -960,7 +960,7 @@ export function Feed() {
               <div className="flex items-center gap-3 text-xs overflow-x-auto [scrollbar-width:none]">
                 <div className="px-3.5 py-2 rounded-xl bg-white/[0.025] border border-white/[0.06] text-center shrink-0">
                   <span className="text-white/40 block text-[10px] uppercase font-semibold">Preço Médio</span>
-                  <span className="font-bold text-emerald-400 font-mono">{marketScanResult.summary.avgPrice} R$</span>
+                  <span className="font-bold text-blue-400 font-mono">{marketScanResult.summary.avgPrice} R$</span>
                 </div>
                 <div className="px-3.5 py-2 rounded-xl bg-white/[0.025] border border-white/[0.06] text-center shrink-0">
                   <span className="text-white/40 block text-[10px] uppercase font-semibold">Total Favoritos</span>
@@ -996,7 +996,7 @@ export function Feed() {
                   key={item.id}
                   initial={{ opacity: 0, scale: 0.96 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="rounded-2xl bg-[#0a0a0a] border border-white/[0.08] hover:border-purple-500/40 p-3 flex flex-col justify-between gap-2.5 transition-all group relative overflow-hidden"
+                  className="rounded-2xl bg-[#0a0a0a] border border-white/[0.08] hover:border-blue-500/40 p-3 flex flex-col justify-between gap-2.5 transition-all group relative overflow-hidden"
                 >
                   {/* Top Thumbnail with Type Badge */}
                   <div className="relative aspect-square w-full rounded-xl bg-black/60 overflow-hidden flex items-center justify-center border border-white/[0.04]">
@@ -1015,7 +1015,7 @@ export function Feed() {
                       {item.assetTypeName}
                     </div>
 
-                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-emerald-950/80 backdrop-blur-md text-[10px] font-bold text-emerald-400 border border-emerald-500/30">
+                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-emerald-950/80 backdrop-blur-md text-[10px] font-bold text-blue-400 border border-blue-500/30">
                       {item.price != null ? `${item.price} R$` : "Grátis"}
                     </div>
                   </div>
@@ -1023,7 +1023,7 @@ export function Feed() {
                   {/* Item Metadata */}
                   <div className="space-y-1">
                     <h4
-                      className="text-xs font-semibold text-white/90 line-clamp-2 leading-tight group-hover:text-purple-300 transition-colors"
+                      className="text-xs font-semibold text-white/90 line-clamp-2 leading-tight group-hover:text-blue-300 transition-colors"
                       title={item.name}
                     >
                       {item.name}
@@ -1045,9 +1045,9 @@ export function Feed() {
                       type="button"
                       onClick={() => handleOpenCloneModal(item)}
                       title="Copiar e postar no meu grupo"
-                      className="p-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 hover:text-emerald-100 border border-emerald-500/30 hover:border-emerald-500/50 transition-all cursor-pointer flex-1 flex items-center justify-center gap-1.5 text-[10px] font-bold shadow-sm active:scale-95"
+                      className="p-2 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 hover:text-blue-100 border border-blue-500/30 hover:border-blue-500/50 transition-all cursor-pointer flex-1 flex items-center justify-center gap-1.5 text-[10px] font-bold shadow-sm active:scale-95"
                     >
-                      <Copy className="w-3 h-3 text-emerald-400" />
+                      <Copy className="w-3 h-3 text-blue-400" />
                       <span>Copiar &amp; Postar</span>
                     </button>
 
@@ -1058,7 +1058,7 @@ export function Feed() {
                       className="p-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-white transition-all cursor-pointer"
                     >
                       {copiedItemId === item.id ? (
-                        <Check className="w-3 h-3 text-emerald-400" />
+                        <Check className="w-3 h-3 text-blue-400" />
                       ) : (
                         <Copy className="w-3 h-3" />
                       )}
@@ -1229,7 +1229,7 @@ export function Feed() {
                           <span className="text-[10px] text-white/40 font-mono">ID: {grp.id}</span>
                         </div>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full bg-white/[0.05] text-[10px] font-semibold text-emerald-400 shrink-0">
+                      <span className="px-2 py-0.5 rounded-full bg-white/[0.05] text-[10px] font-semibold text-blue-400 shrink-0">
                         {grp.memberCount.toLocaleString("pt-BR")} membros
                       </span>
                     </div>
@@ -1274,7 +1274,7 @@ export function Feed() {
                 Peças com alto potencial de busca e margem de lucro em Robux.
               </p>
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/25">
               Alta Procura
             </span>
           </div>
@@ -1290,7 +1290,7 @@ export function Feed() {
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">
                       {bp.category}
                     </span>
-                    <div className="text-xs font-bold text-emerald-400 font-mono">
+                    <div className="text-xs font-bold text-blue-400 font-mono">
                       {bp.price} Robux &bull; <span className="text-white/40 font-normal">{bp.margin}</span>
                     </div>
                   </div>
@@ -1324,8 +1324,8 @@ export function Feed() {
                   >
                     {copiedBlueprintTags === bp.id ? (
                       <>
-                        <Check className="w-3 h-3 text-emerald-400" />
-                        <span className="text-emerald-400">Tags Copiadas!</span>
+                        <Check className="w-3 h-3 text-blue-400" />
+                        <span className="text-blue-400">Tags Copiadas!</span>
                       </>
                     ) : (
                       <>
@@ -1395,7 +1395,7 @@ export function Feed() {
                           <div className="text-xs font-bold truncate">{grp.name}</div>
                           <div className="text-[10px] text-white/40 font-mono">ID: {grp.id}</div>
                         </div>
-                        <span className="px-2 py-0.5 rounded-full bg-white/[0.05] text-[10px] text-purple-300 shrink-0">
+                        <span className="px-2 py-0.5 rounded-full bg-white/[0.05] text-[10px] text-blue-300 shrink-0">
                           {grp.reason === "Owner" || grp.rank === 255 ? "Dono" : grp.role || "Membro"}
                         </span>
                       </button>
@@ -1447,7 +1447,7 @@ export function Feed() {
                           <div className="text-xs font-semibold truncate text-white">{res.name}</div>
                           <div className="text-[10px] text-white/40 font-mono">ID: {res.id}</div>
                         </div>
-                        <span className="text-[10px] text-emerald-400 font-mono">
+                        <span className="text-[10px] text-blue-400 font-mono">
                           {res.memberCount.toLocaleString()} membros
                         </span>
                       </button>
@@ -1481,7 +1481,7 @@ export function Feed() {
               {/* Modal Header */}
               <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
                     <Copy className="w-4 h-4" />
                   </div>
                   <div>
@@ -1535,25 +1535,25 @@ export function Feed() {
 
               {/* Success Result View */}
               {cloneSuccessMessage ? (
-                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/25 space-y-4">
+                <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/25 space-y-4">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-full bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+                    <div className="p-2 rounded-full bg-blue-500/20 text-blue-400 shrink-0 mt-0.5">
                       <CheckCircle2 className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-emerald-300">
+                      <h4 className="text-sm font-bold text-blue-300">
                         {cloneSuccessJob ? "Peça Agendada com Sucesso!" : "Molde Extraído com Sucesso!"}
                       </h4>
-                      <p className="text-xs text-emerald-100/70 mt-1 leading-relaxed">
+                      <p className="text-xs text-blue-100/70 mt-1 leading-relaxed">
                         {cloneSuccessMessage}
                       </p>
                     </div>
                   </div>
 
                   {cloneSuccessJob && (
-                    <div className="p-3 rounded-lg bg-black/40 border border-emerald-500/20 text-xs space-y-1 font-mono">
+                    <div className="p-3 rounded-lg bg-black/40 border border-blue-500/20 text-xs space-y-1 font-mono">
                       <div className="text-white/60 text-[11px]">
-                        Status na Fila: <span className="text-emerald-400 font-bold uppercase">{cloneSuccessJob.status}</span>
+                        Status na Fila: <span className="text-blue-400 font-bold uppercase">{cloneSuccessJob.status}</span>
                       </div>
                       <div className="text-white/60 text-[11px]">
                         Preço: <span className="text-white font-bold">{cloneSuccessJob.price} Robux</span>
@@ -1571,7 +1571,7 @@ export function Feed() {
                       <button
                         type="button"
                         onClick={handleDownloadExtractedTemplate}
-                        className="px-3 py-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                        className="px-3 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                       >
                         <Download className="w-3.5 h-3.5" />
                         <span>Baixar Molde PNG (585x559)</span>
@@ -1662,7 +1662,7 @@ export function Feed() {
                             onClick={() => setClonePrice(p)}
                             className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold transition-all cursor-pointer ${
                               clonePrice === p
-                                ? "bg-emerald-500 text-black"
+                                ? "bg-blue-600 text-white"
                                 : "bg-white/[0.05] text-white/50 hover:text-white"
                             }`}
                           >
@@ -1680,7 +1680,7 @@ export function Feed() {
                         onChange={(e) => setClonePrice(Math.max(5, Number(e.target.value) || 5))}
                         className="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-white/20 transition-all"
                       />
-                      <span className="absolute right-3.5 top-2.5 text-xs font-bold text-emerald-400 font-mono">
+                      <span className="absolute right-3.5 top-2.5 text-xs font-bold text-blue-400 font-mono">
                         Robux
                       </span>
                     </div>
@@ -1697,7 +1697,7 @@ export function Feed() {
                         onClick={() => setCloneMethod("original")}
                         className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                           cloneMethod === "original"
-                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                            ? "bg-blue-500/10 border-blue-500/30 text-blue-300"
                             : "bg-[#121212] border-white/[0.06] text-white/50 hover:text-white"
                         }`}
                       >
@@ -1715,7 +1715,7 @@ export function Feed() {
                         onClick={() => setCloneMethod("ai_remake")}
                         className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                           cloneMethod === "ai_remake"
-                            ? "bg-purple-500/10 border-purple-500/30 text-purple-300"
+                            ? "bg-blue-500/10 border-blue-500/30 text-blue-300"
                             : "bg-[#121212] border-white/[0.06] text-white/50 hover:text-white"
                         }`}
                       >
@@ -1740,7 +1740,7 @@ export function Feed() {
                             <button
                               type="button"
                               onClick={() => navigate("/painel/conta")}
-                              className="text-emerald-400 hover:underline font-bold text-[11px]"
+                              className="text-blue-400 hover:underline font-bold text-[11px]"
                             >
                               Ir para a aba Conta &rarr;
                             </button>
@@ -1756,16 +1756,16 @@ export function Feed() {
                       type="button"
                       onClick={handleExecuteClone}
                       disabled={isCloning}
-                      className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 hover:from-emerald-300 hover:to-teal-300 text-black font-black text-xs sm:text-sm tracking-wider uppercase shadow-[0_0_25px_rgba(52,211,153,0.35)] transition-all active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 via-blue-500 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white font-black text-xs sm:text-sm tracking-wider uppercase shadow-[0_0_25px_rgba(59,130,246,0.35)] transition-all active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                     >
                       {isCloning ? (
                         <>
-                          <LoaderCircle className="w-4 h-4 animate-spin text-black" />
+                          <LoaderCircle className="w-4 h-4 animate-spin text-white" />
                           <span>PROCESSANDO E PUBLICANDO...</span>
                         </>
                       ) : (
                         <>
-                          <Copy className="w-4 h-4 text-black" />
+                          <Copy className="w-4 h-4 text-white" />
                           <span>PUBLICAR NO MEU GRUPO AGORA</span>
                         </>
                       )}
@@ -1782,7 +1782,7 @@ export function Feed() {
                             )}`
                           )
                         }
-                        className="text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1 cursor-pointer font-medium"
+                        className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 cursor-pointer font-medium"
                       >
                         <Wand2 className="w-3 h-3" />
                         <span>Abrir no Studio UGC AI</span>

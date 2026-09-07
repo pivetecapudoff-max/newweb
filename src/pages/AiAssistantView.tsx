@@ -386,7 +386,7 @@ export function AiAssistantView({ userName }: { userName?: string }) {
             {logs.map((log) => {
               const icon =
                 log.level === "success" ? (
-                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-400" />
                 ) : log.level === "warn" ? (
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
                 ) : log.level === "error" ? (
@@ -397,7 +397,7 @@ export function AiAssistantView({ userName }: { userName?: string }) {
 
               const badgeColor =
                 log.level === "success"
-                  ? "text-emerald-300"
+                  ? "text-blue-300"
                   : log.level === "warn"
                   ? "text-amber-300"
                   : log.level === "error"

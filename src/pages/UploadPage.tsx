@@ -278,7 +278,7 @@ export function UploadPage() {
         <div
           className={`p-3 rounded-xl text-xs flex items-center gap-2.5 ${
             optBanner.includes("✅")
-              ? "bg-emerald-500/10 text-emerald-300"
+              ? "bg-blue-500/10 text-blue-300"
               : "bg-rose-500/10 text-rose-200"
           }`}
         >
@@ -292,7 +292,7 @@ export function UploadPage() {
         <div className="rounded-xl border border-white/[0.09] bg-[#0a0a0a] p-4">
           <p className="text-[11px] text-white/40 font-medium uppercase tracking-wide">Total Peças Ativas</p>
           <p className="text-2xl font-bold text-white mt-1">{catalogStore ? catalogStore.itemCount : "—"}</p>
-          <p className="text-[11px] text-emerald-400 mt-0.5">{catalogStore ? `${clothingCount} roupas 2D · ${ugcCount} itens 3D` : "Aguardando catálogo"}</p>
+          <p className="text-[11px] text-blue-400 mt-0.5">{catalogStore ? `${clothingCount} roupas 2D · ${ugcCount} itens 3D` : "Aguardando catálogo"}</p>
         </div>
 
         <div className="rounded-xl border border-white/[0.09] bg-[#0a0a0a] p-4">
@@ -304,7 +304,7 @@ export function UploadPage() {
         <div className="rounded-xl border border-white/[0.09] bg-[#0a0a0a] p-4">
           <p className="text-[11px] text-white/40 font-medium uppercase tracking-wide">Status de SEO</p>
           <p className="mt-1 text-2xl font-semibold text-white">{seoPercent == null ? "—" : `${seoPercent}%`}</p>
-          <p className="mt-0.5 text-[11px] text-emerald-300/75">{catalogStore ? `${seoCount} descrições completas` : "Aguardando catálogo"}</p>
+          <p className="mt-0.5 text-[11px] text-blue-300/75">{catalogStore ? `${seoCount} descrições completas` : "Aguardando catálogo"}</p>
         </div>
 
         <div className="rounded-xl border border-white/[0.09] bg-[#0a0a0a] p-4">
@@ -409,7 +409,7 @@ export function UploadPage() {
                       {typeLabel}
                     </span>
                     {/* SEO badge overlay */}
-                    <span className={`absolute top-2 right-2 rounded-full px-2 py-0.5 text-[9px] font-semibold backdrop-blur-sm ${item.description.trim().length >= 15 ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-300"}`}>
+                    <span className={`absolute top-2 right-2 rounded-full px-2 py-0.5 text-[9px] font-semibold backdrop-blur-sm ${item.description.trim().length >= 15 ? "bg-blue-500/20 text-blue-400" : "bg-amber-500/20 text-amber-300"}`}>
                       {item.description.trim().length >= 15 ? "Descrição completa" : "Descrição pendente"}
                     </span>
                   </div>
@@ -449,7 +449,7 @@ export function UploadPage() {
                           className="p-1 rounded-md hover:bg-white/10 text-white/40 hover:text-white transition-colors"
                         >
                           {copiedId === item.id ? (
-                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                            <CheckCircle2 className="w-3 h-3 text-blue-400" />
                           ) : (
                             <Copy className="w-3 h-3" />
                           )}
@@ -670,7 +670,7 @@ export function UploadPage() {
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
                             job.status === "live"
-                              ? "bg-emerald-500/15 text-emerald-300"
+                              ? "bg-blue-500/15 text-blue-300"
                               : job.status === "uploading"
                               ? "bg-blue-600/15 text-blue-300 animate-pulse"
                               : job.status === "queued"

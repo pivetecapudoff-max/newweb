@@ -215,7 +215,7 @@ export function AiChatModal({ isOpen: externalIsOpen, onClose }: AiChatModalProp
           onClick={() => setInternalIsOpen(true)}
           className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-full bg-gradient-to-r from-neutral-900 to-black px-4 py-3 text-sm font-medium text-white shadow-2xl hover:scale-105 transition-all"
         >
-          <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="flex h-2.5 w-2.5 rounded-full bg-blue-500 animate-pulse" />
           <Sparkles className="h-4 w-4 text-blue-500" />
           <span>AI Assistant</span>
           {errorCount > 0 && (
@@ -339,7 +339,7 @@ export function AiChatModal({ isOpen: externalIsOpen, onClose }: AiChatModalProp
                     }}
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[13px] text-neutral-200 hover:bg-white/5 hover:text-white"
                   >
-                    <DollarSign className="h-4 w-4 text-emerald-400" />
+                    <DollarSign className="h-4 w-4 text-blue-400" />
                     <span>Ver Faturamento & Vendas</span>
                   </button>
 
@@ -465,7 +465,7 @@ export function AiChatModal({ isOpen: externalIsOpen, onClose }: AiChatModalProp
                     let icon = <Info className="h-3 w-3" />;
 
                     if (log.level === "success") {
-                      badgeColor = "bg-emerald-500/20 text-emerald-400";
+                      badgeColor = "bg-blue-500/20 text-blue-400";
                       icon = <CheckCircle2 className="h-3 w-3" />;
                     } else if (log.level === "warn") {
                       badgeColor = "bg-amber-500/20 text-amber-400";

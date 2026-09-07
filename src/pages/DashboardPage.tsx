@@ -449,7 +449,7 @@ export function DashboardPage() {
                                 isOwner
                                   ? "bg-amber-500/15 text-amber-300"
                                   : g.canPost
-                                  ? "bg-purple-500/15 text-purple-300"
+                                  ? "bg-blue-500/15 text-blue-300"
                                   : "bg-white/5 text-white/50"
                               }`}
                             >
@@ -498,7 +498,7 @@ export function DashboardPage() {
           animate={{ opacity: 1, height: "auto" }}
           className={`p-3.5 rounded-2xl text-xs flex items-center justify-between gap-3 transition-all cursor-pointer ${
             optimizeStatus.includes("✅")
-              ? "bg-emerald-500/15 text-emerald-300"
+              ? "bg-blue-500/15 text-blue-300"
               : optimizeStatus.includes("⚠️") || optimizeStatus.includes("❌")
               ? "bg-rose-500/15 text-rose-300"
               : "bg-blue-600/15 text-blue-400"
@@ -507,7 +507,7 @@ export function DashboardPage() {
         >
           <div className="flex items-center gap-2.5">
             {optimizeStatus.includes("✅") ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0" />
             ) : (
               <AlertCircle className="w-4 h-4 text-blue-500 shrink-0" />
             )}
@@ -704,7 +704,7 @@ export function DashboardPage() {
                   <td className="py-3.5 px-3 text-white/60">{sale.origin}</td>
                   <td className="py-3.5 px-3 text-white/50">{sale.time}</td>
                   <td className="py-3.5 px-3 text-right font-semibold">
-                    <span className="text-emerald-400">
+                    <span className="text-blue-400">
                       +{sale.amount} R$
                     </span>
                   </td>
@@ -736,7 +736,7 @@ export function DashboardPage() {
             >
               {/* Subtle background aura */}
               <div className="absolute -top-24 -right-24 w-52 h-52 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-24 -left-24 w-52 h-52 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -left-24 w-52 h-52 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
 
               {/* Modal Header */}
               <div className="flex items-start justify-between gap-4 mb-5">
@@ -781,7 +781,7 @@ export function DashboardPage() {
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-lg bg-purple-500/15 flex items-center justify-center text-purple-400 shrink-0 mt-0.5">
+                    <div className="w-6 h-6 rounded-lg bg-blue-500/15 flex items-center justify-center text-blue-400 shrink-0 mt-0.5">
                       <Zap className="w-3.5 h-3.5" />
                     </div>
                     <div>
@@ -793,13 +793,13 @@ export function DashboardPage() {
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+                    <div className="w-6 h-6 rounded-lg bg-blue-500/15 flex items-center justify-center text-blue-400 shrink-0 mt-0.5">
                       <ShoppingBag className="w-3.5 h-3.5" />
                     </div>
                     <div>
                       <span className="font-semibold text-white block">3. Otimização para o CAC & Busca</span>
                       <span className="text-white/50 text-[11px] leading-relaxed">
-                        Formata palavras-chave que aumentam a relevância nos provadores do <span className="text-emerald-300">Catalog Avatar Creator</span> e na busca nativa do Roblox.
+                        Formata palavras-chave que aumentam a relevância nos provadores do <span className="text-blue-300">Catalog Avatar Creator</span> e na busca nativa do Roblox.
                       </span>
                     </div>
                   </div>
@@ -885,8 +885,8 @@ export function DashboardPage() {
                       <span>Em Execução...</span>
                     </div>
                   ) : optimizeResult ? (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/15 text-emerald-300 text-xs font-semibold">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/15 text-blue-300 text-xs font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
                       <span>Concluído com Sucesso!</span>
                     </div>
                   ) : (
@@ -931,7 +931,7 @@ export function DashboardPage() {
                   <span className="text-white/40 block text-[10px] uppercase tracking-wider font-semibold">
                     Itens Otimizados
                   </span>
-                  <span className="text-emerald-400 font-bold text-sm mt-0.5 block">
+                  <span className="text-blue-400 font-bold text-sm mt-0.5 block">
                     {optimizeResult ? `${optimizeResult.updated ?? 0} / ${optimizeResult.total ?? 0}` : optimizing ? "Em andamento..." : "Ainda não executado"}
                   </span>
                   <span className="text-[10px] text-white/40 block mt-0.5">Resultado da última execução</span>
@@ -968,7 +968,7 @@ export function DashboardPage() {
                         <span
                           className={`px-1.5 py-0.5 rounded text-[9.5px] font-semibold tracking-wider shrink-0 uppercase ${
                             isSuccess
-                              ? "bg-emerald-500/20 text-emerald-300"
+                              ? "bg-blue-500/20 text-blue-300"
                               : isWarn
                               ? "bg-amber-500/20 text-amber-300"
                               : isError
@@ -983,7 +983,7 @@ export function DashboardPage() {
                         <span
                           className={`flex-1 break-words ${
                             isSuccess
-                              ? "text-emerald-300 font-medium"
+                              ? "text-blue-300 font-medium"
                               : isWarn
                               ? "text-amber-300 font-medium"
                               : isError
@@ -1010,8 +1010,8 @@ export function DashboardPage() {
                   >
                     {copiedLogs ? (
                       <>
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-emerald-400">Copiado!</span>
+                        <Check className="w-3.5 h-3.5 text-blue-400" />
+                        <span className="text-blue-400">Copiado!</span>
                       </>
                     ) : (
                       <>

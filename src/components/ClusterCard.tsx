@@ -86,7 +86,7 @@ export function ClusterCard({ cluster }: { cluster: Cluster }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <TrendingUp className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          <TrendingUp className="w-3.5 h-3.5 text-blue-400 shrink-0" />
           <div>
             <div className="font-extrabold text-white text-sm leading-none">
               {cluster.metrics.acceleration.toFixed(2)}x

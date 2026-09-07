@@ -376,7 +376,7 @@ export function WaveChart({ title = "Receita & Desempenho", onOptimizeClick, wee
 
             <div className="flex items-center justify-between text-[10px] text-white/50 mt-1">
               <span>{metricType === "robux" ? `${activePoint.sales} vendas` : `${activePoint.robux} R$`}</span>
-              <span className="text-emerald-400 font-semibold">
+              <span className="text-blue-400 font-semibold">
                 {Math.round((activePoint.robux / 1000) * 100)}% meta
               </span>
             </div>

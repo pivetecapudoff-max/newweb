@@ -124,7 +124,7 @@ export function SeoOptimizationModal({
             <div>
               <h2 className="text-base font-semibold text-white flex items-center gap-2">
                 Otimização Visual de SEO &amp; Títulos com IA
-                <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300 uppercase tracking-wider">
+                <span className="rounded-full border border-blue-400/30 bg-blue-400/10 px-2 py-0.5 text-[10px] font-bold text-blue-300 uppercase tracking-wider">
                   Visão Multimodal Ativa
                 </span>
               </h2>
@@ -223,7 +223,7 @@ export function SeoOptimizationModal({
                       title="Copiar título"
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-white/60 hover:text-white"
                     >
-                      {copiedField === "title" ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copiedField === "title" ? <Check className="h-3.5 w-3.5 text-blue-400" /> : <Copy className="h-3.5 w-3.5" />}
                     </button>
                   </div>
                   <p className="mt-1.5 text-[10px] text-white/35">
@@ -240,7 +240,7 @@ export function SeoOptimizationModal({
                       onClick={() => copyToClipboard(selectedDescription, "desc")}
                       className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-400 hover:text-blue-300"
                     >
-                      {copiedField === "desc" ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                      {copiedField === "desc" ? <Check className="h-3 w-3 text-blue-400" /> : <Copy className="h-3 w-3" />}
                       {copiedField === "desc" ? "Copiado!" : "Copiar Descrição"}
                     </button>
                   </div>
@@ -272,7 +272,7 @@ export function SeoOptimizationModal({
                 {data.strongKeywords?.length > 0 && (
                   <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
                     <div className="flex items-center gap-2 text-xs font-semibold text-white/80 mb-2">
-                      <Tag className="h-3.5 w-3.5 text-emerald-400" />
+                      <Tag className="h-3.5 w-3.5 text-blue-400" />
                       PALAVRAS-CHAVE MAIS FORTES
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -292,7 +292,7 @@ export function SeoOptimizationModal({
                 <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2 text-xs font-semibold text-white/90">
-                      <TrendingUp className="h-4 w-4 text-emerald-400" />
+                      <TrendingUp className="h-4 w-4 text-blue-400" />
                       5 OPÇÕES DE TÍTULOS (Ranqueadas por Potencial Comercial)
                     </div>
                     <span className="text-[10px] text-white/35">Clique para selecionar</span>
@@ -334,8 +334,8 @@ export function SeoOptimizationModal({
                               )}
                             </div>
                             <div className="flex shrink-0 items-center gap-1.5">
-                              <span className="flex items-center gap-0.5 rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-xs font-bold text-emerald-300 font-mono">
-                                <Star className="h-3 w-3 fill-emerald-400 text-emerald-400" />
+                              <span className="flex items-center gap-0.5 rounded-lg border border-blue-400/30 bg-blue-400/10 px-2 py-0.5 text-xs font-bold text-blue-300 font-mono">
+                                <Star className="h-3 w-3 fill-blue-400 text-blue-400" />
                                 {opt.score}/10
                               </span>
                               <span className="text-[10px] text-white/30 font-mono">
@@ -357,7 +357,7 @@ export function SeoOptimizationModal({
                       <button
                         type="button"
                         onClick={() => copyToClipboard(data.tags.join(" "), "tags")}
-                        className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 hover:text-emerald-300"
+                        className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-400 hover:text-blue-300"
                       >
                         {copiedField === "tags" ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                         {copiedField === "tags" ? "Tags Copiadas!" : "Copiar Apenas Tags"}
@@ -382,7 +382,7 @@ export function SeoOptimizationModal({
               onClick={copyAll}
               className="inline-flex items-center gap-1.5 rounded-xl border border-white/[0.09] bg-white/[0.05] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-white/[0.09] disabled:opacity-35"
             >
-              {copiedField === "all" ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+              {copiedField === "all" ? <CheckCircle2 className="h-4 w-4 text-blue-400" /> : <Copy className="h-4 w-4" />}
               {copiedField === "all" ? "Tudo Copiado!" : "Copiar Pacote Completo"}
             </button>
 

@@ -63,7 +63,7 @@ export function SettingsPage() {
     return (
       <div className="h-full flex items-center justify-center p-8 bg-transparent">
         <div className="flex items-center gap-3 text-white/60 text-sm">
-          <RefreshCw className="w-5 h-5 animate-spin text-purple-400" />
+          <RefreshCw className="w-5 h-5 animate-spin text-blue-400" />
           <span>Carregando configurações...</span>
         </div>
       </div>
@@ -97,7 +97,7 @@ export function SettingsPage() {
           disabled={busy}
           className={`px-5 py-2.5 rounded-full font-semibold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer ${
             saved
-              ? "bg-emerald-500 text-black shadow-emerald-500/20"
+              ? "bg-blue-600 text-white shadow-blue-500/20"
               : "bg-white hover:bg-white/90 text-black active:scale-95"
           }`}
         >
@@ -119,9 +119,9 @@ export function SettingsPage() {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
-            className="p-3.5 rounded-2xl bg-emerald-500/10 text-emerald-300 text-xs flex items-center gap-2.5"
+            className="p-3.5 rounded-2xl bg-blue-500/10 text-blue-300 text-xs flex items-center gap-2.5"
           >
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0" />
             <span>Configurações salvas e sincronizadas com sucesso!</span>
           </motion.div>
         )}
@@ -145,7 +145,7 @@ export function SettingsPage() {
         <div className="rounded-[22px] bg-[#0a0a0a] p-6 shadow-[0_15px_45px_rgba(0,0,0,0.4)] space-y-5">
           <div className="flex items-center justify-between pb-1">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-purple-500/15 flex items-center justify-center text-purple-400">
+              <div className="w-8 h-8 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-400">
                 <Zap className="w-4 h-4" />
               </div>
               <div>
@@ -177,7 +177,7 @@ export function SettingsPage() {
             <div className="p-3.5 rounded-xl bg-[#111111] space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-white/70">Intervalo</label>
-                <span className="text-[11px] font-bold text-purple-300">{settings.intervalMinutes}m</span>
+                <span className="text-[11px] font-bold text-blue-300">{settings.intervalMinutes}m</span>
               </div>
               <input
                 type="number"
@@ -196,7 +196,7 @@ export function SettingsPage() {
             <div className="p-3.5 rounded-xl bg-[#111111] space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-white/70">Profundidade</label>
-                <span className="text-[11px] font-bold text-purple-300">{settings.pagesPerCategory} págs</span>
+                <span className="text-[11px] font-bold text-blue-300">{settings.pagesPerCategory} págs</span>
               </div>
               <input
                 type="number"
@@ -225,13 +225,13 @@ export function SettingsPage() {
                     onClick={() => toggleCategory(key)}
                     className={`px-3 py-2.5 rounded-xl text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
                       active
-                        ? "bg-purple-500/20 text-purple-200 font-semibold"
+                        ? "bg-blue-500/20 text-blue-200 font-semibold"
                         : "bg-[#111111] text-white/40 hover:text-white hover:bg-[#161616]"
                     }`}
                   >
                     <span>{CATEGORY_LABEL[key]}</span>
                     {active ? (
-                      <Check className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                      <Check className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                     ) : (
                       <span className="w-1.5 h-1.5 rounded-full bg-white/10" />
                     )}
@@ -245,7 +245,7 @@ export function SettingsPage() {
         {/* Card 2: Sensibilidade do Radar (Sliders unificados em roxo) */}
         <div className="rounded-[22px] bg-[#0a0a0a] p-6 shadow-[0_15px_45px_rgba(0,0,0,0.4)] space-y-4">
           <div className="flex items-center gap-3 pb-1">
-            <div className="w-8 h-8 rounded-xl bg-purple-500/15 flex items-center justify-center text-purple-400">
+            <div className="w-8 h-8 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-400">
               <Sliders className="w-4 h-4" />
             </div>
             <div>
@@ -259,7 +259,7 @@ export function SettingsPage() {
             <div className="p-3.5 rounded-xl bg-[#111111] space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-medium text-white/70">Velocidade Mínima</span>
-                <span className="font-bold text-purple-300">{settings.alertMinVelocity} vendas/h</span>
+                <span className="font-bold text-blue-300">{settings.alertMinVelocity} vendas/h</span>
               </div>
               <input
                 type="range"
@@ -279,7 +279,7 @@ export function SettingsPage() {
             <div className="p-3.5 rounded-xl bg-[#111111] space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-medium text-white/70">Aceleração de Crescimento</span>
-                <span className="font-bold text-purple-300">{settings.alertMinAcceleration}x</span>
+                <span className="font-bold text-blue-300">{settings.alertMinAcceleration}x</span>
               </div>
               <input
                 type="range"
@@ -299,7 +299,7 @@ export function SettingsPage() {
             <div className="p-3.5 rounded-xl bg-[#111111] space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-medium text-white/70">Afinidade do Nicho</span>
-                <span className="font-bold text-purple-300">
+                <span className="font-bold text-blue-300">
                   {Math.round(settings.alertMinPurity * 100)}%
                 </span>
               </div>
@@ -322,7 +322,7 @@ export function SettingsPage() {
         {/* Card 3: Notificações Discord */}
         <div className="rounded-[22px] bg-[#0a0a0a] p-6 shadow-[0_15px_45px_rgba(0,0,0,0.4)] space-y-4">
           <div className="flex items-center gap-3 pb-1">
-            <div className="w-8 h-8 rounded-xl bg-purple-500/15 flex items-center justify-center text-purple-400">
+            <div className="w-8 h-8 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-400">
               <Bell className="w-4 h-4" />
             </div>
             <div>
@@ -354,7 +354,7 @@ export function SettingsPage() {
           <div className="flex items-center justify-between text-[11px] text-white/35 pt-1">
             <span>Ao salvar um novo webhook, uma mensagem de teste é enviada.</span>
             {settings.discordWebhookSet && (
-              <span className="text-emerald-400 flex items-center gap-1.5 font-semibold">
+              <span className="text-blue-400 flex items-center gap-1.5 font-semibold">
                 <Check className="w-3.5 h-3.5" /> Conectado
               </span>
             )}
@@ -364,7 +364,7 @@ export function SettingsPage() {
         {/* Card 4: Inteligência & Estratégia da Marca */}
         <div className="rounded-[22px] bg-[#0a0a0a] p-6 shadow-[0_15px_45px_rgba(0,0,0,0.4)] space-y-4">
           <div className="flex items-center gap-3 pb-1">
-            <div className="w-8 h-8 rounded-xl bg-purple-500/15 flex items-center justify-center text-purple-400">
+            <div className="w-8 h-8 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-400">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
@@ -376,7 +376,7 @@ export function SettingsPage() {
           <div className="space-y-2.5 text-xs">
             <div className="p-3 rounded-xl bg-[#111111] flex items-center justify-between">
               <span className="text-white/50">Modelo de IA</span>
-              <span className="px-2.5 py-1 rounded-full bg-purple-500/15 text-purple-300 font-semibold text-[11px]">
+              <span className="px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-300 font-semibold text-[11px]">
                 Gemini 3.5 Flash
               </span>
             </div>
@@ -391,7 +391,7 @@ export function SettingsPage() {
             <div className="p-3.5 rounded-xl bg-[#111111] space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-white/60 font-medium">Meta Diária Líquida</span>
-                <span className="text-purple-300 font-bold text-xs">
+                <span className="text-blue-300 font-bold text-xs">
                   1.000 Robux / dia
                 </span>
               </div>
@@ -419,7 +419,7 @@ export function SettingsPage() {
 
             <div className="p-3 rounded-xl bg-[#111111] flex items-center justify-between">
               <span className="text-white/50">Royalties de Limiteds</span>
-              <span className="text-emerald-400 font-semibold text-[11px]">
+              <span className="text-blue-400 font-semibold text-[11px]">
                 10% por revenda no marketplace
               </span>
             </div>

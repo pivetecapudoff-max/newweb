@@ -274,7 +274,7 @@ export function Landing() {
               <span>Dashboard • Welcome, why</span>
             </span>
             <div className="flex items-center gap-1.5 text-[11px] text-white/40">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
               <span className="hidden sm:inline font-mono">Live</span>
             </div>
           </div>
@@ -317,7 +317,7 @@ export function Landing() {
               <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-white/[0.06] space-y-1">
                 <div className="flex items-center gap-2 text-white/50 text-xs">
                   <div className="w-6 h-6 rounded-lg bg-white/[0.05] flex items-center justify-center">
-                    <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                    <DollarSign className="w-3.5 h-3.5 text-blue-400" />
                   </div>
                   <span className="font-semibold">Receita Robux</span>
                 </div>
@@ -342,7 +342,7 @@ export function Landing() {
               <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-white/[0.06] space-y-1">
                 <div className="flex items-center gap-2 text-white/50 text-xs">
                   <div className="w-6 h-6 rounded-lg bg-white/[0.05] flex items-center justify-center">
-                    <ShoppingBag className="w-3.5 h-3.5 text-purple-400" />
+                    <ShoppingBag className="w-3.5 h-3.5 text-blue-400" />
                   </div>
                   <span className="font-semibold">Vendas (Roupas &amp; UGC)</span>
                 </div>

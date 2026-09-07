@@ -2,7 +2,7 @@ import { BADGE_LABEL, VERDICT_LABEL, type Badge, type Verdict } from "../lib/lab
 
 export function VerdictBadge({ verdict }: { verdict: Verdict }) {
   const styles: Record<Verdict, string> = {
-    subir: "bg-emerald-500/15 text-emerald-400 font-semibold",
+    subir: "bg-blue-500/15 text-blue-400 font-semibold",
     vale: "bg-blue-600/15 text-blue-400 font-semibold",
     olho: "bg-amber-500/15 text-amber-300 font-semibold",
     passar: "bg-white/10 text-white/40 font-medium",
@@ -20,7 +20,7 @@ export function VerdictBadge({ verdict }: { verdict: Verdict }) {
 
 export function SignalBadge({ badge }: { badge: Badge }) {
   const styles: Record<Badge, string> = {
-    ganhando_forca: "bg-purple-500/15 text-purple-300",
+    ganhando_forca: "bg-blue-500/15 text-blue-300",
     achado: "bg-blue-600/15 text-blue-400",
     referencia: "bg-pink-500/15 text-pink-300",
   };

@@ -349,16 +349,16 @@ export function UgcCreatorView() {
       {/* Top Header & Settings Bar with Liquid Glass */}
       <div className="liquid-glass flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl mb-3 shrink-0 shadow-2xl relative">
         <div className="relative z-10 flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] backdrop-blur-md">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] backdrop-blur-md">
             <Wand2 className="w-5 h-5 animate-pulse" />
           </div>
           <div>
             <h1 className="text-base font-bold text-white flex items-center gap-2 flex-wrap">
               <span>Criador UGC com IA</span>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/35 text-purple-300 backdrop-blur-md shadow-sm">
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-500/35 text-blue-300 backdrop-blur-md shadow-sm">
                 Multi-Grupos 3D/2D
               </span>
-              <span className="text-[10px] font-semibold tracking-wider px-2 py-0.5 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 backdrop-blur-md shadow-sm flex items-center gap-1">
+              <span className="text-[10px] font-semibold tracking-wider px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 backdrop-blur-md shadow-sm flex items-center gap-1">
                 <span>🎯 Alvo: {groups.find((g) => g.id === selectedGroupId)?.name || "Minha Loja Roblox"}</span>
               </span>
             </h1>
@@ -375,13 +375,13 @@ export function UgcCreatorView() {
             type="button"
             onClick={handleAnalyzeGroup}
             disabled={isAnalyzingGroup || loading}
-            className="liquid-glass flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-purple-500/30 bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 backdrop-blur-md shadow-[0_0_12px_rgba(168,85,247,0.15),inset_0_1px_0_rgba(255,255,255,0.1)] transition-all cursor-pointer disabled:opacity-50"
+            className="liquid-glass flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-blue-500/30 bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 backdrop-blur-md shadow-[0_0_12px_rgba(168,85,247,0.15),inset_0_1px_0_rgba(255,255,255,0.1)] transition-all cursor-pointer disabled:opacity-50"
             title="Analisar por que alguns itens vendem e outros não no seu grupo"
           >
             {isAnalyzingGroup ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-400" />
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-400" />
             ) : (
-              <BarChart3 className="w-3.5 h-3.5 text-purple-400" />
+              <BarChart3 className="w-3.5 h-3.5 text-blue-400" />
             )}
             <span>{isAnalyzingGroup ? "Auditando..." : "Analisar Vendas do Grupo"}</span>
           </button>
@@ -408,7 +408,7 @@ export function UgcCreatorView() {
 
           {/* Aesthetic Style Preset Selector */}
           <div className="flex items-center gap-2 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.1] px-3 py-1.5 rounded-xl text-xs backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-all">
-            <Sliders className="w-3.5 h-3.5 text-purple-400" />
+            <Sliders className="w-3.5 h-3.5 text-blue-400" />
             <select
               value={selectedStyle}
               onChange={(e) => setSelectedStyle(e.target.value)}
@@ -442,11 +442,11 @@ export function UgcCreatorView() {
             onClick={() => setAutoPost(!autoPost)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border backdrop-blur-md transition-all cursor-pointer ${
               autoPost
-                ? "bg-emerald-500/15 border-emerald-500/35 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.2),inset_0_1px_0_rgba(255,255,255,0.15)]"
+                ? "bg-blue-500/15 border-blue-500/35 text-blue-400 shadow-[0_0_12px_rgba(16,185,129,0.2),inset_0_1px_0_rgba(255,255,255,0.15)]"
                 : "bg-white/[0.04] border-white/[0.1] text-white/50 hover:text-white/75"
             }`}
           >
-            <span className={`w-2 h-2 rounded-full ${autoPost ? "bg-emerald-400 animate-pulse shadow-[0_0_6px_#34d399]" : "bg-white/20"}`} />
+            <span className={`w-2 h-2 rounded-full ${autoPost ? "bg-blue-500 animate-pulse shadow-[0_0_6px_#34d399]" : "bg-white/20"}`} />
             <span>Auto-Postar no Roblox</span>
           </button>
         </div>
@@ -462,7 +462,7 @@ export function UgcCreatorView() {
             } ${messages.length <= 1 ? "my-auto py-6" : ""}`}
           >
             {msg.role === "assistant" && (
-              <div className="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0 mt-1">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 mt-1">
                 <Sparkles className="w-4 h-4" />
               </div>
             )}
@@ -472,7 +472,7 @@ export function UgcCreatorView() {
               <div
                 className={`p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
                   msg.role === "user"
-                    ? "bg-purple-600/20 border border-purple-500/30 text-white rounded-tr-none ml-auto"
+                    ? "bg-blue-600/20 border border-blue-500/30 text-white rounded-tr-none ml-auto"
                     : "bg-[#0a0a0a] border border-white/[0.08] text-white/90 rounded-2xl shadow-xl w-full text-left"
                 }`}
               >
@@ -509,7 +509,7 @@ export function UgcCreatorView() {
                         {msg.design.theme}
                       </span>
                     </div>
-                    <div className="text-emerald-400 font-mono font-bold text-xs tracking-wider bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                    <div className="text-blue-400 font-mono font-bold text-xs tracking-wider bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20">
                       {msg.design.price} R$
                     </div>
                   </div>
@@ -531,7 +531,7 @@ export function UgcCreatorView() {
                           onClick={() => setPreviewTabs((prev) => ({ ...prev, [msg.id]: "avatar" }))}
                           className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer ${
                             (previewTabs[msg.id] || "avatar") === "avatar"
-                              ? "bg-purple-600/30 text-purple-300 border border-purple-500/40 shadow-sm"
+                              ? "bg-blue-600/30 text-blue-300 border border-blue-500/40 shadow-sm"
                               : "text-white/40 hover:text-white/70"
                           }`}
                         >
@@ -542,7 +542,7 @@ export function UgcCreatorView() {
                           onClick={() => setPreviewTabs((prev) => ({ ...prev, [msg.id]: "template" }))}
                           className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer ${
                             previewTabs[msg.id] === "template"
-                              ? "bg-purple-600/30 text-purple-300 border border-purple-500/40 shadow-sm"
+                              ? "bg-blue-600/30 text-blue-300 border border-blue-500/40 shadow-sm"
                               : "text-white/40 hover:text-white/70"
                           }`}
                         >
@@ -571,8 +571,8 @@ export function UgcCreatorView() {
                   {/* Market Research (Compact Single-Row Strip) */}
                   {msg.catalogResearch && msg.catalogResearch.length > 0 && (
                     <div className="flex items-center gap-1.5 overflow-x-auto py-1 text-[10px] [scrollbar-width:none] border-t border-white/[0.04] pt-2">
-                      <span className="text-purple-400/70 shrink-0 font-semibold flex items-center gap-1">
-                        <Search className="w-3 h-3 text-purple-400" />
+                      <span className="text-blue-400/70 shrink-0 font-semibold flex items-center gap-1">
+                        <Search className="w-3 h-3 text-blue-400" />
                         <span>Catálogo:</span>
                       </span>
                       {msg.catalogResearch.slice(0, 3).map((item) => (
@@ -602,10 +602,10 @@ export function UgcCreatorView() {
                       className="w-full px-3 py-2 flex items-center justify-between text-left hover:bg-white/[0.02] transition-colors cursor-pointer"
                     >
                       <span className="text-[11px] font-semibold text-white/60 flex items-center gap-1.5">
-                        <Tag className="w-3 h-3 text-purple-400" />
+                        <Tag className="w-3 h-3 text-blue-400" />
                         <span>Descrição & Tags Virais (SEO)</span>
                       </span>
-                      <span className="text-[10px] text-purple-400 font-mono">
+                      <span className="text-[10px] text-blue-400 font-mono">
                         {expandedDesc[msg.id] ? "Ocultar ▲" : "Ver Tags ▼"}
                       </span>
                     </button>
@@ -615,9 +615,9 @@ export function UgcCreatorView() {
                           <button
                             type="button"
                             onClick={() => handleCopyText(msg.id, msg.design!.description)}
-                            className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer font-medium"
+                            className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1 cursor-pointer font-medium"
                           >
-                            {copiedId === msg.id ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                            {copiedId === msg.id ? <Check className="w-3 h-3 text-blue-400" /> : <Copy className="w-3 h-3" />}
                             <span>{copiedId === msg.id ? "Copiado!" : "Copiar Tags"}</span>
                           </button>
                         </div>
@@ -631,15 +631,15 @@ export function UgcCreatorView() {
                   {/* Publish & Download Actions */}
                   <div className="pt-2 border-t border-white/[0.06] flex items-center gap-2">
                     {msg.design.uploadJob ? (
-                      <div className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <div className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-semibold">
+                        <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0" />
                         <span>Postado no Grupo!</span>
                         {msg.design.uploadJob.catalogUrl && (
                           <a
                             href={msg.design.uploadJob.catalogUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="underline flex items-center gap-1 text-white hover:text-emerald-300 ml-1"
+                            className="underline flex items-center gap-1 text-white hover:text-blue-300 ml-1"
                           >
                             <span>Ver</span>
                             <ExternalLink className="w-3 h-3" />
@@ -647,17 +647,17 @@ export function UgcCreatorView() {
                         )}
                       </div>
                     ) : msg.design.uploading ? (
-                      <div className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold">
-                        <RefreshCw className="w-4 h-4 animate-spin text-purple-400" />
+                      <div className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-semibold">
+                        <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />
                         <span>Postando no Grupo...</span>
                       </div>
                     ) : (
                       <button
                         type="button"
                         onClick={() => handleManualPublish(msg.id)}
-                        className="flex-1 py-2 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.15)]"
+                        className="flex-1 py-2 px-3 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.15)]"
                       >
-                        <UploadCloud className="w-3.5 h-3.5 text-emerald-400" />
+                        <UploadCloud className="w-3.5 h-3.5 text-blue-400" />
                         <span>Copiar &amp; Postar no Grupo</span>
                       </button>
                     )}
@@ -686,13 +686,13 @@ export function UgcCreatorView() {
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="rounded-2xl bg-[#080808]/90 border border-purple-500/30 p-5 space-y-5 shadow-2xl backdrop-blur-xl w-full max-w-2xl text-left"
+                  className="rounded-2xl bg-[#080808]/90 border border-blue-500/30 p-5 space-y-5 shadow-2xl backdrop-blur-xl w-full max-w-2xl text-left"
                 >
                   {/* Card Header & Health Score */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/35">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-500/35">
                           Diagnóstico de Vendas Roblox
                         </span>
                         <span className="text-xs text-white/50 font-mono">
@@ -713,7 +713,7 @@ export function UgcCreatorView() {
                         <div
                           className={`text-base font-extrabold ${
                             msg.groupAnalysis.metrics.healthScore >= 75
-                              ? "text-emerald-400"
+                              ? "text-blue-400"
                               : msg.groupAnalysis.metrics.healthScore >= 50
                               ? "text-amber-400"
                               : "text-rose-400"
@@ -725,7 +725,7 @@ export function UgcCreatorView() {
                       <div
                         className={`w-3 h-3 rounded-full animate-pulse ${
                           msg.groupAnalysis.metrics.healthScore >= 75
-                            ? "bg-emerald-400"
+                            ? "bg-blue-500"
                             : msg.groupAnalysis.metrics.healthScore >= 50
                             ? "bg-amber-400"
                             : "bg-rose-400"
@@ -760,7 +760,7 @@ export function UgcCreatorView() {
 
                   {/* Comparison: Why some sell vs Why others don't */}
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between text-xs font-bold text-emerald-400">
+                    <div className="flex items-center justify-between text-xs font-bold text-blue-400">
                       <span className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>🏆 Peças que Vendem / Têm Tração ({msg.groupAnalysis.topSellingItems.length})</span>
@@ -770,12 +770,12 @@ export function UgcCreatorView() {
                       {msg.groupAnalysis.topSellingItems.slice(0, 3).map((item) => (
                         <div
                           key={item.id}
-                          className="p-3 rounded-xl bg-emerald-500/[0.04] border border-emerald-500/20 space-y-1.5"
+                          className="p-3 rounded-xl bg-blue-600/[0.04] border border-blue-500/20 space-y-1.5"
                         >
                           <div className="flex items-center justify-between text-xs">
                             <span className="font-semibold text-white truncate max-w-[240px]">{item.name}</span>
                             <div className="flex items-center gap-2">
-                              <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300">
+                              <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-blue-500/15 text-blue-300">
                                 {item.price} R$
                               </span>
                               {item.favorites > 0 && (
@@ -787,7 +787,7 @@ export function UgcCreatorView() {
                             {item.reasonsForSuccess.map((r, idx) => (
                               <span
                                 key={idx}
-                                className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-300 border border-emerald-400/20"
+                                className="text-[10px] px-2 py-0.5 rounded-full bg-blue-400/10 text-blue-300 border border-blue-400/20"
                               >
                                 ✓ {r}
                               </span>
@@ -830,7 +830,7 @@ export function UgcCreatorView() {
                               </div>
                             ))}
                             <div className="text-[10px] text-white/60 bg-black/40 p-1.5 rounded border border-white/[0.05]">
-                              <strong className="text-purple-300">Solução recomendada:</strong> {item.suggestedFix}
+                              <strong className="text-blue-300">Solução recomendada:</strong> {item.suggestedFix}
                             </div>
                           </div>
                         </div>
@@ -870,7 +870,7 @@ export function UgcCreatorView() {
                       }}
                       className="px-3.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.1] text-white/80 hover:text-white text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
                     >
-                      <RefreshCw className="w-3.5 h-3.5 text-purple-400" />
+                      <RefreshCw className="w-3.5 h-3.5 text-blue-400" />
                       <span>Otimizar Tags das Peças Paradas</span>
                     </button>
                   </div>
@@ -888,8 +888,8 @@ export function UgcCreatorView() {
 
         {loading && (
           <div className="w-full flex justify-center py-2">
-            <div className="flex gap-3 items-center text-xs text-purple-300 bg-[#0a0a0a] border border-purple-500/20 p-4 rounded-2xl shadow-xl">
-              <RefreshCw className="w-4 h-4 animate-spin text-purple-400" />
+            <div className="flex gap-3 items-center text-xs text-blue-300 bg-[#0a0a0a] border border-blue-500/20 p-4 rounded-2xl shadow-xl">
+              <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />
               <span>Consultando modelo e arquitetando o molde 2D do Roblox...</span>
             </div>
           </div>
@@ -900,8 +900,8 @@ export function UgcCreatorView() {
 
       {/* Quick Inspiration Chips (Compatible with any group) */}
       <div className="shrink-0 flex items-center gap-1.5 overflow-x-auto py-1 px-0.5 mb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <span className="text-[10px] uppercase font-bold text-purple-400/80 tracking-wider flex items-center gap-1 shrink-0">
-          <Sparkles className="w-3 h-3 text-purple-400" />
+        <span className="text-[10px] uppercase font-bold text-blue-400/80 tracking-wider flex items-center gap-1 shrink-0">
+          <Sparkles className="w-3 h-3 text-blue-400" />
           <span>Inspirações Virais:</span>
         </span>
         {[
@@ -920,7 +920,7 @@ export function UgcCreatorView() {
               handleSendPrompt(chip.prompt);
             }}
             disabled={loading}
-            className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-purple-500/15 border border-white/[0.08] hover:border-purple-500/30 text-white/70 hover:text-purple-200 transition-all cursor-pointer backdrop-blur-sm shadow-sm active:scale-95 disabled:opacity-50"
+            className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-blue-500/15 border border-white/[0.08] hover:border-blue-500/30 text-white/70 hover:text-blue-200 transition-all cursor-pointer backdrop-blur-sm shadow-sm active:scale-95 disabled:opacity-50"
           >
             {chip.label}
           </button>
