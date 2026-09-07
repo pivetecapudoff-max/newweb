@@ -22,6 +22,7 @@ import { ripUgcItem, type UgcRipResult } from "../lib/api";
 import { useNavigate } from "react-router-dom";
 import { LiquidMetalButton } from "@/components/ui/liquid-metal-button";
 import { SeoOptimizationModal } from "../components/SeoOptimizationModal";
+import { toastManager } from "@/components/ui/toast";
 
 interface HistoryItem {
   assetId: string;
@@ -108,8 +109,14 @@ export function CopyPage() {
 
       setResult(res);
       saveToHistory(res);
+      toastManager.success(
+        "Modelo 3D Extraído!",
+        `Arquivos de "${res.name || "Item"}" prontos para download.`
+      );
     } catch (err: any) {
-      setError(err?.message || "Erro inesperado ao copiar o item UGC.");
+      const errorMsg = err?.message || "Erro inesperado ao copiar o item UGC.";
+      setError(errorMsg);
+      toastManager.error("Falha ao Extrair 3D", errorMsg);
     } finally {
       setLoading(false);
     }

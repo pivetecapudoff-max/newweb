@@ -18,10 +18,12 @@ import { SilkShaderBackground } from "./components/SilkShaderBackground";
 import { AuthGuard } from "./components/AuthGuard";
 import { LoginPage } from "./pages/LoginPage";
 import { CloudflareGate } from "./components/CloudflareGate";
+import { ToastProvider } from "./components/ui/toast";
 
 export function App() {
   return (
-    <CloudflareGate>
+    <ToastProvider>
+      <CloudflareGate>
       <div className="relative min-h-screen w-full bg-[#02010A] text-white">
         <SilkShaderBackground fixed={true} />
         <div className="relative z-10 w-full h-full" style={{ position: "relative", zIndex: 10 }}>
@@ -58,6 +60,7 @@ export function App() {
         </Routes>
       </div>
     </div>
-  </CloudflareGate>
+    </CloudflareGate>
+  </ToastProvider>
   );
 }

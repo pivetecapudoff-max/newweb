@@ -11,6 +11,7 @@ import {
   type GroupStore,
 } from "../lib/api";
 import { writeSession } from "../lib/session";
+import { toastManager } from "../components/ui/toast";
 import {
   Users,
   ExternalLink,
@@ -90,8 +91,14 @@ export function AccountPage() {
       setCookie("");
       writeSession(next.displayName || next.username || "creator");
       loadData();
+      toastManager.success(
+        "Cookie Conectado com Sucesso!",
+        `Conta @${next.username || next.displayName || "Roblox"} sincronizada ao catálogo.`
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
+      toastManager.error("Falha ao Conectar Cookie", msg);
     } finally {
       setBusy(false);
     }
@@ -112,8 +119,11 @@ export function AccountPage() {
       setAccount(next);
       setDashboard(null);
       setGroupStore(null);
+      toastManager.info("Conta Desconectada", "Sua sessão Roblox foi encerrada com sucesso.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
+      toastManager.error("Erro ao Desconectar", msg);
     } finally {
       setBusy(false);
     }

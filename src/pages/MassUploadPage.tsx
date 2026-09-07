@@ -25,6 +25,7 @@ import {
   type ScannedMarketItem,
   type UploadGroup,
 } from "../lib/api";
+import { toastManager } from "../components/ui/toast";
 
 const MAX_BATCH = 8;
 
@@ -168,19 +169,26 @@ export function MassUploadPage() {
   async function runMassUpload() {
     if (!connected) {
       setError("Conecte sua conta Roblox antes de iniciar o lote.");
+      toastManager.error("Conta Desconectada", "Conecte sua conta Roblox antes de iniciar o lote.");
       return;
     }
     if (!groupId) {
       setError("Escolha um grupo em que sua conta tenha permissão para publicar.");
+      toastManager.error("Grupo Não Selecionado", "Escolha um grupo para publicar as peças.");
       return;
     }
     if (!selectedItems.length) {
       setError("Selecione pelo menos uma peça em alta.");
+      toastManager.info("Nenhuma Peça Selecionada", "Selecione pelo menos 1 peça para o envio.");
       return;
     }
 
     setRunning(true);
     setError(null);
+    toastManager.info("Processando Lote", `Iniciando cópia de ${selectedItems.length} peças para o grupo...`);
+
+    let successCount = 0;
+    let failCount = 0;
 
     for (const item of selectedItems.slice(0, MAX_BATCH)) {
       setBatch((current) => ({
@@ -203,6 +211,7 @@ export function MassUploadPage() {
           throw new Error(result.error || "Falha ao copiar molde da peça.");
         }
 
+        successCount++;
         setBatch((current) => ({
           ...current,
           [item.id]: {
@@ -211,6 +220,7 @@ export function MassUploadPage() {
           },
         }));
       } catch (err) {
+        failCount++;
         setBatch((current) => ({
           ...current,
           [item.id]: {
@@ -221,6 +231,19 @@ export function MassUploadPage() {
       }
     }
     setRunning(false);
+
+    if (successCount > 0) {
+      toastManager.success(
+        "Lote Publicado com Sucesso!",
+        `${successCount} peça${successCount > 1 ? "s" : ""} enviada${successCount > 1 ? "s" : ""} para a fila de publicação do grupo.`
+      );
+    }
+    if (failCount > 0) {
+      toastManager.error(
+        "Aviso no Lote",
+        `${failCount} peça${failCount > 1 ? "s falharam" : " falhou"}. Verifique o saldo do grupo ou detalhes no card.`
+      );
+    }
   }
 
   const queuedCount = Object.values(batch).filter((entry) => entry.state === "queued").length;

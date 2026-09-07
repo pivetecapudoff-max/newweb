@@ -33,6 +33,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { toastManager } from "../components/ui/toast";
 import { DotButton } from "../components/ui/DotButton";
 import { ClusterCard } from "../components/ClusterCard";
 import { ItemThumb } from "../components/ItemThumb";
@@ -347,6 +348,7 @@ export function Feed() {
   async function copyItemId(id: number) {
     await navigator.clipboard.writeText(String(id));
     setCopiedItemId(id);
+    toastManager.success("ID Copiado!", `Asset ID #${id} copiado para a área de transferência.`);
     window.setTimeout(() => setCopiedItemId(null), 1500);
   }
 
@@ -398,9 +400,13 @@ export function Feed() {
       if (res.templateDataUrl) {
         setCloneDownloadedUrl(res.templateDataUrl);
       }
-      setCloneSuccessMessage(res.message || "Peça copiada e enviada para a fila de publicação do grupo!");
+      const successMsg = res.message || "Peça copiada e enviada para a fila de publicação do grupo!";
+      setCloneSuccessMessage(successMsg);
+      toastManager.success("Roupa Copiada com Sucesso!", `Peça "${cloneName.trim() || cloneModalItem.name}" enviada para o grupo.`);
     } catch (err: any) {
-      setCloneError(err?.message || "Erro ao processar cópia.");
+      const errorMsg = err?.message || "Erro ao processar cópia.";
+      setCloneError(errorMsg);
+      toastManager.error("Falha ao Copiar Roupa", errorMsg);
     } finally {
       setIsCloning(false);
     }
@@ -415,6 +421,7 @@ export function Feed() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    toastManager.success("Download Concluído", "Molde PNG salvo com sucesso.");
   };
 
   const clusters = data?.cycle?.clusters || [];
@@ -1310,6 +1317,7 @@ export function Feed() {
                     onClick={() => {
                       navigator.clipboard.writeText(bp.tags.join(" "));
                       setCopiedBlueprintTags(bp.id);
+                      toastManager.success("Tags Copiadas!", "Palavras-chave SEO copiadas para a área de transferência.");
                       setTimeout(() => setCopiedBlueprintTags(null), 1800);
                     }}
                     className="px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-white text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"

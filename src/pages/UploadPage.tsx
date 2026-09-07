@@ -1,6 +1,7 @@
 import React, { FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { DotButton } from "../components/ui/DotButton";
+import { toastManager } from "../components/ui/toast";
 import {
   deleteUpload,
   fetchUploads,
@@ -152,6 +153,7 @@ export function UploadPage() {
     event.preventDefault();
     if (!file || !preview) {
       setError("Selecione um arquivo PNG ou JPEG do template da roupa primeiro.");
+      toastManager.error("Arquivo Faltando", "Selecione a imagem PNG/JPEG do molde da roupa.");
       return;
     }
     setBusy(true);
@@ -166,6 +168,10 @@ export function UploadPage() {
         fileName: file.name,
         image: preview,
       });
+      toastManager.success(
+        "Roupa Adicionada à Fila!",
+        `Item "${name || file.name}" agendado para publicação no grupo.`
+      );
       setFile(null);
       setPreview(null);
       setName("");
@@ -173,7 +179,9 @@ export function UploadPage() {
       setActiveTab("queue");
       loadUploads();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
+      toastManager.error("Erro no Upload", msg);
     } finally {
       setBusy(false);
     }
@@ -182,6 +190,7 @@ export function UploadPage() {
   const handleCopy = (id: number) => {
     navigator.clipboard.writeText(String(id));
     setCopiedId(id);
+    toastManager.success("ID Copiado!", `Asset #${id} copiado para a área de transferência.`);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
