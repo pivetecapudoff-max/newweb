@@ -1064,6 +1064,89 @@ function calcPngCrc(typeStr: string, dataBuf: Buffer): number {
   return zlib.crc32(combined);
 }
 
+function unfilterPng(raw: Buffer, width: number, height: number, bpp: number): Buffer {
+  const stride = 1 + width * bpp;
+  const out = Buffer.alloc(width * height * bpp);
+  function paeth(a: number, b: number, c: number): number {
+    const p = a + b - c;
+    const pa = Math.abs(p - a);
+    const pb = Math.abs(p - b);
+    const pc = Math.abs(p - c);
+    if (pa <= pb && pa <= pc) return a;
+    if (pb <= pc) return b;
+    return c;
+  }
+  for (let y = 0; y < height; y++) {
+    const filter = raw[y * stride];
+    for (let x = 0; x < width * bpp; x++) {
+      const rawByte = raw[y * stride + 1 + x];
+      const a = x >= bpp ? out[y * width * bpp + x - bpp] : 0;
+      const b = y > 0 ? out[(y - 1) * width * bpp + x] : 0;
+      const c = x >= bpp && y > 0 ? out[(y - 1) * width * bpp + x - bpp] : 0;
+      let val = 0;
+      if (filter === 0) val = rawByte;
+      else if (filter === 1) val = (rawByte + a) & 0xff;
+      else if (filter === 2) val = (rawByte + b) & 0xff;
+      else if (filter === 3) val = (rawByte + Math.floor((a + b) / 2)) & 0xff;
+      else if (filter === 4) val = (rawByte + paeth(a, b, c)) & 0xff;
+      out[y * width * bpp + x] = val;
+    }
+  }
+  return out;
+}
+
+function filterPng0(pixels: Buffer, width: number, height: number, bpp: number): Buffer {
+  const stride = 1 + width * bpp;
+  const out = Buffer.alloc(height * stride);
+  for (let y = 0; y < height; y++) {
+    out[y * stride] = 0;
+    pixels.copy(out, y * stride + 1, y * width * bpp, (y + 1) * width * bpp);
+  }
+  return out;
+}
+
+function sanitizeRobloxTitle(raw: string): string {
+  let cleaned = String(raw || "")
+    .replace(/#\d+/g, "")
+    .replace(/#/g, "")
+    .replace(/\bboxers\b/gi, "Shorts")
+    .replace(/\bboxer\b/gi, "Shorts")
+    .replace(/\bcorset\b/gi, "Top")
+    .replace(/\bthong\b/gi, "Shorts")
+    .replace(/\bbra\b/gi, "Top")
+    .replace(/\blingerie\b/gi, "Outfit")
+    .replace(/\bpanties\b/gi, "Shorts")
+    .replace(/\bpanty\b/gi, "Shorts")
+    .replace(/\bunderwear\b/gi, "Pants")
+    .replace(/\bbikini\b/gi, "Swimwear")
+    .replace(/\bnaked\b/gi, "Classic")
+    .replace(/\bnude\b/gi, "Classic")
+    .replace(/\bsexy\b/gi, "Aesthetic")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleaned) cleaned = "Classic Roblox Clothing";
+  if (cleaned.length > 50) {
+    cleaned = cleaned.slice(0, 50).trim();
+  }
+  return cleaned;
+}
+
+function sanitizeRobloxDescription(title: string, customDesc?: string): string {
+  if (customDesc && customDesc.trim()) {
+    const cleaned = customDesc
+      .replace(/#\d+/g, "")
+      .replace(/#/g, "")
+      .replace(/\bboxers\b/gi, "Shorts")
+      .replace(/\bcorset\b/gi, "Top")
+      .replace(/\blingerie\b/gi, "Outfit")
+      .slice(0, 500)
+      .trim();
+    if (cleaned) return cleaned;
+  }
+  return `${title} - High quality classic clothing piece on Roblox. Created with Farol Studio.`.slice(0, 500);
+}
+
 function applyAntiBanTransform(buf: Buffer): Buffer {
   if (buf.length < 8 || buf[0] !== 0x89 || buf[1] !== 0x50 || buf[2] !== 0x4E || buf[3] !== 0x47) {
     return buf;
@@ -1105,41 +1188,8 @@ function applyAntiBanTransform(buf: Buffer): Buffer {
   iendCrc.writeUInt32BE(iendCrcVal >>> 0);
   const iendChunk = Buffer.concat([iendLen, Buffer.from("IEND", "ascii"), iendData, iendCrc]);
 
-  if (bitDepth === 8 && (colorType === 6 || colorType === 2)) {
-    try {
-      const rawDecomp = zlib.inflateSync(Buffer.concat(idatChunks));
-      const bpp = colorType === 6 ? 4 : 3;
-      const stride = 1 + width * bpp;
-
-      if (rawDecomp.length === stride * height) {
-        // Mutate 60-100 random non-transparent pixels by +/- 1 (completely invisible to human eye, breaks hash & deduplication)
-        const mutations = 60 + Math.floor(Math.random() * 40);
-        for (let m = 0; m < mutations; m++) {
-          const y = Math.floor(Math.random() * height);
-          const x = Math.floor(Math.random() * width);
-          const px = y * stride + 1 + x * bpp;
-          if (bpp === 4 && rawDecomp[px + 3] < 20) continue;
-          const ch = Math.floor(Math.random() * 3);
-          const delta = Math.random() > 0.5 ? 1 : -1;
-          rawDecomp[px + ch] = Math.max(0, Math.min(255, rawDecomp[px + ch] + delta));
-        }
-
-        const recomp = zlib.deflateSync(rawDecomp, { level: 9 });
-        const newIdatLen = Buffer.alloc(4);
-        newIdatLen.writeUInt32BE(recomp.length);
-        const newIdatCrc = Buffer.alloc(4);
-        newIdatCrc.writeUInt32BE(calcPngCrc("IDAT", recomp) >>> 0);
-        const newIdatChunk = Buffer.concat([newIdatLen, Buffer.from("IDAT", "ascii"), recomp, newIdatCrc]);
-
-        return Buffer.concat([sig, ihdrChunk, newIdatChunk, iendChunk]);
-      }
-    } catch (e) {
-      console.warn("[AntiBan] Decompression error, falling back to clean rebuild:", e);
-    }
-  }
-
-  // Fallback: strip metadata and insert unique salt chunk
-  const salt = Buffer.from(`AntiBan_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+  // Unique comment metadata chunk that changes file hash & deduplication signature completely
+  const salt = Buffer.from(`FarolAntiBan_${Date.now()}_${Math.random().toString(36).slice(2)}`);
   const textPayload = Buffer.concat([Buffer.from("Comment\0", "ascii"), salt]);
   const textLen = Buffer.alloc(4);
   textLen.writeUInt32BE(textPayload.length);
@@ -1147,6 +1197,40 @@ function applyAntiBanTransform(buf: Buffer): Buffer {
   textCrc.writeUInt32BE(calcPngCrc("tEXt", textPayload) >>> 0);
   const textChunk = Buffer.concat([textLen, Buffer.from("tEXt", "ascii"), textPayload, textCrc]);
 
+  if (bitDepth === 8 && (colorType === 6 || colorType === 2)) {
+    try {
+      const rawDecomp = zlib.inflateSync(Buffer.concat(idatChunks));
+      const bpp = colorType === 6 ? 4 : 3;
+      const stride = 1 + width * bpp;
+
+      if (rawDecomp.length === stride * height) {
+        const pixels = unfilterPng(rawDecomp, width, height, bpp);
+        const totalPixels = width * height;
+        const mutations = 10 + Math.floor(Math.random() * 10);
+        for (let m = 0; m < mutations; m++) {
+          const idx = Math.floor(Math.random() * totalPixels) * bpp;
+          if (bpp === 4 && pixels[idx + 3] < 30) continue;
+          const ch = Math.floor(Math.random() * 3);
+          const current = pixels[idx + ch];
+          pixels[idx + ch] = current > 128 ? current - 1 : current + 1;
+        }
+
+        const filtered = filterPng0(pixels, width, height, bpp);
+        const recomp = zlib.deflateSync(filtered, { level: 9 });
+        const newIdatLen = Buffer.alloc(4);
+        newIdatLen.writeUInt32BE(recomp.length);
+        const newIdatCrc = Buffer.alloc(4);
+        newIdatCrc.writeUInt32BE(calcPngCrc("IDAT", recomp) >>> 0);
+        const newIdatChunk = Buffer.concat([newIdatLen, Buffer.from("IDAT", "ascii"), recomp, newIdatCrc]);
+
+        return Buffer.concat([sig, ihdrChunk, newIdatChunk, textChunk, iendChunk]);
+      }
+    } catch (e) {
+      console.warn("[AntiBan] Unfilter/recomp error, falling back to clean rebuild:", e);
+    }
+  }
+
+  // Fallback: preserve original IDAT stream and append unique salt chunk
   const rawCompressed = Buffer.concat(idatChunks);
   const idatLen = Buffer.alloc(4);
   idatLen.writeUInt32BE(rawCompressed.length);
@@ -1178,7 +1262,6 @@ app.post("/api/market-scanner/clone-asset", requireAuth, async (req, res) => {
     const cookie = account?.cookie;
 
     let detailsName = `Item ${assetId}`;
-    let itemDescription = `High-demand aesthetic piece inspired by item #${assetId}.`;
     let thumbnail = "";
 
     try {
@@ -1194,7 +1277,8 @@ app.post("/api/market-scanner/clone-asset", requireAuth, async (req, res) => {
       // ignore
     }
 
-    const finalName = (name || detailsName).slice(0, 50);
+    const finalName = sanitizeRobloxTitle(name || detailsName);
+    const itemDescription = sanitizeRobloxDescription(finalName);
     let templateBuffer: Buffer | null = null;
     let mime = "image/png";
 

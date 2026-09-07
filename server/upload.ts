@@ -48,10 +48,10 @@ const ASSET_TYPE_NAME: Record<ClothingKind, string> = {
   tshirt: "TShirt",
 };
 
-/** Roblox upload fee (July 2026): 2D shirt/pants 80 R$, t-shirt 0. Sale price is separate. */
+/** Roblox upload fee for classic 2D clothing (shirt/pants: 10 R$, t-shirt: 0 R$). */
 const UPLOAD_FEE: Record<ClothingKind, number> = {
-  shirt: 80,
-  pants: 80,
+  shirt: 10,
+  pants: 10,
   tshirt: 0,
 };
 
@@ -60,7 +60,8 @@ function sleep(ms: number): Promise<void> {
 }
 
 function parseActualFee(text: string): number | null {
-  const match = text.match(/Actual price \((\d+) Robux\) is larger than expected price/i);
+  const match = text.match(/(?:Actual|expected) price \(?(\d+) Robux\)?/i)
+    || text.match(/price.*?(\d+)\s*Robux/i);
   if (!match) return null;
   const fee = Number(match[1]);
   return Number.isFinite(fee) && fee >= 0 ? fee : null;
@@ -167,8 +168,39 @@ export function enqueueUpload(input: {
   if (!loadAccount()) {
     throw new Error("Connect your own Roblox cookie on Account first.");
   }
-  const name = String(input.name || "").trim();
-  if (name.length < 2) throw new Error("Give the item a name.");
+  let name = String(input.name || "")
+    .replace(/#\d+/g, "")
+    .replace(/#/g, "")
+    .replace(/\bboxers\b/gi, "Shorts")
+    .replace(/\bboxer\b/gi, "Shorts")
+    .replace(/\bcorset\b/gi, "Top")
+    .replace(/\bthong\b/gi, "Shorts")
+    .replace(/\bbra\b/gi, "Top")
+    .replace(/\blingerie\b/gi, "Outfit")
+    .replace(/\bpanties\b/gi, "Shorts")
+    .replace(/\bpanty\b/gi, "Shorts")
+    .replace(/\bunderwear\b/gi, "Pants")
+    .replace(/\bbikini\b/gi, "Swimwear")
+    .replace(/\bnaked\b/gi, "Classic")
+    .replace(/\bnude\b/gi, "Classic")
+    .replace(/\bsexy\b/gi, "Aesthetic")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (name.length < 2) name = "Classic Roblox Clothing";
+  if (name.length > 50) name = name.slice(0, 50).trim();
+
+  let description = String(input.description || "")
+    .replace(/#\d+/g, "")
+    .replace(/#/g, "")
+    .replace(/\bboxers\b/gi, "Shorts")
+    .replace(/\bcorset\b/gi, "Top")
+    .replace(/\blingerie\b/gi, "Outfit")
+    .slice(0, 500)
+    .trim();
+  if (!description) {
+    description = `${name} - High quality classic clothing piece on Roblox. Created with Farol Studio.`;
+  }
+
   const kind = (["shirt", "pants", "tshirt"].includes(String(input.kind))
     ? input.kind
     : "shirt") as ClothingKind;
@@ -180,8 +212,8 @@ export function enqueueUpload(input: {
   writeFileSync(filePath, image.bytes);
   const job: UploadJob = {
     id,
-    name: name.slice(0, 50),
-    description: String(input.description || name).slice(0, 180),
+    name,
+    description,
     kind,
     price: kind === "tshirt" ? price : Math.max(price, 5),
     groupId: input.groupId && Number.isFinite(input.groupId) ? Number(input.groupId) : null,
@@ -251,8 +283,34 @@ async function robloxSend(
   return { status: res.status, text, json };
 }
 
+function extractRobloxError(text: string, json: unknown): string {
+  if (json && typeof json === "object") {
+    const obj = json as Record<string, any>;
+    if (typeof obj.userFacingMessage === "string" && obj.userFacingMessage.trim()) {
+      return obj.userFacingMessage.trim();
+    }
+    if (typeof obj.message === "string" && obj.message.trim()) {
+      return obj.message.trim();
+    }
+    if (Array.isArray(obj.errors) && obj.errors.length > 0) {
+      const first = obj.errors[0];
+      if (typeof first?.userFacingMessage === "string" && first.userFacingMessage.trim()) {
+        return first.userFacingMessage.trim();
+      }
+      if (typeof first?.message === "string" && first.message.trim()) {
+        return first.message.trim();
+      }
+    }
+    if (typeof obj.error === "string" && obj.error.trim()) {
+      return obj.error.trim();
+    }
+  }
+  const clean = text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return clean.slice(0, 220);
+}
+
 function looksModerated(text: string): boolean {
-  return /moderat|inappropriate|not approved|rejected by/i.test(text);
+  return /moderat|inappropriate|not approved|rejected by|filtered/i.test(text);
 }
 
 function parseAssetId(payload: { status: number; text: string; json: unknown }): number | null {
@@ -301,10 +359,14 @@ async function uploadClassic(
   );
   const assetId = parseAssetId(result);
   if (assetId) return assetId;
+  const errorMsg = extractRobloxError(result.text, result.json);
   if (looksModerated(result.text)) {
-    throw Object.assign(new Error("Roblox moderated this file."), { moderated: true });
+    throw Object.assign(
+      new Error(`Moderação do Roblox: ${errorMsg || "Nome, descrição ou imagem reprovada pelo filtro do Roblox"}`),
+      { moderated: true, raw: result.text }
+    );
   }
-  throw new Error(result.text.slice(0, 220) || `Upload.ashx failed (${result.status}).`);
+  throw new Error(errorMsg || `Upload.ashx failed (${result.status}).`);
 }
 
 async function waitForAssetOp(cookie: string, opPath: string): Promise<number | null> {
@@ -358,8 +420,9 @@ async function uploadUserAuth(
     return uploadUserAuth(cookie, job, bytes, userId, actualFee);
   }
   if (/insufficient|not enough|does not have suffiecient|cannot afford/i.test(result.text)) {
+    const target = job.groupId ? "no fundo do Grupo" : "na sua conta Roblox";
     throw new Error(
-      `Roblox wants ${expectedPrice} R$ just to upload this ${job.kind}. Sale price is separate. Top up and retry.`
+      `Saldo insuficiente: O Roblox exige taxa de ${expectedPrice} Robux ${target} para enviar este ${job.kind}. Recarregue e tente novamente.`
     );
   }
   const assetId = parseAssetId(result);
@@ -369,10 +432,14 @@ async function uploadUserAuth(
     const fromOp = await waitForAssetOp(cookie, opPath);
     if (fromOp) return fromOp;
   }
+  const errorMsg = extractRobloxError(result.text, result.json);
   if (looksModerated(result.text)) {
-    throw Object.assign(new Error("Roblox moderated this file."), { moderated: true });
+    throw Object.assign(
+      new Error(`Moderação do Roblox: ${errorMsg || "Nome, descrição ou imagem reprovada pelo filtro do Roblox"}`),
+      { moderated: true, raw: result.text }
+    );
   }
-  throw new Error(result.text.slice(0, 220) || `Asset API failed (${result.status}).`);
+  throw new Error(errorMsg || `Asset API failed (${result.status}).`);
 }
 
 async function putOnSale(cookie: string, assetId: number, price: number): Promise<void> {
