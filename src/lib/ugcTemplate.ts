@@ -1,4 +1,5 @@
 // Roblox Official 2D Clothing Template Generator (585 x 559 px) & 3D Avatar Preview
+import * as THREE from "three";
 export type UgcClothingKind = "shirt" | "pants" | "tshirt";
 
 export interface UgcDesignSpec {
@@ -608,14 +609,345 @@ export async function drawPleatedSkirt(ctx: CanvasRenderingContext2D, spec: UgcD
 }
 
 /**
+ * Renders authentic, highly detailed Y2K / Streetwear Baggy Cargo Pants
+ * with realistic 3D bellows utility pockets, chrome chains, D-rings,
+ * dual-grommet eyelet belt, baggy fabric creases/folds, and platform skate shoes.
+ */
+export async function drawCargoBaggyPants(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
+  const pColor = spec.primaryColor || "#101014"; // Jet black matte cargo fabric
+  const metalColor = spec.accentColor || "#e2e8f0"; // Polished chrome hardware
+  const waistColor = spec.secondaryColor || "#09090b";
+  const seamColor = "rgba(255, 255, 255, 0.12)";
+
+  const waistY = 130;
+  const pelvisH = 202 - waistY; // 72px
+  const waistH = 14;
+
+  const torsoPanels = [
+    { x: 231, w: 128 }, // Front
+    { x: 427, w: 128 }, // Back
+    { x: 165, w: 64 },  // Right
+    { x: 361, w: 64 },  // Left
+  ];
+
+  // 1. LOWER TORSO PANELS (Pelvis: Y = 130..202)
+  for (const p of torsoPanels) {
+    // Fill deep cargo fabric
+    ctx.fillStyle = pColor;
+    ctx.fillRect(p.x, waistY, p.w, pelvisH);
+    applyFabricTexture(ctx, p.x, waistY, p.w, pelvisH);
+
+    // Subtle vertical fabric shading
+    const grad = ctx.createLinearGradient(p.x, waistY, p.x + p.w, waistY);
+    grad.addColorStop(0, "rgba(0,0,0,0.2)");
+    grad.addColorStop(0.5, "rgba(255,255,255,0.03)");
+    grad.addColorStop(1, "rgba(0,0,0,0.2)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(p.x, waistY, p.w, pelvisH);
+
+    // Skater Waistband
+    ctx.fillStyle = waistColor;
+    ctx.fillRect(p.x, waistY, p.w, waistH);
+    drawDoubleStitch(ctx, p.x, waistY + 1, p.w, true, seamColor);
+    drawDoubleStitch(ctx, p.x, waistY + waistH - 2, p.w, true, seamColor);
+
+    // Belt Loops
+    for (let bx = p.x + 10; bx < p.x + p.w; bx += 26) {
+      ctx.fillStyle = "#050507";
+      ctx.fillRect(bx, waistY, 4, waistH);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+      ctx.strokeRect(bx, waistY, 4, waistH);
+    }
+  }
+
+  // Underside crotch
+  ctx.fillStyle = "#09090b";
+  ctx.fillRect(231, 204, 128, 64);
+  applyFabricTexture(ctx, 231, 204, 128, 64);
+
+  // FRONT TORSO HARDWARE (Belt, Dual Grommets, Roller Buckle, Chrome Chains, Riveted Hand Pockets, Fly Zipper)
+  const frontX = 231;
+  const frontY = waistY;
+
+  // Front Skater Belt
+  ctx.fillStyle = "#070709";
+  ctx.fillRect(frontX + 8, frontY + 3, 112, 8);
+
+  // Dual rows of chrome eyelets/grommets along belt
+  for (let gx = frontX + 16; gx <= frontX + 112; gx += 10) {
+    for (const gy of [frontY + 4.5, frontY + 8.5]) {
+      ctx.strokeStyle = metalColor;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(gx, gy, 1.4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = "#000000";
+      ctx.beginPath();
+      ctx.arc(gx, gy, 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Silver Roller Buckle at center
+  ctx.strokeStyle = metalColor;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(frontX + 56, frontY + 2, 16, 10);
+  ctx.fillStyle = metalColor;
+  ctx.fillRect(frontX + 63, frontY + 3.5, 2.5, 7); // Center prong
+
+  // Fly Zipper with metal slider
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(frontX + 64, frontY + waistH);
+  ctx.lineTo(frontX + 64, frontY + 54);
+  ctx.stroke();
+
+  // Curved Deep Hand Pockets with chrome rivets
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(frontX + 16, frontY + waistH, 22, 0, 0.45 * Math.PI);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(frontX + 112, frontY + waistH, 22, 0.55 * Math.PI, Math.PI);
+  ctx.stroke();
+
+  // Pocket corner chrome rivets
+  for (const [rx, ry] of [
+    [frontX + 16 + Math.cos(0.45 * Math.PI) * 22, frontY + waistH + Math.sin(0.45 * Math.PI) * 22],
+    [frontX + 112 + Math.cos(0.55 * Math.PI) * 22, frontY + waistH + Math.sin(0.55 * Math.PI) * 22],
+    [frontX + 37, frontY + waistH + 1],
+    [frontX + 91, frontY + waistH + 1],
+  ]) {
+    ctx.fillStyle = metalColor;
+    ctx.beginPath();
+    ctx.arc(rx, ry, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Heavy Chrome Curb Chain (Draping diagonally across right front thigh)
+  drawDrapedChain(ctx, frontX + 36, frontY + 7, frontX + 18, frontY + 48, 14, metalColor);
+  drawDrapedChain(ctx, frontX + 38, frontY + 7, frontX + 22, frontY + 48, 22, metalColor);
+
+  // Silver D-ring hanging from left belt loop
+  ctx.strokeStyle = metalColor;
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(frontX + 90, frontY + waistH + 1, 6, 6);
+
+  // Hanging nylon utility strap with white stitch
+  ctx.fillStyle = "#0c0c0e";
+  ctx.fillRect(frontX + 91, frontY + waistH + 7, 4, 20);
+  ctx.strokeStyle = "rgba(255,255,255,0.4)";
+  ctx.lineWidth = 0.6;
+  ctx.strokeRect(frontX + 91, frontY + waistH + 7, 4, 20);
+  ctx.fillStyle = metalColor;
+  ctx.fillRect(frontX + 90, frontY + waistH + 26, 6, 3);
+
+  // BACK TORSO PANELS (X: 427): 2 Large Utility Back Pockets
+  const backX = 427;
+  const backY = waistY;
+  for (const px of [backX + 14, backX + 70]) {
+    ctx.fillStyle = "#0c0c0e";
+    ctx.fillRect(px, backY + 20, 44, 40);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px, backY + 20, 44, 40);
+
+    ctx.fillStyle = "#141418";
+    ctx.fillRect(px - 1, backY + 16, 46, 10);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+    ctx.strokeRect(px - 1, backY + 16, 46, 10);
+
+    ctx.fillStyle = metalColor;
+    ctx.beginPath();
+    ctx.arc(px + 22, backY + 21, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 2. THIGH TOPS (217 & 308 at Y = 289..353)
+  for (const tx of [217, 308]) {
+    ctx.fillStyle = pColor;
+    ctx.fillRect(tx, 289, 64, 64);
+    applyFabricTexture(ctx, tx, 289, 64, 64);
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.4)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(tx + 0.5, 289.5, 63, 63);
+  }
+
+  // 3. LEGS: 8 Panels at Y = 355..483
+  const allLegPanels = [19, 85, 151, 217, 308, 374, 440, 506];
+
+  for (const lx of allLegPanels) {
+    ctx.fillStyle = pColor;
+    ctx.fillRect(lx, 355, 64, 128);
+    applyFabricTexture(ctx, lx, 355, 64, 128);
+
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(lx + 32, 355);
+    ctx.lineTo(lx + 32, 355 + 128);
+    ctx.stroke();
+
+    const isOuter = lx === 19 || lx === 151 || lx === 374 || lx === 506;
+    const isFront = lx === 217 || lx === 308;
+
+    if (isOuter) {
+      // 3D BELLOWS CARGO POCKET
+      const pkX = lx + 9;
+      const pkY = 384;
+      const pkW = 46;
+      const pkH = 46;
+
+      ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
+      ctx.fillRect(pkX + 2, pkY + 2, pkW, pkH);
+
+      ctx.fillStyle = "#121217";
+      ctx.fillRect(pkX, pkY, pkW, pkH);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(pkX, pkY, pkW, pkH);
+
+      ctx.fillStyle = "#0a0a0d";
+      ctx.fillRect(pkX + 19, pkY, 8, pkH);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.18)";
+      ctx.strokeRect(pkX + 19, pkY, 8, pkH);
+
+      ctx.fillStyle = "#1a1a22";
+      ctx.fillRect(pkX - 2, pkY - 4, pkW + 4, 13);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+      ctx.strokeRect(pkX - 2, pkY - 4, pkW + 4, 13);
+
+      ctx.fillStyle = metalColor;
+      ctx.beginPath();
+      ctx.arc(pkX + 10, pkY + 2.5, 2, 0, Math.PI * 2);
+      ctx.arc(pkX + pkW - 10, pkY + 2.5, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#09090b";
+      ctx.fillRect(pkX + 20, pkY + pkH, 6, 18);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+      ctx.strokeRect(pkX + 20, pkY + pkH, 6, 18);
+
+      ctx.strokeStyle = metalColor;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(pkX + 19, pkY + pkH + 18, 8, 5);
+
+      ctx.fillStyle = "#0f0f13";
+      ctx.fillRect(pkX + 4, 444, 38, 22);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+      ctx.strokeRect(pkX + 4, 444, 38, 22);
+      ctx.strokeStyle = metalColor;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(pkX + 7, 448);
+      ctx.lineTo(pkX + 39, 448);
+      ctx.stroke();
+    }
+
+    if (isFront) {
+      const fX = lx + 10;
+      ctx.fillStyle = "#121217";
+      ctx.fillRect(fX, 368, 44, 26);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+      ctx.strokeRect(fX, 368, 44, 26);
+      drawDoubleStitch(ctx, fX, 372, 44, true, seamColor);
+
+      // KNEE ARTICULATION DARTS & BAGGY FOLD WRINKLES
+      const folds = [
+        { y: 408, deep: true },
+        { y: 416, deep: false },
+        { y: 424, deep: true },
+        { y: 432, deep: false },
+      ];
+
+      for (const fold of folds) {
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.75)";
+        ctx.lineWidth = fold.deep ? 2.0 : 1.2;
+        ctx.beginPath();
+        ctx.moveTo(lx + 4, fold.y);
+        ctx.quadraticCurveTo(lx + 32, fold.y + 4, lx + 60, fold.y);
+        ctx.stroke();
+
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(lx + 4, fold.y - 1.5);
+        ctx.quadraticCurveTo(lx + 32, fold.y + 2.5, lx + 60, fold.y - 1.5);
+        ctx.stroke();
+      }
+
+      // SHIN STACKING WRINKLES
+      const shinFolds = [446, 455, 464, 472];
+      for (const sy of shinFolds) {
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.7)";
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(lx + 6, sy);
+        ctx.quadraticCurveTo(lx + 32, sy + 3, lx + 58, sy);
+        ctx.stroke();
+
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+        ctx.lineWidth = 0.9;
+        ctx.beginPath();
+        ctx.moveTo(lx + 6, sy - 1.2);
+        ctx.quadraticCurveTo(lx + 32, sy + 1.8, lx + 58, sy - 1.2);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = "#0c0c0e";
+      ctx.fillRect(lx, 478, 64, 5);
+      drawDoubleStitch(ctx, lx, 478, 64, true, seamColor);
+
+      ctx.fillStyle = metalColor;
+      ctx.fillRect(lx + 50, 479, 4, 3);
+    }
+
+    // HEAVY PLATFORM SKATE SHOES
+    ctx.fillStyle = "#070709";
+    ctx.fillRect(lx, 485, 64, 50);
+
+    ctx.fillStyle = "#18181c";
+    ctx.fillRect(lx, 518, 64, 16);
+
+    ctx.fillStyle = "#000000";
+    for (let tx = lx; tx < lx + 64; tx += 8) {
+      ctx.fillRect(tx + 2, 528, 4, 6);
+    }
+
+    if (isFront) {
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+      ctx.lineWidth = 1.2;
+      for (let ly = 492; ly <= 512; ly += 5) {
+        ctx.beginPath();
+        ctx.moveTo(lx + 20, ly);
+        ctx.lineTo(lx + 44, ly + 2.5);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(lx + 44, ly);
+        ctx.lineTo(lx + 20, ly + 2.5);
+        ctx.stroke();
+      }
+    }
+  }
+
+  for (const bx of [217, 308]) {
+    ctx.fillStyle = "#070709";
+    ctx.fillRect(bx, 485, 64, 64);
+    ctx.fillStyle = "#18181c";
+    for (let gx = bx + 6; gx < bx + 58; gx += 12) {
+      for (let gy = 491; gy < 543; gy += 12) {
+        ctx.fillRect(gx, gy, 8, 8);
+      }
+    }
+  }
+}
+
+/**
  * Renders authentic, clean Roblox Pants / Jeans / Cargo / Skirt
  */
 async function renderClassicRobloxPants(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
-  const baseColor = spec.primaryColor || "#18181b";
-  const seamColor = spec.accentColor || "#d4d4d8";
-  const waistColor = spec.secondaryColor || "#09090b";
-
-  const tx = 231;
   const t = (spec.title || "").toLowerCase();
   const d = (spec.details || []).map((x) => x.toLowerCase());
   const isSkirt = d.some((i) => i.includes("skirt") || i.includes("saia") || i.includes("pleat")) || t.includes("skirt") || t.includes("saia") || t.includes("jirai");
@@ -631,80 +963,10 @@ async function renderClassicRobloxPants(ctx: CanvasRenderingContext2D, spec: Ugc
     return;
   }
 
-  // Regular pants: waist starts at Y = 130 (lower torso), chest Y: 74..129 is transparent!
-  const waistY = 130;
-  const pelvisH = 202 - waistY;
-
-  // Pelvis Panels (Lower Torso Y = 130..202)
-  ctx.fillStyle = baseColor;
-  ctx.fillRect(tx, waistY, 128, pelvisH); // Front
-  ctx.fillRect(427, waistY, 128, pelvisH); // Back
-  ctx.fillRect(165, waistY, 64, pelvisH);  // Right
-  ctx.fillRect(361, waistY, 64, pelvisH);  // Left
-  ctx.fillRect(231, 204, 128, 64); // Crotch underside
-  applyFabricTexture(ctx, tx, waistY, 128, pelvisH);
-
-  // Waistband
-  ctx.fillStyle = waistColor;
-  ctx.fillRect(tx, waistY, 128, 12);
-  ctx.fillRect(427, waistY, 128, 12);
-  ctx.fillRect(165, waistY, 64, 12);
-  ctx.fillRect(361, waistY, 64, 12);
-
-  // Belt Buckle
-  ctx.fillStyle = seamColor;
-  ctx.fillRect(tx + 58, waistY + 2, 12, 8);
-  ctx.fillStyle = "#09090b";
-  ctx.fillRect(tx + 61, waistY + 3.5, 6, 5);
-
-  // Fly Zipper & Front Pockets
-  ctx.strokeStyle = `${seamColor}77`;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(tx + 64, waistY + 12);
-  ctx.lineTo(tx + 64, waistY + 54);
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.arc(tx + 22, waistY + 12, 16, 0, 0.5 * Math.PI);
-  ctx.arc(tx + 106, waistY + 12, 16, 0.5 * Math.PI, Math.PI);
-  ctx.stroke();
-
-  // Leg Tops (Thigh tops: 217, 289, 64, 64 & 308, 289, 64, 64)
-  ctx.fillStyle = baseColor;
-  ctx.fillRect(217, 289, 64, 64);
-  ctx.fillRect(308, 289, 64, 64);
-  applyFabricTexture(ctx, 217, 289, 64, 64);
-  applyFabricTexture(ctx, 308, 289, 64, 64);
-
-  // Legs Panels (Y = 355)
-  const legPanels = [19, 85, 151, 217, 308, 374, 440, 506];
-  const legHeight = 128;
-
-  for (const lx of legPanels) {
-    ctx.fillStyle = baseColor;
-    ctx.fillRect(lx, 355, 64, legHeight);
-    applyFabricTexture(ctx, lx, 355, 64, legHeight);
-
-    // Ankle Cuff
-    drawDoubleStitch(ctx, lx, 355 + legHeight - 3, 64, true, seamColor);
-
-    // Side seam
-    ctx.strokeStyle = `${seamColor}44`;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(lx + 32, 355);
-    ctx.lineTo(lx + 32, 355 + legHeight);
-    ctx.stroke();
-  }
-
-  // Feet / shoes bottom (Full pants)
-  ctx.fillStyle = baseColor;
-  ctx.fillRect(217, 485, 64, 64);
-  ctx.fillRect(308, 485, 64, 64);
-  applyFabricTexture(ctx, 217, 485, 64, 64);
-  applyFabricTexture(ctx, 308, 485, 64, 64);
+  // All streetwear, baggy, cargo or dark pants render with the rich Baggy Cargo engine!
+  await drawCargoBaggyPants(ctx, spec);
 }
+
 
 /**
  * Draws refined, compact chest emblems that look aesthetic and proportional on avatars
@@ -1398,152 +1660,321 @@ export function renderTshirtGraphic(spec: UgcDesignSpec): string {
 }
 
 /**
- * Generates an authentic 3D Avatar Mannequin Thumbnail wearing the shirt
+ * Maps the 6 faces of a Three.js BoxGeometry to exact pixel coordinates
+ * on the official Roblox 585 x 559 Classic Clothing template.
+ */
+function applyBoxGeometryRobloxUVs(
+  geometry: THREE.BoxGeometry,
+  rects: {
+    right: [number, number, number, number];  // Face 0 (+X)
+    left: [number, number, number, number];   // Face 1 (-X)
+    top: [number, number, number, number];    // Face 2 (+Y)
+    bottom: [number, number, number, number]; // Face 3 (-Y)
+    front: [number, number, number, number];  // Face 4 (+Z)
+    back: [number, number, number, number];   // Face 5 (-Z)
+  }
+) {
+  const uvAttr = geometry.attributes.uv;
+  const faces = [rects.right, rects.left, rects.top, rects.bottom, rects.front, rects.back];
+
+  for (let f = 0; f < 6; f++) {
+    const r = faces[f];
+    const [px, py, pw, ph] = r;
+    const u0 = px / 585;
+    const u1 = (px + pw) / 585;
+    const vTop = 1.0 - py / 559;
+    const vBottom = 1.0 - (py + ph) / 559;
+
+    const base = f * 4;
+    uvAttr.setXY(base + 0, u0, vTop);
+    uvAttr.setXY(base + 1, u1, vTop);
+    uvAttr.setXY(base + 2, u0, vBottom);
+    uvAttr.setXY(base + 3, u1, vBottom);
+  }
+  uvAttr.needsUpdate = true;
+}
+
+/**
+ * Creates the classic Roblox smiley face texture
+ */
+function createRobloxClassicFace(): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    ctx.fillStyle = "#e5e7eb";
+    ctx.fillRect(0, 0, 256, 256);
+
+    ctx.fillStyle = "#111827";
+    ctx.beginPath(); ctx.ellipse(82, 98, 14, 21, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(174, 98, 14, 21, 0, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath(); ctx.arc(77, 90, 5.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(169, 90, 5.5, 0, Math.PI * 2); ctx.fill();
+
+    ctx.strokeStyle = "#111827";
+    ctx.lineWidth = 9;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(128, 136, 44, 0.18 * Math.PI, 0.82 * Math.PI, false);
+    ctx.stroke();
+
+    ctx.fillStyle = "#111827";
+    ctx.beginPath(); ctx.arc(88, 160, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(168, 160, 5, 0, Math.PI * 2); ctx.fill();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+/**
+ * Builds composite texture for avatar mannequin
+ */
+async function buildAvatarCompositeTexture(
+  templateDataUrl: string,
+  kind: UgcClothingKind = "shirt"
+): Promise<THREE.CanvasTexture> {
+  const canvas = document.createElement("canvas");
+  canvas.width = 585;
+  canvas.height = 559;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return new THREE.CanvasTexture(canvas);
+
+  const skinColor = "#e5e7eb";
+
+  if (kind === "pants") {
+    ctx.fillStyle = skinColor;
+    ctx.fillRect(231, 74, 128, 56);
+    ctx.fillRect(427, 74, 128, 56);
+    ctx.fillRect(165, 74, 64, 56);
+    ctx.fillRect(361, 74, 64, 56);
+    ctx.fillRect(231, 10, 128, 64);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(231, 74, 128, 38);
+    ctx.fillRect(427, 74, 128, 38);
+    ctx.fillRect(165, 74, 64, 38);
+    ctx.fillRect(361, 74, 64, 38);
+
+    ctx.fillStyle = skinColor;
+    ctx.beginPath();
+    ctx.ellipse(231 + 64, 74, 22, 12, 0, 0, Math.PI);
+    ctx.fill();
+
+    const armPanels = [19, 85, 151, 217, 308, 374, 440, 506];
+    ctx.fillStyle = skinColor;
+    for (const ax of armPanels) {
+      ctx.fillRect(ax, 355, 64, 128);
+    }
+  } else if (kind === "shirt") {
+    ctx.fillStyle = "#18181b";
+    const legPanels = [19, 85, 151, 217, 308, 374, 440, 506];
+    for (const lx of legPanels) {
+      ctx.fillRect(lx, 355, 64, 128);
+    }
+    ctx.fillStyle = skinColor;
+    for (const lx of legPanels) {
+      ctx.fillRect(lx, 355 + 104, 64, 24);
+    }
+  } else {
+    ctx.fillStyle = "#18181b";
+    ctx.fillRect(231, 74, 128, 128);
+    ctx.fillRect(427, 74, 128, 128);
+    ctx.fillRect(165, 74, 64, 128);
+    ctx.fillRect(361, 74, 64, 128);
+  }
+
+  if (templateDataUrl) {
+    await new Promise<void>((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, 585, 559);
+        resolve();
+      };
+      img.onerror = () => resolve();
+      img.src = templateDataUrl;
+    });
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  return texture;
+}
+
+/**
+ * Generates an authentic 3D Avatar Roblox R6 Mannequin Thumbnail wearing the clothing
  * Matching the exact look of official Roblox catalog thumbnails!
  */
 export async function renderAvatarPreview(
   templateDataUrl: string,
   kind: UgcClothingKind = "shirt"
 ): Promise<string> {
-  return new Promise((resolve) => {
+  if (typeof window === "undefined" || !document) return templateDataUrl;
+
+  try {
+    const width = 320;
+    const height = 320;
     const canvas = document.createElement("canvas");
-    canvas.width = 300;
-    canvas.height = 300;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      resolve(templateDataUrl);
-      return;
+    canvas.width = width;
+    canvas.height = height;
+
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      preserveDrawingBuffer: true,
+      alpha: true,
+    });
+    renderer.setSize(width, height);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+    camera.position.set(0, 0.4, 7.0);
+    camera.lookAt(0, 0.1, 0);
+
+    // Studio Lighting
+    scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+    const key = new THREE.DirectionalLight(0xffffff, 1.15);
+    key.position.set(4, 6, 5);
+    scene.add(key);
+
+    const rim = new THREE.DirectionalLight(0x60a5fa, 0.7);
+    rim.position.set(-4, 3, -5);
+    scene.add(rim);
+
+    // Ground Shadow Disc
+    const shadowCanvas = document.createElement("canvas");
+    shadowCanvas.width = 128;
+    shadowCanvas.height = 128;
+    const sCtx = shadowCanvas.getContext("2d");
+    if (sCtx) {
+      const grad = sCtx.createRadialGradient(64, 64, 4, 64, 64, 64);
+      grad.addColorStop(0, "rgba(0, 0, 0, 0.6)");
+      grad.addColorStop(0.5, "rgba(0, 0, 0, 0.25)");
+      grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+      sCtx.fillStyle = grad;
+      sCtx.fillRect(0, 0, 128, 128);
     }
+    const shadowMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.6, 3.6),
+      new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(shadowCanvas), transparent: true })
+    );
+    shadowMesh.rotation.x = -Math.PI / 2;
+    shadowMesh.position.y = -2.99;
+    scene.add(shadowMesh);
 
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      // 1. Sleek studio background
-      const bgGrad = ctx.createRadialGradient(150, 140, 20, 150, 150, 180);
-      bgGrad.addColorStop(0, "#181824");
-      bgGrad.addColorStop(0.7, "#09090d");
-      bgGrad.addColorStop(1, "#040407");
-      ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, 300, 300);
+    // Avatar Group
+    const avatar = new THREE.Group();
+    avatar.rotation.y = 0.35; // Classic 3/4 catalog angle
+    scene.add(avatar);
 
-      // Floor reflection / shadow
-      ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-      ctx.beginPath();
-      ctx.ellipse(150, 266, 68, 10, 0, 0, Math.PI * 2);
-      ctx.fill();
+    // Head
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xe5e7eb, roughness: 0.35, metalness: 0.05 });
+    const faceTex = createRobloxClassicFace();
+    const headMat = [
+      skinMat, skinMat, skinMat, skinMat,
+      new THREE.MeshStandardMaterial({ map: faceTex, roughness: 0.35, metalness: 0.05 }),
+      skinMat
+    ];
+    const head = new THREE.Mesh(new THREE.BoxGeometry(1.25, 1.25, 1.25), headMat);
+    head.position.set(0, 1.625, 0);
+    avatar.add(head);
 
-      // Avatar Skin tone (Clean Studio White/Light Gray)
-      const skinColor = "#e5e7eb";
+    const stud = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.36, 0.36, 0.18, 24),
+      new THREE.MeshStandardMaterial({ color: 0xd1d5db, roughness: 0.3, metalness: 0.1 })
+    );
+    stud.position.set(0, 2.34, 0);
+    avatar.add(stud);
 
-      // Neck (behind head and torso)
-      ctx.fillStyle = skinColor;
-      ctx.fillRect(141, 66, 18, 16);
+    // Composite Clothing Texture
+    const compTex = await buildAvatarCompositeTexture(templateDataUrl, kind);
+    const clothingMat = new THREE.MeshStandardMaterial({ map: compTex, roughness: 0.4, metalness: 0.08 });
 
-      // 2. Head (centered at x: 150, y: 44, w: 48, h: 48)
-      ctx.save();
-      ctx.fillStyle = skinColor;
-      ctx.beginPath();
-      ctx.roundRect(126, 26, 48, 48, 8);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(0, 0, 0, 0.15)";
-      ctx.lineWidth = 1;
-      ctx.stroke();
+    // Torso, Arms, Legs with Roblox UVs
+    const torsoGeo = new THREE.BoxGeometry(2, 2, 1);
+    applyBoxGeometryRobloxUVs(torsoGeo, {
+      right: [361, 74, 64, 128],
+      left: [165, 74, 64, 128],
+      top: [231, 10, 128, 64],
+      bottom: [231, 204, 128, 64],
+      front: [231, 74, 128, 128],
+      back: [427, 74, 128, 128],
+    });
+    const torso = new THREE.Mesh(torsoGeo, clothingMat);
+    avatar.add(torso);
 
-      // Minimalist Roblox Avatar Face
-      ctx.fillStyle = "#1e293b";
-      ctx.beginPath(); ctx.arc(141, 48, 2.5, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(159, 48, 2.5, 0, Math.PI * 2); ctx.fill();
-      // Smile
-      ctx.strokeStyle = "#1e293b";
-      ctx.lineWidth = 1.6;
-      ctx.beginPath();
-      ctx.arc(150, 56, 4.5, 0.15 * Math.PI, 0.85 * Math.PI);
-      ctx.stroke();
-      ctx.restore();
+    const rArmGeo = new THREE.BoxGeometry(1, 2, 1);
+    applyBoxGeometryRobloxUVs(rArmGeo, {
+      right: [19, 355, 64, 128],
+      left: [151, 355, 64, 128],
+      top: [217, 289, 64, 64],
+      bottom: [217, 485, 64, 64],
+      front: [217, 355, 64, 128],
+      back: [85, 355, 64, 128],
+    });
+    const rArm = new THREE.Mesh(rArmGeo, clothingMat);
+    rArm.position.set(-1.5, 0, 0);
+    avatar.add(rArm);
 
-      // 3. Torso (x: 116, y: 76, w: 68, h: 72)
-      ctx.save();
-      // Soft shadow behind torso
-      ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
-      ctx.shadowBlur = 8;
-      ctx.shadowOffsetY = 3;
+    const lArmGeo = new THREE.BoxGeometry(1, 2, 1);
+    applyBoxGeometryRobloxUVs(lArmGeo, {
+      right: [374, 355, 64, 128],
+      left: [506, 355, 64, 128],
+      top: [308, 289, 64, 64],
+      bottom: [308, 485, 64, 64],
+      front: [308, 355, 64, 128],
+      back: [440, 355, 64, 128],
+    });
+    const lArm = new THREE.Mesh(lArmGeo, clothingMat);
+    lArm.position.set(1.5, 0, 0);
+    avatar.add(lArm);
 
-      if (kind === "pants") {
-        // Base bare torso & clean white crop cami on upper chest so skirts/pants look natural and gorgeous
-        ctx.fillStyle = skinColor;
-        ctx.fillRect(116, 76, 68, 72);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(116, 76, 68, 30);
-        // Scoop neckline on top
-        ctx.fillStyle = skinColor;
-        ctx.beginPath();
-        ctx.ellipse(150, 76, 12, 6, 0, 0, Math.PI);
-        ctx.fill();
-      }
+    const rLegGeo = new THREE.BoxGeometry(1, 2, 1);
+    applyBoxGeometryRobloxUVs(rLegGeo, {
+      right: [19, 355, 64, 128],
+      left: [151, 355, 64, 128],
+      top: [217, 289, 64, 64],
+      bottom: [217, 485, 64, 64],
+      front: [217, 355, 64, 128],
+      back: [85, 355, 64, 128],
+    });
+    const rLeg = new THREE.Mesh(rLegGeo, clothingMat);
+    rLeg.position.set(-0.5, -2, 0);
+    avatar.add(rLeg);
 
-      // Draw front torso slice from template: (231, 74, 128, 128) -> (116, 76, 68, 72)
-      ctx.drawImage(img, 231, 74, 128, 128, 116, 76, 68, 72);
-      ctx.restore();
+    const lLegGeo = new THREE.BoxGeometry(1, 2, 1);
+    applyBoxGeometryRobloxUVs(lLegGeo, {
+      right: [374, 355, 64, 128],
+      left: [506, 355, 64, 128],
+      top: [308, 289, 64, 64],
+      bottom: [308, 485, 64, 64],
+      front: [308, 355, 64, 128],
+      back: [440, 355, 64, 128],
+    });
+    const lLeg = new THREE.Mesh(lLegGeo, clothingMat);
+    lLeg.position.set(0.5, -2, 0);
+    avatar.add(lLeg);
 
-      // 4. Arms (Avatar Right: 76, 76, 36, 72 | Avatar Left: 188, 76, 36, 72)
-      // Right Arm (Screen Left)
-      ctx.save();
-      ctx.fillStyle = skinColor;
-      ctx.fillRect(76, 76, 36, 72); // Base bare arm
-      if (kind === "shirt") {
-        // Draw from Right Limb Front: (217, 355, 64, 128) -> (76, 76, 36, 72)
-        ctx.drawImage(img, 217, 355, 64, 128, 76, 76, 36, 72);
-      }
-      ctx.strokeStyle = "rgba(0, 0, 0, 0.12)";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(76, 76, 36, 72);
-      ctx.restore();
+    renderer.render(scene, camera);
+    const dataUrl = canvas.toDataURL("image/png");
 
-      // Left Arm (Screen Right)
-      ctx.save();
-      ctx.fillStyle = skinColor;
-      ctx.fillRect(188, 76, 36, 72); // Base bare arm
-      if (kind === "shirt") {
-        // Draw from Left Limb Front: (308, 355, 64, 128) -> (188, 76, 36, 72)
-        ctx.drawImage(img, 308, 355, 64, 128, 188, 76, 36, 72);
-      }
-      ctx.strokeStyle = "rgba(0, 0, 0, 0.12)";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(188, 76, 36, 72);
-      ctx.restore();
+    renderer.dispose();
+    torsoGeo.dispose();
+    rArmGeo.dispose();
+    lArmGeo.dispose();
+    rLegGeo.dispose();
+    lLegGeo.dispose();
 
-      // 5. Legs (Left: 116, 150, 33, 86 | Right: 151, 150, 33, 86)
-      ctx.save();
-      const legBaseColor = kind === "pants" ? skinColor : "#1e293b";
-      ctx.fillStyle = legBaseColor;
-      ctx.fillRect(116, 150, 33, 86);
-      ctx.fillRect(151, 150, 33, 86);
-
-      if (kind === "pants") {
-        // Right Leg Front: (217, 355, 64, 128) -> (116, 150, 33, 86)
-        // Left Leg Front: (308, 355, 64, 128) -> (151, 150, 33, 86)
-        ctx.drawImage(img, 217, 355, 64, 128, 116, 150, 33, 86);
-        ctx.drawImage(img, 308, 355, 64, 128, 151, 150, 33, 86);
-      }
-
-      ctx.strokeStyle = "rgba(0, 0, 0, 0.15)";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(116, 150, 33, 86);
-      ctx.strokeRect(151, 150, 33, 86);
-      ctx.restore();
-
-      // Subtle ambient 3D lighting vignette
-      ctx.save();
-      const lightGrad = ctx.createLinearGradient(100, 40, 200, 260);
-      lightGrad.addColorStop(0, "rgba(255, 255, 255, 0.08)");
-      lightGrad.addColorStop(1, "rgba(0, 0, 0, 0.25)");
-      ctx.fillStyle = lightGrad;
-      ctx.fillRect(76, 26, 148, 210);
-      ctx.restore();
-
-      resolve(canvas.toDataURL("image/png"));
-    };
-    img.onerror = () => resolve(templateDataUrl);
-    img.src = templateDataUrl;
-  });
+    return dataUrl;
+  } catch (err) {
+    console.warn("3D Avatar preview generation fallback:", err);
+    return templateDataUrl;
+  }
 }

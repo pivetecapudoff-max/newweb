@@ -41,6 +41,7 @@ import {
   renderAvatarPreview,
   type UgcDesignSpec,
 } from "../lib/ugcTemplate";
+import { RobloxAvatar3D } from "../components/RobloxAvatar3D";
 
 interface UgcChatMessage {
   id: string;
@@ -550,21 +551,26 @@ export function UgcCreatorView() {
                         </button>
                       </div>
                       <span className="text-[10px] font-mono text-white/40">
-                        {previewTabs[msg.id] === "template" ? "585 × 559 px" : "Mannequin R6/R15"}
+                        {previewTabs[msg.id] === "template" ? "585 × 559 px" : "Roblox R6 3D"}
                       </span>
                     </div>
 
                     {/* Preview Image Container */}
                     <div className="w-full aspect-square max-w-[260px] mx-auto rounded-xl overflow-hidden bg-black/80 border border-white/10 shadow-2xl flex items-center justify-center p-1 relative group">
-                      <img
-                        src={
-                          previewTabs[msg.id] === "template"
-                            ? msg.design.templateDataUrl
-                            : msg.design.avatarPreviewDataUrl || msg.design.templateDataUrl
-                        }
-                        alt={msg.design.title}
-                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 rounded-lg"
-                      />
+                      {previewTabs[msg.id] === "template" ? (
+                        <img
+                          src={msg.design.templateDataUrl}
+                          alt={msg.design.title}
+                          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 rounded-lg"
+                        />
+                      ) : (
+                        <RobloxAvatar3D
+                          templateDataUrl={msg.design.templateDataUrl}
+                          kind={msg.design.kind}
+                          title={msg.design.title}
+                          className="w-full h-full rounded-lg"
+                        />
+                      )}
                     </div>
                   </div>
 

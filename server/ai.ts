@@ -1881,12 +1881,22 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fo
 
   const cleanInput = userPrompt.replace(/cria|fazer|roupa|calça|camisa|uma|pra mim/gi, '').trim();
   if (cleanInput.length > 2 && !cleanInput.includes('http')) {
-    title = `⋆ ˚｡⋆୨୧˚ ${cleanInput.slice(0, 32)} basic tee ˚୨୧⋆｡˚ ⋆`;
+    if (isPants) {
+      if (p.includes('saia') || p.includes('skirt')) {
+        title = `⋆ ˚｡⋆୨୧˚ ${cleanInput.slice(0, 32)} skirt ˚୨୧⋆｡˚ ⋆`;
+      } else {
+        title = `─── ⋆⋅☆⋅⋆ ── ${cleanInput.slice(0, 32)} baggy pants ── ⋆⋅☆⋅⋆ ───`;
+      }
+    } else {
+      title = `⋆ ˚｡⋆୨୧˚ ${cleanInput.slice(0, 32)} ˚୨୧⋆｡˚ ⋆`;
+    }
   }
 
-  const researchReply = catalogResearch.length > 0
-    ? `🔍 **Pesquisa no Catálogo Roblox:** Analisei os itens mais populares sobre **${searchKeyword}** (como *${catalogResearch[0].name}* com ${catalogResearch[0].favoriteCount.toLocaleString()} favoritos). Com base nas tendências reais dos criadores, desenvolvi a **${title}** em corte básico e usável (T-shirt com manga curta, gola recortada e estampa de alta definição) por 5 Robux!`
-    : `Desenvolvi a **${title}** para **${brandName}**, com caimento clássico básico (T-shirt manga curta, gola recortada e estampa limpa) por 5 Robux!`;
+  const researchReply = isPants
+    ? (p.includes('saia') || p.includes('skirt')
+        ? `Desenvolvi a **${title}** com pregas plissadas, alfinetes de segurança e cinto duplo Y2K pronta para a sua loja!`
+        : `Desenvolvi a **${title}** com caimento baggy streetwear, bolsos utilitários e correntes metálicas pronta para a sua loja!`)
+    : `Desenvolvi a **${title}** com acabamento de alta definição para o catálogo Roblox por 5 Robux!`;
 
   return {
     title,
