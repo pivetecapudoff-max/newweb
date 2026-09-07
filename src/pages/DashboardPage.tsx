@@ -38,9 +38,112 @@ interface AiLogEntry {
   details?: any;
 }
 
+function DashboardSkeleton() {
+  return (
+    <div className="h-full overflow-y-auto p-6 md:p-8 space-y-6 pb-16 text-white select-none">
+      {/* Title & Top Action Bar Skeleton */}
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <div className="h-8 w-64 rounded-xl bg-white/10 animate-pulse" />
+          <div className="h-4 w-44 rounded-lg bg-white/5 animate-pulse mt-2" />
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-36 sm:w-44 rounded-full bg-white/5 animate-pulse hidden sm:block" />
+          <div className="h-9 w-32 sm:w-36 rounded-full bg-white/10 animate-pulse" />
+        </div>
+      </div>
+
+      {/* Row of 4 Stat Cards Skeletons */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        {[
+          { label: "Receita Robux", icon: BarChart3 },
+          { label: "Membros do Grupo", icon: Users },
+          { label: "Vendas (Roupas & UGC)", icon: ShoppingBag },
+          { label: "Catálogo Ativo", icon: TrendingUp },
+        ].map((item, i) => {
+          const Icon = item.icon;
+          return (
+            <div
+              key={i}
+              className="relative rounded-[22px] bg-[#0a0a0a] p-5 shadow-[0_10px_30px_rgba(0,0,0,0.35)] min-h-[148px] flex flex-col justify-between overflow-hidden border border-white/[0.03]"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-[#1a1a1a] flex items-center justify-center text-white/30">
+                  <Icon className="w-3.5 h-3.5" />
+                </div>
+                <span className="text-xs font-semibold text-white/30">{item.label}</span>
+              </div>
+              <div className="space-y-2 mt-3">
+                <div className="w-28 h-7 rounded-lg bg-white/10 animate-pulse" />
+                <div className="w-36 h-3 rounded bg-white/5 animate-pulse" />
+                <div className="w-24 h-2.5 rounded bg-white/[0.03] animate-pulse" />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* WaveChart Skeleton */}
+      <div className="rounded-[24px] bg-[#0a0a0a] p-6 shadow-[0_15px_45px_rgba(0,0,0,0.45)] relative overflow-hidden border border-white/[0.03]">
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-36 h-7 rounded-full bg-white/5 animate-pulse" />
+            <div className="w-44 h-3 rounded bg-white/5 animate-pulse hidden sm:block" />
+          </div>
+          <div className="w-24 h-7 rounded-full bg-white/5 animate-pulse" />
+        </div>
+        <div
+          className="relative w-full max-h-[380px] flex items-center justify-center bg-white/[0.01] rounded-2xl border border-white/[0.02]"
+          style={{ aspectRatio: "960 / 340" }}
+        >
+          {/* Grid lines placeholder */}
+          <div className="w-full h-full p-6 flex flex-col justify-between pointer-events-none">
+            <div className="w-full border-b border-dashed border-white/[0.04]" />
+            <div className="w-full border-b border-dashed border-white/[0.04]" />
+            <div className="w-full border-b border-dashed border-white/[0.04]" />
+            <div className="w-full border-b border-dashed border-white/[0.04]" />
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="flex items-center gap-2.5 text-white/35 text-xs font-medium animate-pulse">
+              <TrendingUp className="w-4 h-4 text-blue-500/60" />
+              <span>Sincronizando métricas com a Roblox...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activity Table Skeleton */}
+      <div className="rounded-[24px] bg-[#0a0a0a] p-6 shadow-[0_15px_45px_rgba(0,0,0,0.45)] border border-white/[0.03]">
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <div>
+            <div className="w-48 h-4 rounded-md bg-white/10 animate-pulse" />
+            <div className="w-32 h-3 rounded bg-white/5 animate-pulse mt-2" />
+          </div>
+          <div className="w-28 h-6 rounded-full bg-white/5 animate-pulse" />
+        </div>
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5].map((row) => (
+            <div
+              key={row}
+              className="h-11 rounded-xl bg-white/[0.02] animate-pulse flex items-center justify-between px-4"
+            >
+              <div className="w-40 h-3 bg-white/10 rounded" />
+              <div className="w-16 h-3 bg-white/5 rounded" />
+              <div className="w-24 h-3 bg-white/5 rounded hidden sm:block" />
+              <div className="w-20 h-3 bg-white/5 rounded hidden sm:block" />
+              <div className="w-14 h-3 bg-white/10 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DashboardPage() {
   const navigate = useNavigate();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState<boolean>(!data);
   const [groupStore, setGroupStore] = useState<GroupStore | null>(null);
   const [currentTime, setCurrentTime] = useState("");
   const [currentDate, setCurrentDate] = useState("");
@@ -104,9 +207,15 @@ export function DashboardPage() {
   }, []);
 
   const loadDashboard = (gid = selectedGroupId) => {
+    if (!data) setLoading(true);
     fetchDashboard(gid)
-      .then(setData)
-      .catch(() => {});
+      .then((res) => {
+        setData(res);
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -310,6 +419,10 @@ export function DashboardPage() {
       amount: sale.amount,
     };
   });
+
+  if (loading && !data) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div className="h-full overflow-y-auto p-6 md:p-8 space-y-6 pb-16 text-white select-none">
@@ -526,7 +639,7 @@ export function DashboardPage() {
           initial="hidden"
           animate="visible"
           whileHover={{ y: -3 }}
-          className="relative rounded-[22px] bg-[#0a0a0a] p-5 overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-all"
+          className="relative rounded-[22px] bg-[#0a0a0a] p-5 overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-all min-h-[148px] flex flex-col justify-between border border-white/[0.03]"
         >
           <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-blue-600/10 blur-xl pointer-events-none" />
 
@@ -544,6 +657,9 @@ export function DashboardPage() {
             <p className="text-[11px] text-white/35 mt-1 font-medium">
               {todayRev == null ? "Dados de vendas indisponíveis" : `+${todayRev} R$ hoje · ${weeklyRev} R$ (7 dias)`}
             </p>
+            <p className="text-[10px] text-white/20 mt-0.5">
+              Receita consolidada de vendas
+            </p>
           </div>
         </motion.div>
 
@@ -554,7 +670,7 @@ export function DashboardPage() {
           initial="hidden"
           animate="visible"
           whileHover={{ y: -3 }}
-          className="relative rounded-[22px] bg-[#0a0a0a] p-5 overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-all"
+          className="relative rounded-[22px] bg-[#0a0a0a] p-5 overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-all min-h-[148px] flex flex-col justify-between border border-white/[0.03]"
         >
           <div className="flex items-center gap-2.5 mb-3">
             <div className="w-7 h-7 rounded-lg bg-[#1a1a1a] flex items-center justify-center text-white/70">
@@ -585,7 +701,7 @@ export function DashboardPage() {
           initial="hidden"
           animate="visible"
           whileHover={{ y: -3 }}
-          className="relative rounded-[22px] bg-[#0a0a0a] p-5 overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-all"
+          className="relative rounded-[22px] bg-[#0a0a0a] p-5 overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-all min-h-[148px] flex flex-col justify-between border border-white/[0.03]"
         >
           <div className="flex items-center gap-2.5 mb-3">
             <div className="w-7 h-7 rounded-lg bg-[#1a1a1a] flex items-center justify-center text-white/70">
@@ -614,7 +730,7 @@ export function DashboardPage() {
           initial="hidden"
           animate="visible"
           whileHover={{ y: -3 }}
-          className="relative rounded-[22px] bg-[#0a0a0a] p-5 overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-all"
+          className="relative rounded-[22px] bg-[#0a0a0a] p-5 overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-all min-h-[148px] flex flex-col justify-between border border-white/[0.03]"
         >
           <div className="flex items-center gap-2.5 mb-3">
             <div className="w-7 h-7 rounded-lg bg-[#1a1a1a] flex items-center justify-center text-white/70">
@@ -624,19 +740,29 @@ export function DashboardPage() {
           </div>
 
           <div>
-            <h3 className="text-3xl font-extrabold text-white tracking-tight">
-              {totalItems == null ? "—" : `${totalItems} peças`}
-            </h3>
-            <p className="text-[11px] text-white/35 mt-1 font-medium">
-              {clothingCount == null || ugcCount == null
-                ? (isAllGroups && allGroups.length === 0 ? "Nenhum grupo com catálogo" : "Catálogo indisponível")
-                : `${clothingCount} roupas 2D · ${ugcCount} itens 3D`}
-            </p>
-            <p className="text-[10px] text-white/20 mt-0.5">
-              {isAllGroups && groupStore
-                ? `Catálogo do grupo principal (${groupStore.groupName})`
-                : "Contagem retornada pelo catálogo Roblox"}
-            </p>
+            {totalItems == null && !groupStore ? (
+              <div className="space-y-1.5 py-0.5">
+                <div className="h-7 w-28 bg-white/10 rounded-lg animate-pulse" />
+                <div className="h-3 w-36 bg-white/5 rounded animate-pulse" />
+                <div className="h-2.5 w-24 bg-white/[0.03] rounded animate-pulse" />
+              </div>
+            ) : (
+              <>
+                <h3 className="text-3xl font-extrabold text-white tracking-tight">
+                  {totalItems == null ? "0 peças" : `${totalItems} peças`}
+                </h3>
+                <p className="text-[11px] text-white/35 mt-1 font-medium">
+                  {clothingCount == null || ugcCount == null
+                    ? (isAllGroups && allGroups.length === 0 ? "Nenhum grupo com catálogo" : "Catálogo indisponível")
+                    : `${clothingCount} roupas 2D · ${ugcCount} itens 3D`}
+                </p>
+                <p className="text-[10px] text-white/20 mt-0.5">
+                  {isAllGroups && groupStore
+                    ? `Catálogo do grupo principal (${groupStore.groupName})`
+                    : "Contagem retornada pelo catálogo Roblox"}
+                </p>
+              </>
+            )}
           </div>
         </motion.div>
       </div>

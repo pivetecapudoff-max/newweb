@@ -279,9 +279,20 @@ export function AppShell() {
             </div>
           </header>
 
-          {/* Page Content View */}
+          {/* Page Content View with animated route transitions */}
           <main className="flex-1 min-h-0 overflow-hidden relative">
-            <Outlet />
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                className="h-full w-full overflow-hidden flex flex-col"
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
           </main>
         </div>
 

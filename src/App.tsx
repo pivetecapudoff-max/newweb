@@ -30,6 +30,8 @@ export function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/assistente" element={<Navigate to="/painel/chat" replace />} />
+          <Route path="/assistente/painel" element={<Navigate to="/painel/chat" replace />} />
           <Route element={<AuthGuard />}>
             <Route path="/painel" element={<AppShell />}>
               <Route index element={<DashboardPage />} />
@@ -37,6 +39,8 @@ export function App() {
               <Route path="overview" element={<DashboardPage />} />
               <Route path="chat" element={<AiAssistantView />} />
               <Route path="assistant" element={<AiAssistantView />} />
+              <Route path="assistente" element={<AiAssistantView />} />
+              <Route path="assistente/painel" element={<AiAssistantView />} />
               <Route path="ai" element={<AiAssistantView />} />
               <Route path="ugc-creator" element={<UgcCreatorView />} />
               <Route path="create-ugc" element={<UgcCreatorView />} />
