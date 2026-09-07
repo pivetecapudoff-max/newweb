@@ -78,17 +78,17 @@ export function AppShell() {
     return () => {
       alive = false;
     };
-  }, [location.pathname]);
+  }, []);
 
   const navItemClass = (path: string, exact = false) => {
     const isActive = exact
       ? location.pathname === path
       : location.pathname.startsWith(path);
 
-    return `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+    return `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer outline-none focus:outline-none select-none border ${
       isActive
-        ? "bg-white/10 text-white font-semibold shadow-sm backdrop-blur-md border border-white/[0.08]"
-        : "text-white/60 hover:text-white hover:bg-white/[0.05]"
+        ? "bg-white/10 text-white font-semibold shadow-sm backdrop-blur-md border-white/[0.08]"
+        : "text-white/60 hover:text-white hover:bg-white/[0.05] border-transparent"
     }`;
   };
 
@@ -279,20 +279,11 @@ export function AppShell() {
             </div>
           </header>
 
-          {/* Page Content View with animated route transitions */}
+          {/* Page Content View */}
           <main className="flex-1 min-h-0 overflow-hidden relative">
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.18, ease: "easeOut" }}
-                className="h-full w-full overflow-hidden flex flex-col"
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
+            <div className="h-full w-full overflow-hidden flex flex-col">
+              <Outlet />
+            </div>
           </main>
         </div>
 

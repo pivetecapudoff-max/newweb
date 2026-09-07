@@ -46,21 +46,30 @@ function readFileAsBase64(file: File): Promise<string> {
   });
 }
 
+let cachedChatMessages: ChatMessage[] = [];
+let cachedChatLogs: AiLog[] = [];
+
 export function AiAssistantView({ userName }: { userName?: string }) {
   const [activeTab, setActiveTab] = useState<"chat" | "logs">("chat");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => cachedChatMessages);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [logs, setLogs] = useState<AiLog[]>([]);
+  const [logs, setLogs] = useState<AiLog[]>(() => cachedChatLogs);
   const [accountName, setAccountName] = useState(userName || "Conta Roblox");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    cachedChatMessages = messages;
+  }, [messages]);
 
   const fetchLogs = async () => {
     try {
       const res = await fetch("/api/ai/logs");
       if (res.ok) {
         const data = await res.json();
-        setLogs(data.logs || []);
+        const incomingLogs = data.logs || [];
+        cachedChatLogs = incomingLogs;
+        setLogs(incomingLogs);
       }
     } catch {}
   };

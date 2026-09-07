@@ -140,11 +140,26 @@ function DashboardSkeleton() {
   );
 }
 
+// In-memory cache to prevent skeleton flicker on tab switches
+const cachedDashboardMap: Record<string, DashboardData> = {};
+const cachedGroupStoreMap: Record<string, GroupStore> = {};
+
 export function DashboardPage() {
   const navigate = useNavigate();
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState<boolean>(!data);
-  const [groupStore, setGroupStore] = useState<GroupStore | null>(null);
+
+  // Group selection state
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(() => {
+    return localStorage.getItem("farol_selected_group_id") || "all";
+  });
+
+  const [data, setData] = useState<DashboardData | null>(() => cachedDashboardMap[selectedGroupId] || null);
+  const [loading, setLoading] = useState<boolean>(() => !cachedDashboardMap[selectedGroupId]);
+  const [groupStore, setGroupStore] = useState<GroupStore | null>(() => {
+    const targetGid = selectedGroupId === "all"
+      ? (cachedDashboardMap[selectedGroupId]?.groups.find((g) => g.canPost)?.id || cachedDashboardMap[selectedGroupId]?.groups[0]?.id)
+      : selectedGroupId;
+    return targetGid ? (cachedGroupStoreMap[String(targetGid)] || null) : null;
+  });
   const [currentTime, setCurrentTime] = useState("");
   const [currentDate, setCurrentDate] = useState("");
 
@@ -187,10 +202,6 @@ export function DashboardPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Group selection state
-  const [selectedGroupId, setSelectedGroupId] = useState<string>(() => {
-    return localStorage.getItem("farol_selected_group_id") || "all";
-  });
   const [showGroupDropdown, setShowGroupDropdown] = useState(false);
   const [groupSearch, setGroupSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -207,9 +218,10 @@ export function DashboardPage() {
   }, []);
 
   const loadDashboard = (gid = selectedGroupId) => {
-    if (!data) setLoading(true);
+    if (!cachedDashboardMap[gid]) setLoading(true);
     fetchDashboard(gid)
       .then((res) => {
+        cachedDashboardMap[gid] = res;
         setData(res);
         setLoading(false);
       })
@@ -233,8 +245,17 @@ export function DashboardPage() {
       setGroupStore(null);
       return;
     }
+    const targetKey = String(targetGid);
+    if (cachedGroupStoreMap[targetKey]) {
+      setGroupStore(cachedGroupStoreMap[targetKey]);
+    }
     const loadGroupStore = () => {
-      lookupGroupStore(String(targetGid)).then(setGroupStore).catch(() => setGroupStore(null));
+      lookupGroupStore(targetKey)
+        .then((store) => {
+          cachedGroupStoreMap[targetKey] = store;
+          setGroupStore(store);
+        })
+        .catch(() => setGroupStore(null));
     };
     loadGroupStore();
     const interval = setInterval(loadGroupStore, 120000);
@@ -245,6 +266,13 @@ export function DashboardPage() {
     setSelectedGroupId(gid);
     localStorage.setItem("farol_selected_group_id", gid);
     setShowGroupDropdown(false);
+    if (cachedDashboardMap[gid]) {
+      setData(cachedDashboardMap[gid]);
+      setLoading(false);
+    } else {
+      setData(null);
+      setLoading(true);
+    }
     loadDashboard(gid);
   };
 

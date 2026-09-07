@@ -8,6 +8,10 @@
   color-scheme: dark;
 }
 
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 ::selection {
   background: rgba(139, 92, 246, 0.35);
   color: #ffffff;
