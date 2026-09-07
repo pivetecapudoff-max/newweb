@@ -301,9 +301,9 @@ export function AccountPage() {
                     {primaryGroup?.name || "Nenhum grupo detectado"}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Sincronização Ativa</span>
+                <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Sincronizado</span>
                 </div>
               </div>
             </div>

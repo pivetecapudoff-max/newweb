@@ -574,10 +574,7 @@ export function AnalyticsPage() {
                 <p className="text-[11px] text-white/40">Feed em tempo real das compras de catálogo</p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Ao Vivo</span>
-            </div>
+            <span className="text-[11px] text-white/40 font-medium">Recentes</span>
           </div>
 
           <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">

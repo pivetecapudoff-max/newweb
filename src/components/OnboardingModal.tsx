@@ -164,14 +164,14 @@ export function OnboardingModal({
     },
     {
       badge: "Passo 2 de 3",
-      title: "Otimizador SEO & IA Gemini",
-      subtitle: "Aumente as visualizações e vendas dos seus itens usando inteligência artificial.",
+      title: "Otimizador de SEO & Tags",
+      subtitle: "Melhore títulos e descrições para posicionar seus itens no topo das buscas.",
       icon: Bot,
       iconColor: "text-purple-400 bg-purple-500/15 border-purple-500/30",
       content: (
         <div className="space-y-4 text-left">
           <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
-            Com nosso motor de SEO inteligente, você atualiza itens individuais ou coleções inteiras com descrições ricas em palavras-chave que o algoritmo de busca do Roblox adora.
+            Gere títulos, tags e descrições com palavras-chave reais de busca do Roblox para aumentar o alcance e as vendas das suas roupas e itens UGC.
           </p>
 
           <div className="space-y-3">

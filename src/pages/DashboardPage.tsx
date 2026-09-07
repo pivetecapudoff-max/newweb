@@ -693,9 +693,8 @@ export function DashboardPage() {
             <tbody className="text-xs">
               {recentSales.map((sale) => (
                 <tr key={sale.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="py-3.5 px-3 text-white/90 font-medium flex items-center gap-2.5">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
-                    <span className="truncate max-w-[220px] sm:max-w-none">{sale.name}</span>
+                  <td className="py-3.5 px-3 text-white/90 font-medium">
+                    <span className="truncate max-w-[220px] sm:max-w-none block">{sale.name}</span>
                   </td>
                   <td className="py-3.5 px-3">
                     <span className="rounded-full bg-blue-600/15 px-2 py-0.5 text-[10px] font-semibold text-blue-400">

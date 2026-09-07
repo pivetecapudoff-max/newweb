@@ -978,7 +978,7 @@ export function Feed() {
             <div className="py-20 text-center space-y-3 rounded-2xl bg-[#0a0a0a] border border-white/[0.06]">
               <LoaderCircle className="w-7 h-7 animate-spin text-white/50 mx-auto" />
               <p className="text-xs text-white/40 uppercase tracking-wider font-semibold">
-                Consultando dados do catálogo Roblox ao vivo...
+                Carregando itens do catálogo Roblox...
               </p>
             </div>
           )}
@@ -1157,7 +1157,7 @@ export function Feed() {
               <div>
                 <h3 className="text-sm font-bold text-white">Radar de Grupos Concorrentes &amp; Referência</h3>
                 <p className="text-xs text-white/40 mt-0.5">
-                  Pesquise e espione grupos de roupas e marcas UGC no Roblox ao vivo.
+                  Pesquise grupos de roupas e marcas UGC no Roblox.
                 </p>
               </div>
 
@@ -1207,7 +1207,7 @@ export function Feed() {
           {/* Group Results Grid */}
           {groupSearchResults.length === 0 ? (
             <div className="py-12 text-center text-xs text-white/40 rounded-2xl bg-[#0a0a0a] border border-white/[0.06]">
-              {searchingGroups ? "Consultando grupos ao vivo no Roblox..." : "Nenhum grupo encontrado com este termo."}
+              {searchingGroups ? "Buscando grupos no Roblox..." : "Nenhum grupo encontrado com este termo."}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

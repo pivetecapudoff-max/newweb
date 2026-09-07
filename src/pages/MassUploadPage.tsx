@@ -128,7 +128,7 @@ export function MassUploadPage() {
     } catch (err) {
       setItems([]);
       setSelected(new Set());
-      setError(err instanceof Error ? err.message : "Não foi possível consultar o catálogo ao vivo.");
+      setError(err instanceof Error ? err.message : "Não foi possível carregar as roupas do catálogo.");
     } finally {
       setLoading(false);
     }
@@ -260,10 +260,10 @@ export function MassUploadPage() {
                 Mass Upload
               </div>
               <h1 className="text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
-                Tendências reais, cópia em massa.
+                Upload em Massa
               </h1>
               <p className="mt-3 max-w-xl text-sm leading-6 text-white/50">
-                O scanner busca as roupas mais vendidas do catálogo, extrai os moldes 585x559 reais e publica diretamente no seu grupo com proteção Anti-Ban.
+                Selecione as roupas do catálogo para baixar os moldes e publicar direto no seu grupo do Roblox.
               </p>
             </div>
 
@@ -273,14 +273,12 @@ export function MassUploadPage() {
                 <div className="mt-1 text-xl font-semibold text-emerald-400">{selected.size}/{MAX_BATCH}</div>
               </div>
               <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3">
-                <div className="text-[10px] uppercase tracking-wider text-white/40">Taxa estimada</div>
+                <div className="text-[10px] uppercase tracking-wider text-white/40">Taxa total</div>
                 <div className="mt-1 text-xl font-semibold text-white">{estimatedFee} R$</div>
               </div>
               <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3">
-                <div className="text-[10px] uppercase tracking-wider text-white/40">Fonte</div>
-                <div className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-emerald-300">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> ao vivo
-                </div>
+                <div className="text-[10px] uppercase tracking-wider text-white/40">Taxa por peça</div>
+                <div className="mt-1 text-xl font-semibold text-white">10 R$</div>
               </div>
             </div>
           </div>
@@ -292,10 +290,10 @@ export function MassUploadPage() {
               <div>
                 <div className="flex items-center gap-2 text-sm font-semibold text-white">
                   <TrendingUp className="h-4 w-4 text-emerald-400" />
-                  Mais vendidos desta semana
+                  Mais vendidos do catálogo
                 </div>
                 <p className="mt-1 text-xs text-white/40">
-                  {updatedAt ? `Atualizado às ${updatedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : "Consultando catálogo Roblox"}
+                  {updatedAt ? `Atualizado às ${updatedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : "Carregando catálogo..."}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -326,7 +324,7 @@ export function MassUploadPage() {
                   onClick={selectTop}
                   className="rounded-xl border border-emerald-500/30 bg-emerald-500/15 hover:bg-emerald-500/25 px-3 py-2 text-xs font-medium text-emerald-300 transition disabled:opacity-40"
                 >
-                  Selecionar top {Math.min(MAX_BATCH, items.length)}
+                  Selecionar {Math.min(MAX_BATCH, items.length)} itens
                 </button>
               </div>
             </div>
@@ -509,10 +507,10 @@ export function MassUploadPage() {
               <span>
                 <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
                   <ShieldCheck className="h-3.5 w-3.5" />
-                  Proteção Anti-Ban Ativa
+                  Proteção Anti-Ban
                 </span>
                 <span className="mt-1 block text-[11px] leading-4 text-white/40">
-                  Aplica mutação microscópica e altera o hash do PNG para impedir detecção de duplicata pelo Roblox.
+                  Altera sutilmente os pixels e o hash do arquivo para o Roblox não bloquear como duplicado.
                 </span>
               </span>
             </button>
@@ -520,10 +518,10 @@ export function MassUploadPage() {
             <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-3">
               <div className="flex items-center gap-2 text-xs font-medium text-amber-200">
                 <ShieldCheck className="h-4 w-4" />
-                Antes de publicar
+                Informações de envio
               </div>
               <p className="mt-1.5 text-[11px] leading-4 text-white/40">
-                Camisas e calças cobram 10 R$ de taxa de upload do Roblox. O molde é copiado e enviado diretamente para a fila do seu grupo.
+                Cada peça tem taxa de 10 Robux cobrada pelo próprio Roblox para publicação no grupo.
               </p>
             </div>
 
@@ -539,7 +537,7 @@ export function MassUploadPage() {
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-3.5 text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed"
               >
                 {running ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Layers3 className="h-4 w-4" />}
-                {running ? "Copiando lote..." : `Copiar e publicar ${selected.size} peça${selected.size === 1 ? "" : "s"} no grupo`}
+                {running ? "Enviando lote..." : `Publicar ${selected.size} peça${selected.size === 1 ? "" : "s"} no grupo`}
               </button>
             )}
 
