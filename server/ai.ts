@@ -1640,17 +1640,30 @@ export async function generateUgcDesignData(
     .trim()
     .replace(/\s+/g, ' ');
 
-  let searchKeyword = cleanSubject || 'aesthetic t-shirt';
+  let searchKeyword = 'aesthetic roblox';
   const pLower = userPrompt.toLowerCase();
-  if (pLower.includes('minion')) searchKeyword = 'minion';
+  if (pLower.includes('saia') || pLower.includes('skirt')) {
+    if (pLower.includes('jirai')) searchKeyword = 'jirai kei skirt';
+    else if (pLower.includes('plissada') || pLower.includes('pleated')) searchKeyword = 'pleated skirt';
+    else if (pLower.includes('goth')) searchKeyword = 'goth skirt';
+    else if (pLower.includes('y2k')) searchKeyword = 'y2k skirt';
+    else searchKeyword = 'pleated skirt aesthetic';
+  } else if (pLower.includes('calça') || pLower.includes('pants') || pLower.includes('cargo') || pLower.includes('baggy')) {
+    if (pLower.includes('cargo')) searchKeyword = 'baggy cargo pants';
+    else if (pLower.includes('y2k')) searchKeyword = 'y2k pants';
+    else if (pLower.includes('goth')) searchKeyword = 'goth pants';
+    else searchKeyword = 'baggy pants';
+  } else if (pLower.includes('minion')) searchKeyword = 'minion';
   else if (pLower.includes('batman')) searchKeyword = 'batman';
   else if (pLower.includes('spider') || pLower.includes('aranha')) searchKeyword = 'spiderman';
   else if (pLower.includes('hello kitty') || pLower.includes('hellokitty')) searchKeyword = 'hello kitty';
   else if (pLower.includes('kuromi')) searchKeyword = 'kuromi';
+  else if (pLower.includes('moletom') || pLower.includes('hoodie')) searchKeyword = 'oversized hoodie';
+  else if (pLower.includes('cropped') || pLower.includes('crop')) searchKeyword = 'crop top';
   else if (pLower.includes('streetwear') || pLower.includes('y2k')) searchKeyword = 'y2k streetwear';
   else if (pLower.includes('anime')) searchKeyword = 'anime shirt';
-  else if (pLower.includes('goth') || pLower.includes('gothic')) searchKeyword = 'goth shirt';
-  else if (pLower.includes('cat') || pLower.includes('gato')) searchKeyword = 'cat aesthetic';
+  else if (pLower.includes('goth') || pLower.includes('gothic')) searchKeyword = 'goth clothing';
+  else if (cleanSubject) searchKeyword = cleanSubject;
 
   let catalogResearch: Array<{ id: number; name: string; creatorName: string; favoriteCount: number; url: string }> = [];
   try {
@@ -1677,9 +1690,9 @@ export async function generateUgcDesignData(
     ? catalogResearch.map((item, idx) => `${idx + 1}. "${item.name}" por ${item.creatorName} (${item.favoriteCount.toLocaleString()} favoritos)`).join('\n')
     : 'Nenhum item específico encontrado na busca rápida, usando tendências globais de vendas.';
 
-  const prompt = `Você é um diretor criativo de moda Roblox e especialista em economia do catálogo, gerando roupas clássicas 2D de alta conversão.
+  const prompt = `Você é um estilista sênior e diretor de moda Roblox Marketplace especializado em roupas clássicas 2D (585x559 px).
 
-O usuário quer criar uma peça com base no seguinte pedido:
+O usuário quer criar a seguinte peça:
 "${userPrompt}"
 ${attachments?.length ? 'O usuário anexou fotos de referência. Analise minuciosamente os cortes, cores, caimento e detalhes da imagem.' : ''}
 
@@ -1687,17 +1700,22 @@ CONTEXTO DO CRIADOR & MULTI-GRUPOS:
 - Loja/Grupo de Destino: ${hasTargetGroup ? `"${targetGroupName}" (ID: ${options?.groupId || 'N/A'})` : 'Loja pessoal do usuário'}
 - Preset de Estilo Ativo: ${stylePreset}
 
-PESQUISA DE MERCADO ROBLOX EM TEMPO REAL:
-Termo pesquisado no catálogo oficial: "${searchKeyword}"
+TENDÊNCIAS EM ALTA NO CATÁLOGO ROBLOX PARA "${searchKeyword}":
 ${catalogSummary}
 
-DIRETRIZES DE DESIGN BASEADO NO CATÁLOGO REAL (MUITO IMPORTANTE):
-1. PADRÃO DAS ROUPAS QUE MAIS VENDEM NO ROBLOX:
-   - As camisas de maior sucesso comercial no Roblox são BÁSICAS, LIMPAS e USÁVEIS (estilo T-shirt clássica com manga curta e estampa frontal nítida).
-   - NUNCA cubra os braços inteiros com tecido ou faça parecer macacão/pijama de corpo inteiro a menos que seja explicitamente pedido "pijama" ou "macacão".
-   - shirtStyle: SEMPRE "short_sleeve" (manga curta) para camisas comuns/t-shirts. Use "long_sleeve" apenas para casacos/moletons, ou "crop_top" para tops curtos.
-   - Decote: gola careca clássica (crewneck) com recorte no pescoço para a cabeça do avatar.
-   - Estampa: centralizada e limpa no peito ("graphicTheme"), sem poluição visual.
+DIRETRIZES DE DESIGN TÉCNICO (MUITO IMPORTANTE):
+1. IDENTIFICAÇÃO DO TIPO DE PEÇA:
+   - SE FOR SAIA ("saia", "skirt", "plissada", "pleated", "jirai"):
+     * kind: ESTRITAMENTE "pants" (no Roblox, saias são sempre do tipo Pants clássica 2D).
+     * details: inclua sempre as características pedidas como "pleated-skirt", "safety-pin" (se pediu alfinete), "double-belt", "chains", "thigh-high-socks", "lace-trim".
+     * theme: "jirai_kei", "goth" ou "y2k".
+     * pattern: "pleated".
+   - SE FOR CALÇA ("calça", "pants", "cargo", "baggy", "jeans"):
+     * kind: "pants".
+     * details: ["baggy-cargo", "side-pockets", "straps", "chains"].
+   - SE FOR CAMISA/PARTE DE CIMA ("camisa", "shirt", "t-shirt", "moletom", "cropped", "jaqueta"):
+     * kind: "shirt" (ou "tshirt" apenas se for estampa pura).
+     * shirtStyle: "short_sleeve", "long_sleeve", "crop_top" ou "hoodie" conforme o pedido.
 
 2. NENHUMA MENÇÃO A TERCEIROS:
    - O sistema é 100% universal para a loja do criador: "${brandName}".
@@ -1710,31 +1728,35 @@ DIRETRIZES DE DESIGN BASEADO NO CATÁLOGO REAL (MUITO IMPORTANTE):
 3. PREÇO: ESTRITAMENTE 5 Robux (padrão oficial clássico para estimular compras em lote).
 
 4. RESPOSTA AO USUÁRIO (reply):
-   Em português. DEVE ser CURTO E DIRETO (máximo 1 a 2 frases curtas). Exemplo: "🔍 Pesquisei as tendências do catálogo e criei a T-Shirt básica [Nome] para sua loja!"
+   Em português NATURAL, DIRETO E HUMANO.
+   NUNCA use frases robóticas ou clichês de IA como "🔍 Pesquisei as tendências do catálogo e criei a peça...".
+   Responda de forma profissional e direta destacando os detalhes que você aplicou na peça.
+   Exemplo: "Desenvolvi a [Nome da Peça] com pregas plissadas, cinto duplo e alfinetes de segurança no estilo Jirai Kei pronta para sua loja!"
 
 5. TEMAS E PERSONAGENS:
+   - Jirai Kei / Goth: primaryColor: "#111111", accentColor: "#e4e4e7", theme: "jirai_kei", pattern: "pleated", details: ["pleated-skirt", "safety-pin", "double-belt", "chains", "thigh-high-socks"]
    - Minions: primaryColor: "#111111" ou "#facc15", graphicTheme: "minion_face", details: ["short-sleeve", "crewneck", "minion-graphic"]
    - Batman: primaryColor: "#0f172a", graphicTheme: "batman_logo", details: ["short-sleeve", "crewneck", "batman-logo"]
    - Spiderman: primaryColor: "#111111" ou "#dc2626", graphicTheme: "spider_logo", details: ["short-sleeve", "crewneck", "spider-logo"]
    - Hello Kitty: primaryColor: "#ffffff" ou "#111111", graphicTheme: "hellokitty", details: ["short-sleeve", "crewneck", "hellokitty-graphic"]
-   - Y2K / Streetwear: primaryColor: "#111111", graphicTheme: "chain_necklace", details: ["short-sleeve", "crewneck", "chains"]
+   - Y2K / Streetwear: primaryColor: "#111111", graphicTheme: "chain_necklace", details: ["chains", "streetwear"]
 
 RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fora do JSON):
 {
-  "title": "⋆ ˚｡⋆୨୧˚ minion cute basic tee ˚୨୧⋆｡˚ ⋆",
+  "title": "⋆ ˚｡⋆୨୧˚ jirai kei pleated skirt w/ safety pin ˚୨୧⋆｡˚ ⋆",
   "kind": "shirt" | "pants" | "tshirt",
   "shirtStyle": "short_sleeve" | "long_sleeve" | "crop_top" | "hoodie",
   "price": 5,
-  "theme": "minion" | "streetwear" | "y2k" | "goth" | "coquette" | "casual",
-  "graphicTheme": "minion_face" | "batman_logo" | "spider_logo" | "hellokitty" | "kuromi" | "chain_necklace" | "skull" | "heart" | "flame" | "star" | "none",
+  "theme": "jirai_kei" | "goth" | "streetwear" | "y2k" | "coquette" | "casual",
+  "graphicTheme": "chain_necklace" | "safety_pin" | "none",
   "graphicText": "",
   "primaryColor": "#111111",
-  "secondaryColor": "#27272a",
-  "accentColor": "#facc15",
-  "pattern": "solid" | "stripes" | "grunge" | "stars" | "acid_wash",
-  "details": ["short-sleeve", "crewneck", "minion-graphic"],
+  "secondaryColor": "#18181b",
+  "accentColor": "#e4e4e7",
+  "pattern": "pleated" | "solid" | "stripes" | "grunge" | "stars",
+  "details": ["pleated-skirt", "safety-pin", "double-belt", "chains"],
   "description": "...",
-  "reply": "🔍 Pesquisei o catálogo e desenvolvi a T-Shirt básica [Nome] para a sua loja!"
+  "reply": "Desenvolvi a [Nome da Peça] com pregas plissadas, cinto duplo e alfinetes de segurança pronta para a sua loja!"
 }`;
 
   try {
@@ -1757,9 +1779,7 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO no seguinte formato (sem texto adicional fo
           pattern: parsed.pattern || 'solid',
           details: Array.isArray(parsed.details) ? parsed.details : ['short-sleeve', 'crewneck'],
           description: parsed.description || generateEnhancedSeoDescription(parsed.title, undefined, targetGroupName),
-          reply: parsed.reply || (catalogResearch.length > 0
-            ? `🔍 Analisei as tendências do catálogo oficial e desenvolvi a **T-Shirt básica ${parsed.title}** para a sua loja!`
-            : `✨ Desenvolvi a **T-Shirt básica ${parsed.title}** com caimento oficial para a sua loja!`),
+          reply: parsed.reply || `Desenvolvi a peça **${parsed.title}** personalizada para sua loja!`,
           catalogResearch,
         };
       }

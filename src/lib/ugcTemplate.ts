@@ -225,6 +225,389 @@ async function renderClassicRobloxShirt(ctx: CanvasRenderingContext2D, spec: Ugc
 }
 
 /**
+ * Draws a realistic metallic safety pin (alfinete de segurança)
+ */
+function drawDetailedSafetyPin(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  angleRad: number,
+  color: string = "#e4e4e7"
+) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angleRad);
+
+  // Metallic shadow
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.55)";
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(2, 6);
+  ctx.lineTo(2, h - 4);
+  ctx.stroke();
+
+  // Pin wire (needle & back bar)
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.8;
+  // Back bar
+  ctx.beginPath();
+  ctx.moveTo(0, 6);
+  ctx.lineTo(0, h - 4);
+  ctx.stroke();
+
+  // Needle bar
+  ctx.beginPath();
+  ctx.moveTo(w - 2, 8);
+  ctx.lineTo(0, h - 4);
+  ctx.stroke();
+
+  // Coiled spring loop at base
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0, h - 3, 3, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Chrome head clasp
+  const headGrad = ctx.createLinearGradient(0, 0, w, 7);
+  headGrad.addColorStop(0, "#ffffff");
+  headGrad.addColorStop(0.3, color);
+  headGrad.addColorStop(0.8, "#71717a");
+  headGrad.addColorStop(1, "#3f3f46");
+  ctx.fillStyle = headGrad;
+  ctx.beginPath();
+  ctx.roundRect(-2, 0, w + 3, 7, 2);
+  ctx.fill();
+
+  // Clasp latch slit
+  ctx.fillStyle = "#09090b";
+  ctx.fillRect(w - 3, 2, 2, 4);
+
+  // Shiny metallic glint
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(1, 2.5, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+/**
+ * Draws a draped metallic ball/link chain in an elegant arc
+ */
+function drawDrapedChain(
+  ctx: CanvasRenderingContext2D,
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+  sag: number,
+  color: string = "#e4e4e7"
+) {
+  const steps = 14;
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const cx = startX + (endX - startX) * t;
+    const cy = startY + (endY - startY) * t + Math.sin(t * Math.PI) * sag;
+
+    // Chain link shadow
+    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.beginPath();
+    ctx.arc(cx + 0.5, cy + 0.5, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = i % 2 === 0 ? color : "#ffffff";
+    ctx.beginPath();
+    ctx.arc(cx, cy, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/**
+ * Draws a cute satin ribbon bow (Jirai Kei / Coquette style)
+ */
+function drawJiraiKeiBow(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  accentColor: string = "#e4e4e7"
+) {
+  ctx.save();
+  ctx.fillStyle = "#09090b";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+  ctx.lineWidth = 1;
+
+  // Left loop
+  ctx.beginPath();
+  ctx.ellipse(cx - 7, cy, 7, 4, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Right loop
+  ctx.beginPath();
+  ctx.ellipse(cx + 7, cy, 7, 4, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Tails
+  ctx.fillStyle = "#0c0c0e";
+  ctx.beginPath();
+  ctx.moveTo(cx - 2, cy + 2);
+  ctx.lineTo(cx - 6, cy + 12);
+  ctx.lineTo(cx - 1, cy + 8);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(cx + 2, cy + 2);
+  ctx.lineTo(cx + 6, cy + 12);
+  ctx.lineTo(cx + 1, cy + 8);
+  ctx.fill();
+
+  // Center metallic jewel
+  ctx.fillStyle = accentColor;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(cx - 0.7, cy - 0.7, 0.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+/**
+ * Renders a high-fashion, pixel-accurate Roblox Pleated Skirt (Jirai Kei / Goth / Y2K)
+ * Covers lower torso (Y: 124..202) and upper thighs with pleats, double belt, safety pins & meias 7/8
+ */
+export async function drawPleatedSkirt(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
+  const pColor = spec.primaryColor || "#111111"; // Deep black/charcoal fabric
+  const metalColor = spec.accentColor || "#e4e4e7"; // Polished chrome / silver
+  const waistColor = spec.secondaryColor || "#18181b"; // Leather belt / trim
+  const skinColor = "#f0d0be"; // Realistic natural avatar thigh skin
+  const sockColor = "#0d0d0f"; // Black thigh-high socks
+
+  const t = (spec.title || "").toLowerCase();
+  const d = (spec.details || []).map((x) => x.toLowerCase());
+  const isJiraiKei = t.includes("jirai") || t.includes("goth") || t.includes("y2k") || d.some((i) => i.includes("jirai") || i.includes("goth"));
+  const hasPins = t.includes("alfinete") || t.includes("pin") || d.some((i) => i.includes("pin") || i.includes("alfinete")) || isJiraiKei;
+  const hasChains = t.includes("cinto") || t.includes("corrente") || t.includes("chain") || isJiraiKei;
+
+  // Waist starts at high-waist position (Y = 124)
+  // Chest (Y = 74..123) is 100% TRANSPARENT so avatar shirt/skin is preserved
+  const waistY = 124;
+  const waistH = 14;
+  const skirtH = 202 - waistY; // ~78px down to lower torso bottom (Y = 202)
+
+  // 1. SKIRT BODY ON TORSO (Torso Front: 231, Back: 427, Right: 165, Left: 361)
+  const torsoPanels = [
+    { x: 165, w: 64, name: "right" },
+    { x: 231, w: 128, name: "front" },
+    { x: 361, w: 64, name: "left" },
+    { x: 427, w: 128, name: "back" },
+  ];
+
+  for (const p of torsoPanels) {
+    // Fill skirt base fabric
+    ctx.fillStyle = pColor;
+    ctx.fillRect(p.x, waistY, p.w, skirtH);
+
+    // Apply fabric texture & soft vertical shading
+    applyFabricTexture(ctx, p.x, waistY, p.w, skirtH);
+
+    // Render Crisp 3D Knife Pleats (Pregas Plissadas)
+    const pleatWidth = 11;
+    for (let px = p.x; px < p.x + p.w; px += pleatWidth) {
+      const curW = Math.min(pleatWidth, p.x + p.w - px);
+
+      // Pleat face gradient
+      const pleatGrad = ctx.createLinearGradient(px, waistY, px + curW, waistY);
+      pleatGrad.addColorStop(0, "rgba(255, 255, 255, 0.08)");
+      pleatGrad.addColorStop(0.5, "rgba(255, 255, 255, 0.02)");
+      pleatGrad.addColorStop(0.9, "rgba(0, 0, 0, 0.45)");
+      pleatGrad.addColorStop(1, "rgba(0, 0, 0, 0.7)");
+      ctx.fillStyle = pleatGrad;
+      ctx.fillRect(px, waistY + waistH, curW, skirtH - waistH);
+
+      // Sharp highlight on fold ridge
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(px, waistY + waistH);
+      ctx.lineTo(px, waistY + skirtH);
+      ctx.stroke();
+
+      // Deep shadow in the crease
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.65)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(px + curW - 0.5, waistY + waistH);
+      ctx.lineTo(px + curW - 0.5, waistY + skirtH);
+      ctx.stroke();
+    }
+
+    // Hem Lace Frill (Renda no babado da saia)
+    const hemY = waistY + skirtH;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+    for (let lx = p.x; lx < p.x + p.w; lx += 4) {
+      ctx.beginPath();
+      ctx.arc(lx + 2, hemY - 2, 2, 0, Math.PI);
+      ctx.fill();
+    }
+
+    // High Waistband (Cós alto de couro com costura dupla)
+    ctx.fillStyle = waistColor;
+    ctx.fillRect(p.x, waistY, p.w, waistH);
+    drawDoubleStitch(ctx, p.x, waistY + 1, p.w, true, "rgba(255, 255, 255, 0.15)");
+    drawDoubleStitch(ctx, p.x, waistY + waistH - 2, p.w, true, "rgba(255, 255, 255, 0.15)");
+
+    // Belt loops
+    for (let bx = p.x + 8; bx < p.x + p.w; bx += 24) {
+      ctx.fillStyle = "#0a0a0c";
+      ctx.fillRect(bx, waistY, 3, waistH);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+      ctx.strokeRect(bx, waistY, 3, waistH);
+    }
+  }
+
+  // Underside / Petticoat shorts (231, 204, 128, 64)
+  ctx.fillStyle = "#0c0c0e";
+  ctx.fillRect(231, 204, 128, 64);
+  applyFabricTexture(ctx, 231, 204, 128, 64);
+
+  // 2. FRONT TORSO HARDWARE: Belt Buckle, Grommets, Safety Pins, Chains & Ribbon
+  const frontX = 231;
+  const frontY = waistY;
+
+  // Double Leather Belt across front
+  ctx.fillStyle = "#0d0d0f";
+  ctx.fillRect(frontX + 10, frontY + 3, 108, 8);
+
+  // Silver Grommets (ilhoses metálicos) along the belt
+  for (let gx = frontX + 16; gx <= frontX + 112; gx += 12) {
+    ctx.strokeStyle = metalColor;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(gx, frontY + 7, 2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = "#050507";
+    ctx.beginPath();
+    ctx.arc(gx, frontY + 7, 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Silver Belt Buckle at center
+  ctx.strokeStyle = metalColor;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(frontX + 57, frontY + 1.5, 14, 11);
+  ctx.fillStyle = metalColor;
+  ctx.fillRect(frontX + 63, frontY + 4, 2, 6); // Prong
+
+  // SAFETY PINS (Alfinetes de Segurança) - Specifically requested!
+  if (hasPins) {
+    // Large prominent safety pin on Left-Front hip (X: 250..266, Y: 140..172)
+    drawDetailedSafetyPin(ctx, frontX + 26, frontY + 18, 14, 28, -0.2, metalColor);
+    // Second interlocking mini safety pin
+    drawDetailedSafetyPin(ctx, frontX + 34, frontY + 30, 10, 20, 0.35, metalColor);
+  }
+
+  // AESTHETIC CHAINS (Correntes drapeadas Jirai Kei)
+  if (hasChains) {
+    drawDrapedChain(ctx, frontX + 44, frontY + 11, frontX + 84, frontY + 11, 16, metalColor);
+    drawDrapedChain(ctx, frontX + 48, frontY + 11, frontX + 80, frontY + 11, 24, metalColor);
+  }
+
+  // Silk ribbon bow at center waist
+  drawJiraiKeiBow(ctx, frontX + 64, frontY + 14, metalColor);
+
+  // 3. LEGS: Skirt Flare, Thigh Skin, Thigh-High Socks (Meias 7/8), and Platform Shoes
+  // Leg Top Panels (217, 289, 64, 64) and (308, 289, 64, 64)
+  for (const tx of [217, 308]) {
+    // Upper thigh base skin
+    ctx.fillStyle = skinColor;
+    ctx.fillRect(tx, 289, 64, 64);
+    // Skirt shadow on top of thighs
+    ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+    ctx.fillRect(tx, 289, 64, 20);
+  }
+
+  // 8 Leg Panels:
+  // Right Leg: 19, 85, 151, 217
+  // Left Leg: 308, 374, 440, 506
+  const allLegPanels = [19, 85, 151, 217, 308, 374, 440, 506];
+
+  for (const lx of allLegPanels) {
+    // Upper thigh: exposed skin (Y: 355..400)
+    ctx.fillStyle = skinColor;
+    ctx.fillRect(lx, 355, 64, 45);
+    applyFabricTexture(ctx, lx, 355, 64, 45);
+
+    // Skirt flare overlap on top of thighs (Y: 355..372)
+    ctx.fillStyle = pColor;
+    ctx.fillRect(lx, 355, 64, 18);
+    // Skirt pleat shadows on thigh
+    ctx.strokeStyle = "rgba(0,0,0,0.5)";
+    for (let sx = lx; sx < lx + 64; sx += 11) {
+      ctx.strokeRect(sx, 355, 11, 18);
+    }
+    // Lace trim along skirt hem
+    ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+    for (let fx = lx; fx < lx + 64; fx += 4) {
+      ctx.beginPath();
+      ctx.arc(fx + 2, 372, 2, 0, Math.PI);
+      ctx.fill();
+    }
+
+    // Soft thigh shadow under skirt
+    const shadowGrad = ctx.createLinearGradient(lx, 373, lx, 385);
+    shadowGrad.addColorStop(0, "rgba(0, 0, 0, 0.35)");
+    shadowGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = shadowGrad;
+    ctx.fillRect(lx, 373, 64, 12);
+
+    // THIGH-HIGH SOCKS (Meias 7/8 Pretas): Y: 400..495
+    // Lace garter cuff at top of sock (Y: 400..408)
+    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.fillRect(lx, 400, 64, 4);
+    ctx.fillStyle = "#1e1e24";
+    ctx.fillRect(lx, 404, 64, 4);
+
+    // Sock Body (Y: 408..495)
+    ctx.fillStyle = sockColor;
+    ctx.fillRect(lx, 408, 64, 87);
+    applyFabricTexture(ctx, lx, 408, 64, 87);
+
+    // Ribbed sock vertical weave
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+    ctx.lineWidth = 1;
+    for (let rx = lx + 4; rx < lx + 64; rx += 5) {
+      ctx.beginPath();
+      ctx.moveTo(rx, 408);
+      ctx.lineTo(rx, 495);
+      ctx.stroke();
+    }
+
+    // PLATFORM MARY JANE SHOES (Y: 495..535)
+    ctx.fillStyle = "#050507"; // Glossy black leather shoe
+    ctx.fillRect(lx, 495, 64, 40);
+    // Platform sole
+    ctx.fillStyle = "#121216";
+    ctx.fillRect(lx, 525, 64, 10);
+    // White sock cuff peeking or silver shoe buckle
+    ctx.fillStyle = metalColor;
+    ctx.fillRect(lx + 24, 502, 16, 4);
+  }
+
+  // Feet Bottoms (R: 217, 485 | L: 308, 485)
+  for (const bx of [217, 308]) {
+    ctx.fillStyle = "#050507";
+    ctx.fillRect(bx, 485, 64, 64);
+  }
+}
+
+/**
  * Renders authentic, clean Roblox Pants / Jeans / Cargo / Skirt
  */
 async function renderClassicRobloxPants(ctx: CanvasRenderingContext2D, spec: UgcDesignSpec) {
@@ -233,10 +616,9 @@ async function renderClassicRobloxPants(ctx: CanvasRenderingContext2D, spec: Ugc
   const waistColor = spec.secondaryColor || "#09090b";
 
   const tx = 231;
-  const ty = 74;
   const t = (spec.title || "").toLowerCase();
-  const d = spec.details || [];
-  const isSkirt = d.some((i) => i.includes("skirt") || i.includes("pleated")) || t.includes("skirt") || t.includes("saia");
+  const d = (spec.details || []).map((x) => x.toLowerCase());
+  const isSkirt = d.some((i) => i.includes("skirt") || i.includes("saia") || i.includes("pleat")) || t.includes("skirt") || t.includes("saia") || t.includes("jirai");
   const isMinion = t.includes("minion") || spec.theme.includes("minion");
 
   if (isMinion) {
@@ -244,42 +626,51 @@ async function renderClassicRobloxPants(ctx: CanvasRenderingContext2D, spec: Ugc
     return;
   }
 
-  // Pelvis Panels (Y = 74, Height = 128)
+  if (isSkirt) {
+    await drawPleatedSkirt(ctx, spec);
+    return;
+  }
+
+  // Regular pants: waist starts at Y = 130 (lower torso), chest Y: 74..129 is transparent!
+  const waistY = 130;
+  const pelvisH = 202 - waistY;
+
+  // Pelvis Panels (Lower Torso Y = 130..202)
   ctx.fillStyle = baseColor;
-  ctx.fillRect(tx, ty, 128, 128); // Front
-  ctx.fillRect(427, ty, 128, 128); // Back
-  ctx.fillRect(165, ty, 64, 128);  // Right
-  ctx.fillRect(361, ty, 64, 128);  // Left
+  ctx.fillRect(tx, waistY, 128, pelvisH); // Front
+  ctx.fillRect(427, waistY, 128, pelvisH); // Back
+  ctx.fillRect(165, waistY, 64, pelvisH);  // Right
+  ctx.fillRect(361, waistY, 64, pelvisH);  // Left
   ctx.fillRect(231, 204, 128, 64); // Crotch underside
-  applyFabricTexture(ctx, tx, ty, 128, 128);
+  applyFabricTexture(ctx, tx, waistY, 128, pelvisH);
 
   // Waistband
   ctx.fillStyle = waistColor;
-  ctx.fillRect(tx, ty, 128, 12);
-  ctx.fillRect(427, ty, 128, 12);
-  ctx.fillRect(165, ty, 64, 12);
-  ctx.fillRect(361, ty, 64, 12);
+  ctx.fillRect(tx, waistY, 128, 12);
+  ctx.fillRect(427, waistY, 128, 12);
+  ctx.fillRect(165, waistY, 64, 12);
+  ctx.fillRect(361, waistY, 64, 12);
 
   // Belt Buckle
   ctx.fillStyle = seamColor;
-  ctx.fillRect(tx + 58, ty + 2, 12, 8);
+  ctx.fillRect(tx + 58, waistY + 2, 12, 8);
   ctx.fillStyle = "#09090b";
-  ctx.fillRect(tx + 61, ty + 3.5, 6, 5);
+  ctx.fillRect(tx + 61, waistY + 3.5, 6, 5);
 
   // Fly Zipper & Front Pockets
   ctx.strokeStyle = `${seamColor}77`;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(tx + 64, ty + 12);
-  ctx.lineTo(tx + 64, ty + 60);
+  ctx.moveTo(tx + 64, waistY + 12);
+  ctx.lineTo(tx + 64, waistY + 54);
   ctx.stroke();
 
   ctx.beginPath();
-  ctx.arc(tx + 22, ty + 12, 16, 0, 0.5 * Math.PI);
-  ctx.arc(tx + 106, ty + 12, 16, 0.5 * Math.PI, Math.PI);
+  ctx.arc(tx + 22, waistY + 12, 16, 0, 0.5 * Math.PI);
+  ctx.arc(tx + 106, waistY + 12, 16, 0.5 * Math.PI, Math.PI);
   ctx.stroke();
 
-  // Leg Tops (Thigh tops)
+  // Leg Tops (Thigh tops: 217, 289, 64, 64 & 308, 289, 64, 64)
   ctx.fillStyle = baseColor;
   ctx.fillRect(217, 289, 64, 64);
   ctx.fillRect(308, 289, 64, 64);
@@ -288,7 +679,7 @@ async function renderClassicRobloxPants(ctx: CanvasRenderingContext2D, spec: Ugc
 
   // Legs Panels (Y = 355)
   const legPanels = [19, 85, 151, 217, 308, 374, 440, 506];
-  const legHeight = isSkirt ? 56 : 128;
+  const legHeight = 128;
 
   for (const lx of legPanels) {
     ctx.fillStyle = baseColor;
@@ -307,25 +698,12 @@ async function renderClassicRobloxPants(ctx: CanvasRenderingContext2D, spec: Ugc
     ctx.stroke();
   }
 
-  // Feet / shoes bottom (if full pants)
-  if (!isSkirt) {
-    ctx.fillStyle = baseColor;
-    ctx.fillRect(217, 485, 64, 64);
-    ctx.fillRect(308, 485, 64, 64);
-    applyFabricTexture(ctx, 217, 485, 64, 64);
-    applyFabricTexture(ctx, 308, 485, 64, 64);
-  }
-
-  if (isSkirt) {
-    ctx.strokeStyle = `${waistColor}cc`;
-    ctx.lineWidth = 1.5;
-    for (let px = tx + 12; px < tx + 116; px += 10) {
-      ctx.beginPath();
-      ctx.moveTo(px, ty + 12);
-      ctx.lineTo(px, ty + 104);
-      ctx.stroke();
-    }
-  }
+  // Feet / shoes bottom (Full pants)
+  ctx.fillStyle = baseColor;
+  ctx.fillRect(217, 485, 64, 64);
+  ctx.fillRect(308, 485, 64, 64);
+  applyFabricTexture(ctx, 217, 485, 64, 64);
+  applyFabricTexture(ctx, 308, 485, 64, 64);
 }
 
 /**
@@ -1089,6 +1467,19 @@ export async function renderAvatarPreview(
       ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
       ctx.shadowBlur = 8;
       ctx.shadowOffsetY = 3;
+
+      if (kind === "pants") {
+        // Base bare torso & clean white crop cami on upper chest so skirts/pants look natural and gorgeous
+        ctx.fillStyle = skinColor;
+        ctx.fillRect(116, 76, 68, 72);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(116, 76, 68, 30);
+        // Scoop neckline on top
+        ctx.fillStyle = skinColor;
+        ctx.beginPath();
+        ctx.ellipse(150, 76, 12, 6, 0, 0, Math.PI);
+        ctx.fill();
+      }
 
       // Draw front torso slice from template: (231, 74, 128, 128) -> (116, 76, 68, 72)
       ctx.drawImage(img, 231, 74, 128, 128, 116, 76, 68, 72);
