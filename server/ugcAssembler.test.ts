@@ -43,3 +43,17 @@ test("writes mesh and texture ids into the Accessory", () => {
   assert.match(xml, /rbxassetid:\/\/22/);
   assert.match(xml, /HairAttachment/);
 });
+
+test("emits <null></null> instead of rbxassetid://0 for empty or zero ids", () => {
+  const xml = buildAccessoryRbxmx({
+    name: "Crown Test",
+    accessoryType: "Hat",
+    meshId: "0",
+    textureId: "",
+    handle: { x: 1, y: 1, z: 1 },
+    attachY: 0.1,
+  });
+  assert.match(xml, /<Content name="MeshId"><null><\/null><\/Content>/);
+  assert.match(xml, /<Content name="TextureId"><null><\/null><\/Content>/);
+  assert.doesNotMatch(xml, /rbxassetid:\/\/0/);
+});

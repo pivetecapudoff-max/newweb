@@ -244,8 +244,8 @@ export function UploadPage() {
         setUgcTexture(t);
         if (s.name) setName(s.name);
         if (s.accessoryType) setUgcType(s.accessoryType);
-        if (s.meshId) setUgcMeshId(s.meshId);
-        if (s.textureId) setUgcTextureId(s.textureId);
+        if (s.meshId || s.assetId) setUgcMeshId(s.meshId || s.assetId);
+        if (s.textureId || s.assetId) setUgcTextureId(s.textureId || s.assetId);
         void refreshUgcPreview(m, t, s.accessoryType || ugcType);
       } else if (s.mode === "2d" && s.image) {
         setActiveTab("upload");
@@ -1393,14 +1393,41 @@ export function UploadPage() {
                   </select>
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-white/60">
+                      Mesh ID (Malha 3D)
+                    </label>
+                    <input
+                      type="text"
+                      value={ugcMeshId ? String(ugcMeshId) : ""}
+                      onChange={(e) => setUgcMeshId(e.target.value.trim() || null)}
+                      placeholder="ID da malha (auto se clonado)"
+                      className="w-full rounded-xl bg-[#0f0f0f] border border-white/[0.08] px-3.5 py-2.5 text-xs text-white outline-none font-mono focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-white/60">
+                      Texture ID (Original)
+                    </label>
+                    <input
+                      type="text"
+                      value={ugcTextureId ? String(ugcTextureId) : ""}
+                      onChange={(e) => setUgcTextureId(e.target.value.trim() || null)}
+                      placeholder="Auto na sua conta (ou ID original)"
+                      className="w-full rounded-xl bg-[#0f0f0f] border border-white/[0.08] px-3.5 py-2.5 text-xs text-white outline-none font-mono focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                </div>
+
                 {/* Sub-Asset Ownership Guidance */}
                 <div className="rounded-xl bg-blue-500/10 border border-blue-500/20 p-3.5 text-xs text-blue-300 space-y-1 backdrop-blur-sm">
                   <div className="flex items-center gap-2 font-bold text-blue-200">
                     <Sparkles className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                    <span>Titularidade de IDs (Roblox Marketplace)</span>
+                    <span>Titularidade de IDs (Roblox Studio &amp; Marketplace)</span>
                   </div>
                   <p className="text-[11px] text-blue-200/75 leading-relaxed">
-                    O Roblox exige que todos os sub-assets (malha e textura) pertençam à conta que vai postar. O Farol envia a textura como Decal próprio na sua conta e calibra o Attachment oficial para publicação no Studio com 1 clique.
+                    O Roblox exige que todos os sub-assets pertençam à conta que vai postar. O Farol envia a textura na sua conta gerando um Image Asset ID autêntico (sem erro de Asset Type no Studio). A malha é configurada para validação limpa sem erro de Asset '0'.
                   </p>
                 </div>
 

@@ -295,8 +295,8 @@ export function CopyPage() {
           textureName: hashMutated ? "texture_mutated.png" : (texFile?.name || "texture.png"),
           name: result.name,
           accessoryType: result.type,
-          meshId: result.meshId,
-          textureId: result.textureId,
+          meshId: result.meshId || result.assetId,
+          textureId: result.textureId || result.assetId,
         },
       });
     } catch (err: any) {

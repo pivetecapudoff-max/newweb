@@ -348,23 +348,34 @@ def download_ugc_item(asset_id_or_url: str, output_dir: str = "downloads", cooki
 
         # Localiza IDs de Mesh e Textura no pacote
         found_ids = set()
-        for m in re.findall(rb"rbxassetid://(\d+)", pkg_data):
-            found_ids.add(m.decode())
-        for m in re.findall(rb"id=(\d+)", pkg_data):
-            found_ids.add(m.decode())
+        explicit_mesh_id = None
+        explicit_texture_id = None
 
-        if pkg_data.startswith(b"<roblox"):
+        if pkg_data.startswith(b"<roblox") or b"<roblox" in pkg_data[:200]:
             text = pkg_data.decode("utf-8", errors="ignore")
+            mesh_match = re.search(r'<Content name="MeshId">\s*<url>.*?(?:id=|\/\/)(\d+).*?</url>\s*</Content>', text, re.IGNORECASE)
+            tex_match = re.search(r'<Content name="TextureId">\s*<url>.*?(?:id=|\/\/)(\d+).*?</url>\s*</Content>', text, re.IGNORECASE)
+            if mesh_match:
+                explicit_mesh_id = mesh_match.group(1)
+                found_ids.add(explicit_mesh_id)
+            if tex_match:
+                explicit_texture_id = tex_match.group(1)
+                found_ids.add(explicit_texture_id)
             for m in re.findall(r"<url>(.*?)</url>", text):
                 match_id = re.search(r"(\d+)", m)
                 if match_id:
                     found_ids.add(match_id.group(1))
 
+        for m in re.findall(rb"rbxassetid://(\d+)", pkg_data):
+            found_ids.add(m.decode())
+        for m in re.findall(rb"id=(\d+)", pkg_data):
+            found_ids.add(m.decode())
+
         found_ids.discard(asset_id)
         print(f"[*] IDs de sub-assets encontrados: {list(found_ids)}")
 
         mesh_data, texture_data = None, None
-        mesh_id, texture_id = None, None
+        mesh_id, texture_id = explicit_mesh_id, explicit_texture_id
 
         for sub_id in found_ids:
             try:
@@ -377,6 +388,24 @@ def download_ugc_item(asset_id_or_url: str, output_dir: str = "downloads", cooki
                     texture_data = sub_bytes
                     texture_id = sub_id
                     print(f"   -> [Textura detectada] ID: {sub_id} (Tamanho: {len(sub_bytes)} bytes)")
+                elif sub_bytes.startswith(b"<roblox") or sub_bytes.startswith(b"<?xml"):
+                    # Desempacota XML de Decal ou Mesh referenciado
+                    xml_str = sub_bytes.decode("utf-8", errors="ignore")
+                    nested_match = re.search(r"<url>.*?(?:id=|\/\/)(\d+).*?</url>", xml_str, re.IGNORECASE)
+                    if nested_match:
+                        nested_id = nested_match.group(1)
+                        try:
+                            nested_bytes = fetch_bytes(f"https://assetdelivery.roblox.com/v1/asset/?id={nested_id}", cookie=cookie)
+                            if nested_bytes.startswith(b"\x89PNG") or nested_bytes.startswith(b"\xff\xd8\xff"):
+                                texture_data = nested_bytes
+                                texture_id = nested_id
+                                print(f"   -> [Textura Desempacotada de Decal] ID Real da Imagem: {nested_id}")
+                            elif nested_bytes.startswith(b"version ") or b"COREMESH" in nested_bytes or b"DRACO" in nested_bytes:
+                                mesh_data = nested_bytes
+                                mesh_id = nested_id
+                                print(f"   -> [Mesh Desempacotada] ID: {nested_id}")
+                        except Exception:
+                            pass
             except Exception as e:
                 print(f"   -> Aviso: Não foi possível carregar sub-asset {sub_id}: {e}")
 
@@ -390,8 +419,8 @@ def download_ugc_item(asset_id_or_url: str, output_dir: str = "downloads", cooki
             except Exception:
                 pass
 
-        result["mesh_id"] = mesh_id
-        result["texture_id"] = texture_id
+        result["mesh_id"] = mesh_id or asset_id
+        result["texture_id"] = texture_id or asset_id
 
         # Salva textura
         tex_filename = "texture.png"

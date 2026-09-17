@@ -233,8 +233,16 @@ export function buildAccessoryRbxmx(input: {
   attachY: number;
 }): string {
   const attachment = ATTACHMENT[input.accessoryType] || "HatAttachment";
-  const meshUrl = `rbxassetid://${input.meshId}`;
-  const textureUrl = `rbxassetid://${input.textureId}`;
+  const meshStr = String(input.meshId || "").trim();
+  const texStr = String(input.textureId || "").trim();
+  const hasValidMesh = meshStr !== "" && meshStr !== "0" && meshStr !== "PENDING_MESH";
+  const hasValidTexture = texStr !== "" && texStr !== "0" && texStr !== "PENDING_TEXTURE";
+  const meshContent = hasValidMesh
+    ? `<Content name="MeshId"><url>rbxassetid://${meshStr}</url></Content>`
+    : `<Content name="MeshId"><null></null></Content>`;
+  const textureContent = hasValidTexture
+    ? `<Content name="TextureId"><url>rbxassetid://${texStr}</url></Content>`
+    : `<Content name="TextureId"><null></null></Content>`;
   return `<?xml version="1.0" encoding="utf-8"?>
 <roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
   <Item class="Accessory">
@@ -259,8 +267,8 @@ export function buildAccessoryRbxmx(input: {
       <Item class="SpecialMesh">
         <Properties>
           <token name="MeshType">5</token>
-          <Content name="MeshId"><url>${meshUrl}</url></Content>
-          <Content name="TextureId"><url>${textureUrl}</url></Content>
+          ${meshContent}
+          ${textureContent}
           <Vector3 name="Scale">
             <X>1</X>
             <Y>1</Y>

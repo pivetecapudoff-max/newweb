@@ -762,6 +762,35 @@ async function uploadMeshAsset(
   );
 }
 
+async function resolveImageIdFromDecal(
+  cookie: string,
+  decalId: string | number
+): Promise<string | null> {
+  const headers: Record<string, string> = {
+    "User-Agent": "Roblox/WinInet",
+    "Cookie": `.ROBLOSECURITY=${cookie}`,
+    "Accept": "text/xml, application/xml, */*",
+  };
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      if (attempt > 1) {
+        await sleep(1500);
+      }
+      const res = await fetch(`https://assetdelivery.roblox.com/v1/asset/?id=${decalId}`, { headers });
+      if (!res.ok) continue;
+      const text = await res.text();
+      const match = text.match(/<url>.*?(?:id=|\/\/)(\d+).*?<\/url>/i) || text.match(/id=(\d+)/i);
+      if (match && match[1] && match[1] !== String(decalId)) {
+        console.log(`[Upload] Decal ${decalId} resolvido para ID Real da Imagem: ${match[1]}`);
+        return match[1];
+      }
+    } catch (err: any) {
+      console.warn(`[Upload] Tentativa ${attempt} de resolução do Image ID a partir do Decal ${decalId}:`, err?.message);
+    }
+  }
+  return null;
+}
+
 async function fetchRobux(cookie: string, userId: number): Promise<number | null> {
   try {
     const result = await robloxSend(cookie, `https://economy.roblox.com/v1/users/${userId}/currency`, {
@@ -911,9 +940,9 @@ async function processJob(job: UploadJob): Promise<void> {
     let meshId: string | number | null = null;
 
     if (job.meshFilePath && job.textureFilePath) {
-      // 1. Textura: envia como Decal na conta/grupo do usuário para garantir ID de sua titularidade
+      // 1. Textura: envia como Decal na conta/grupo do usuário e resolve o Image Asset ID real
       try {
-        textureId = await uploadNamedAsset(
+        const uploadedDecalId = await uploadNamedAsset(
           account.cookie,
           account.userId,
           job.groupId,
@@ -924,15 +953,25 @@ async function processJob(job: UploadJob): Promise<void> {
           "texture.png",
           "image/png"
         );
+        console.log(`[Upload] Decal criado (${uploadedDecalId}). Resolvendo Image Asset ID real...`);
+        const resolvedImageId = await resolveImageIdFromDecal(account.cookie, uploadedDecalId);
+        if (resolvedImageId) {
+          textureId = resolvedImageId;
+          console.log(`[Upload] Image Asset ID resolvido com sucesso: ${textureId}`);
+        } else if (job.textureId && /^\d+$/.test(String(job.textureId).trim()) && String(job.textureId).trim() !== "0") {
+          textureId = String(job.textureId).trim();
+        } else {
+          textureId = uploadedDecalId;
+        }
       } catch (texErr: any) {
         console.warn("[Upload] Warning uploading texture decal to account:", texErr?.message);
-        if (job.textureId && /^\d+$/.test(String(job.textureId).trim())) {
+        if (job.textureId && /^\d+$/.test(String(job.textureId).trim()) && String(job.textureId).trim() !== "0") {
           textureId = String(job.textureId).trim();
         }
       }
 
-      // 2. Malha: tenta upload via API se suportado ou usa o ID fornecido
-      if (job.meshId && /^\d+$/.test(String(job.meshId).trim())) {
+      // 2. Malha: usa o ID fornecido (do cloner/catálogo) ou tenta upload via API
+      if (job.meshId && /^\d+$/.test(String(job.meshId).trim()) && String(job.meshId).trim() !== "0") {
         meshId = String(job.meshId).trim();
       } else {
         try {
@@ -949,12 +988,12 @@ async function processJob(job: UploadJob): Promise<void> {
         }
       }
 
-      // 3. Monta o .rbxmx oficial Studio-Ready com o TextureId da sua conta e Attachment calibrado
+      // 3. Monta o .rbxmx oficial Studio-Ready com o Image ID da sua conta e Attachment calibrado
       const rbxmx = buildAccessoryRbxmx({
         name: job.name,
         accessoryType: (job.accessoryType && job.accessoryType !== "Unknown" ? job.accessoryType : "Hat"),
-        meshId: meshId || "0",
-        textureId: textureId || "0",
+        meshId: meshId || "",
+        textureId: textureId || "",
         handle: {
           x: job.handleX || 1,
           y: job.handleY || 1,
@@ -986,7 +1025,7 @@ async function processJob(job: UploadJob): Promise<void> {
 
     const thumbnailUrl = assetId ? await waitForCatalogThumb(assetId) : null;
     const saleWarning =
-      "Acessório montado & salvo! Textura própria criada na sua conta. Para publicar no Marketplace: abra o .rbxmx no Studio → Save to Roblox → Avatar Item.";
+      "Acessório Studio-Ready montado! Textura própria (Image) vinculada à sua conta. Para publicar no Marketplace: abra o .rbxmx no Studio → Salvar na Roblox como Avatar Item.";
 
     patchJob(job.id, {
       status: "live",
