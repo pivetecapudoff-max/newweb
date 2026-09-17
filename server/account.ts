@@ -8,13 +8,14 @@ import {
   type StoredAccount,
   type StoredOps,
 } from "./context.js";
-import { isHosted } from "./host.js";
+import { isDesktopRuntime, isHosted } from "./host.js";
 
 export type { StoredAccount, StoredOps };
 
 const rootDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dataDir = path.join(rootDir, "data");
 const accountsDir = path.join(dataDir, "accounts");
+const desktopAccountFile = path.join(dataDir, "desktop-account.json");
 
 const EMPTY_OPS: StoredOps = {
   sessionUploads: 0,
@@ -81,13 +82,42 @@ export function deleteAccountForDiscordUser(discordId: string): void {
   } catch {}
 }
 
+function loadDesktopAccount(): StoredAccount | null {
+  try {
+    if (!existsSync(desktopAccountFile)) return null;
+    const raw = JSON.parse(readFileSync(desktopAccountFile, "utf8")) as StoredAccount;
+    if (!raw?.cookie || !raw.userId) return null;
+    return {
+      ...raw,
+      ops: { ...EMPTY_OPS, ...(raw.ops || {}) },
+    };
+  } catch {
+    return null;
+  }
+}
+
+function saveDesktopAccount(account: StoredAccount): void {
+  mkdirSync(dataDir, { recursive: true });
+  writeFileSync(desktopAccountFile, JSON.stringify(account, null, 2), "utf8");
+}
+
+function deleteDesktopAccount(): void {
+  try {
+    if (existsSync(desktopAccountFile)) unlinkSync(desktopAccountFile);
+  } catch {}
+}
+
 export function loadAccount(): StoredAccount | null {
   const store = getAuthStore();
-  if (!store) return null;
-  if (store.account) return store.account;
-  if (store.discord?.id) {
+  if (store?.account) return store.account;
+  if (store?.discord?.id) {
     const acc = loadAccountForDiscordUser(store.discord.id);
-    store.account = acc;
+    if (store) store.account = acc;
+    return acc;
+  }
+  if (isDesktopRuntime()) {
+    const acc = loadDesktopAccount();
+    if (store) store.account = acc;
     return acc;
   }
   return null;
@@ -104,6 +134,11 @@ export async function loadAccountForOwner(ownerDiscordId?: string | null): Promi
 export async function saveAccount(account: StoredAccount): Promise<void> {
   const store = getAuthStore();
   const discord = store?.discord || currentDiscord();
+  if (!discord?.id && isDesktopRuntime()) {
+    if (store) store.account = account;
+    saveDesktopAccount(account);
+    return;
+  }
   if (!discord?.id) {
     throw new Error("Faça login com o Discord primeiro para conectar sua conta Roblox.");
   }
@@ -117,6 +152,11 @@ export async function saveAccount(account: StoredAccount): Promise<void> {
 
 export async function clearAccount(): Promise<void> {
   const store = getAuthStore();
+  if (isDesktopRuntime() && !store?.discord?.id && !currentDiscord()?.id) {
+    if (store) store.account = null;
+    deleteDesktopAccount();
+    return;
+  }
   const discord = store?.discord || currentDiscord();
   if (store) store.account = null;
   if (discord?.id) {
@@ -131,7 +171,7 @@ export async function clearAccount(): Promise<void> {
 export function publicAccount() {
   const account = loadAccount();
   const discord = currentDiscord();
-  if (!account || !discord) {
+  if (!account || (!discord && !isDesktopRuntime())) {
     return {
       connected: false,
       userId: null,
@@ -139,7 +179,7 @@ export function publicAccount() {
       displayName: null,
       connectedAt: null,
       ops: { ...EMPTY_OPS },
-      discordEnabled: true,
+      discordEnabled: !isDesktopRuntime(),
       discord: discord || null,
       hosted: isHosted(),
     };
@@ -151,7 +191,7 @@ export function publicAccount() {
     displayName: account.displayName,
     connectedAt: account.connectedAt,
     ops: account.ops,
-    discordEnabled: true,
+    discordEnabled: !isDesktopRuntime(),
     discord,
     hosted: isHosted(),
   };

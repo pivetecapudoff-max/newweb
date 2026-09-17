@@ -551,7 +551,7 @@ export function UgcCreatorView() {
                         </button>
                       </div>
                       <span className="text-[10px] font-mono text-white/40">
-                        {previewTabs[msg.id] === "template" ? "585 × 559 px" : "Roblox 3D (R6/R15)"}
+                        {previewTabs[msg.id] === "template" ? "585 × 559 px" : "Roblox R6 3D"}
                       </span>
                     </div>
 

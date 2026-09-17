@@ -30,6 +30,10 @@ export function isSecureRequest(req?: Request): boolean {
   return requestOrigin(req).startsWith("https://");
 }
 
+export function isDesktopRuntime(): boolean {
+  return process.env.FAROL_DESKTOP === "1";
+}
+
 export function listenTarget(): { port: number; host: string; hosted: boolean } {
   const hosted = Boolean(process.env.PORT) || isHosted();
   return {

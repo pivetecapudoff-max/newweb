@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Lock } from "lucide-react";
+import { isFarolDesktop } from "../lib/desktop";
 
 interface CloudflareGateProps {
   children: React.ReactNode;
@@ -150,7 +151,7 @@ export function CloudflareGate({ children }: CloudflareGateProps) {
     };
   }, [cleared, siteKey]);
 
-  if (cleared) {
+  if (cleared || isLocal || isFarolDesktop()) {
     return <>{children}</>;
   }
 

@@ -1780,11 +1780,16 @@ async function buildAvatarCompositeTexture(
       ctx.fillRect(lx, 355 + 104, 64, 24);
     }
   } else {
-    ctx.fillStyle = "#18181b";
+    // Classic T-shirts are square decals applied only to the torso front.
+    // Build the other body faces here so the preview matches that behavior.
+    ctx.fillStyle = "#f4f4f5";
+    ctx.fillRect(231, 8, 128, 64);
     ctx.fillRect(231, 74, 128, 128);
     ctx.fillRect(427, 74, 128, 128);
     ctx.fillRect(165, 74, 64, 128);
     ctx.fillRect(361, 74, 64, 128);
+    ctx.fillRect(231, 204, 128, 64);
+
   }
 
   if (templateDataUrl) {
@@ -1792,7 +1797,11 @@ async function buildAvatarCompositeTexture(
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.onload = () => {
-        ctx.drawImage(img, 0, 0, 585, 559);
+        if (kind === "tshirt") {
+          ctx.drawImage(img, 231, 74, 128, 128);
+        } else {
+          ctx.drawImage(img, 0, 0, 585, 559);
+        }
         resolve();
       };
       img.onerror = () => resolve();
@@ -1835,8 +1844,8 @@ export async function renderAvatarPreview(
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-    camera.position.set(0, 0.4, 7.0);
-    camera.lookAt(0, 0.1, 0);
+    camera.position.set(0, 0.35, 8.0);
+    camera.lookAt(0, -0.15, 0);
 
     // Studio Lighting
     scene.add(new THREE.AmbientLight(0xffffff, 0.85));
@@ -1896,6 +1905,9 @@ export async function renderAvatarPreview(
     // Composite Clothing Texture
     const compTex = await buildAvatarCompositeTexture(templateDataUrl, kind);
     const clothingMat = new THREE.MeshStandardMaterial({ map: compTex, roughness: 0.4, metalness: 0.08 });
+    const pantsMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.55 });
+    const armMat = kind === "shirt" ? clothingMat : skinMat;
+    const legMat = kind === "pants" ? clothingMat : pantsMat;
 
     // Torso, Arms, Legs with Roblox UVs
     const torsoGeo = new THREE.BoxGeometry(2, 2, 1);
@@ -1919,7 +1931,7 @@ export async function renderAvatarPreview(
       front: [217, 355, 64, 128],
       back: [85, 355, 64, 128],
     });
-    const rArm = new THREE.Mesh(rArmGeo, clothingMat);
+    const rArm = new THREE.Mesh(rArmGeo, armMat);
     rArm.position.set(-1.5, 0, 0);
     avatar.add(rArm);
 
@@ -1932,7 +1944,7 @@ export async function renderAvatarPreview(
       front: [308, 355, 64, 128],
       back: [440, 355, 64, 128],
     });
-    const lArm = new THREE.Mesh(lArmGeo, clothingMat);
+    const lArm = new THREE.Mesh(lArmGeo, armMat);
     lArm.position.set(1.5, 0, 0);
     avatar.add(lArm);
 
@@ -1945,7 +1957,7 @@ export async function renderAvatarPreview(
       front: [217, 355, 64, 128],
       back: [85, 355, 64, 128],
     });
-    const rLeg = new THREE.Mesh(rLegGeo, clothingMat);
+    const rLeg = new THREE.Mesh(rLegGeo, legMat);
     rLeg.position.set(-0.5, -2, 0);
     avatar.add(rLeg);
 
@@ -1958,7 +1970,7 @@ export async function renderAvatarPreview(
       front: [308, 355, 64, 128],
       back: [440, 355, 64, 128],
     });
-    const lLeg = new THREE.Mesh(lLegGeo, clothingMat);
+    const lLeg = new THREE.Mesh(lLegGeo, legMat);
     lLeg.position.set(0.5, -2, 0);
     avatar.add(lLeg);
 
@@ -1971,6 +1983,9 @@ export async function renderAvatarPreview(
     lArmGeo.dispose();
     rLegGeo.dispose();
     lLegGeo.dispose();
+    compTex.dispose();
+    clothingMat.dispose();
+    pantsMat.dispose();
 
     return dataUrl;
   } catch (err) {

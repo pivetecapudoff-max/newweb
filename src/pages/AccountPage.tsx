@@ -33,6 +33,7 @@ import {
 import { motion } from "motion/react";
 import { DotButton } from "../components/ui/DotButton";
 import { CloudflareTurnstile } from "../components/CloudflareTurnstile";
+import { isFarolDesktop } from "../lib/desktop";
 
 export function AccountPage() {
   const navigate = useNavigate();
@@ -671,11 +672,12 @@ export function AccountPage() {
               </div>
             )}
 
-            {/* Cloudflare Turnstile Anti-Bot Protection */}
-            <CloudflareTurnstile
-              onSuccess={(token) => setTurnstileToken(token)}
-              onExpire={() => setTurnstileToken("")}
-            />
+            {!isFarolDesktop() && (
+              <CloudflareTurnstile
+                onSuccess={(token) => setTurnstileToken(token)}
+                onExpire={() => setTurnstileToken("")}
+              />
+            )}
 
             <DotButton
               type="submit"

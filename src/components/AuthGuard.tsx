@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { fetchAccount } from "../lib/api";
+import { isFarolDesktop } from "../lib/desktop";
 
 export function AuthGuard() {
   const [loading, setLoading] = useState(true);
@@ -13,7 +14,7 @@ export function AuthGuard() {
     fetchAccount()
       .then((account) => {
         if (!alive) return;
-        if (account && account.discord) {
+        if (account?.discord || account?.discordEnabled === false || isFarolDesktop()) {
           setIsAuth(true);
         } else {
           setIsAuth(false);
@@ -31,6 +32,10 @@ export function AuthGuard() {
       alive = false;
     };
   }, [location.pathname]);
+
+  if (isFarolDesktop()) {
+    return <Outlet />;
+  }
 
   if (loading) {
     return (

@@ -6,6 +6,8 @@ data/queue/
 !data/.gitkeep
 public/*.zip
 public/downloads/
+dist/downloads/
+dist/*.zip
 artifacts/
 .codex-change/
 scratch_test.txt

@@ -17,7 +17,7 @@ export async function verifyTurnstile(
   ip?: string
 ): Promise<{ success: boolean; error?: string }> {
   // If explicitly disabled via environment variable
-  if (process.env.CLOUDFLARE_TURNSTILE_ENABLED === "false") {
+  if (process.env.CLOUDFLARE_TURNSTILE_ENABLED === "false" || process.env.FAROL_DESKTOP === "1") {
     return { success: true };
   }
 

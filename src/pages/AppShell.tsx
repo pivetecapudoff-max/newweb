@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { fetchAccount, logoutSession } from "../lib/api";
 import { clearSession, writeSession } from "../lib/session";
 import { OnboardingModal } from "../components/OnboardingModal";
+import { isFarolDesktop } from "../lib/desktop";
 import { motion, AnimatePresence } from "motion/react";
 import {
   LayoutGrid,
@@ -125,7 +126,9 @@ export function AppShell() {
               </div>
               <span className="text-sm font-extrabold tracking-tight text-white font-sans leading-tight">
                 Illusions AI
-                <span className="block text-[9px] font-medium text-white/30 tracking-wider">UGC Intelligence</span>
+                <span className="block text-[9px] font-medium text-white/30 tracking-wider">
+                  {isFarolDesktop() ? "Desktop · Publicar UGC" : "UGC Intelligence"}
+                </span>
               </span>
             </div>
 
@@ -134,6 +137,11 @@ export function AppShell() {
               <NavLink to="/painel" end className={() => navItemClass("/painel", true)}>
                 <LayoutGrid className="w-4 h-4" />
                 <span>Dashboard</span>
+              </NavLink>
+
+              <NavLink to="/painel/upload" className={() => navItemClass("/painel/upload", true)}>
+                <ShoppingBag className="w-4 h-4" />
+                <span>Publicar UGC</span>
               </NavLink>
 
               <NavLink to="/painel/chat" className={() => navItemClass("/painel/chat", true)}>
@@ -154,11 +162,6 @@ export function AppShell() {
               <NavLink to="/painel/conta" className={() => navItemClass("/painel/conta", true)}>
                 <Users className="w-4 h-4" />
                 <span>Users</span>
-              </NavLink>
-
-              <NavLink to="/painel/upload" className={() => navItemClass("/painel/upload", true)}>
-                <ShoppingBag className="w-4 h-4" />
-                <span>Products</span>
               </NavLink>
 
               <NavLink to="/painel/analytics" className={() => navItemClass("/painel/analytics", true)}>

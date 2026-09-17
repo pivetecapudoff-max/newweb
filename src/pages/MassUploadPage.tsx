@@ -2,137 +2,90 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertCircle,
-  Check,
   CheckCircle2,
-  Clock3,
   ExternalLink,
+  Images,
   Layers3,
   LoaderCircle,
-  Plus,
-  RefreshCw,
-  ShieldCheck,
   Shirt,
-  Sparkles,
-  TrendingUp,
+  Trash2,
   UploadCloud,
   XCircle,
 } from "lucide-react";
 import {
-  cloneAssetToGroup,
   fetchUploads,
-  scanMarketCatalog,
+  prepareUpload,
+  queueUpload,
   type ClothingKind,
-  type ScannedMarketItem,
   type UploadGroup,
 } from "../lib/api";
+import { renderAvatarPreview } from "../lib/ugcTemplate";
 import { toastManager } from "../components/ui/toast";
 
 const MAX_BATCH = 8;
 
-type CatalogFilter = "both" | "shirts" | "pants" | "tshirts";
-type BatchState = {
-  state: "waiting" | "creating" | "queued" | "failed";
-  message: string;
+type FileState = "preparing" | "ready" | "queued" | "failed";
+
+interface BatchFile {
+  id: string;
+  file: File;
+  rawImage: string;
+  templateImage: string | null;
+  mannequinImage: string | null;
+  kind: ClothingKind;
+  name: string;
+  price: number;
+  state: FileState;
+  error: string | null;
+}
+
+const KIND_LABEL: Record<ClothingKind, string> = {
+  shirt: "Camisa",
+  pants: "Calça",
+  tshirt: "T-shirt",
 };
 
-const FILTERS: Array<{ value: CatalogFilter; label: string }> = [
-  { value: "both", label: "Camisas + calças" },
-  { value: "shirts", label: "Camisas" },
-  { value: "pants", label: "Calças" },
-  { value: "tshirts", label: "T-shirts" },
-];
-
-function candidateKind(item: ScannedMarketItem): ClothingKind {
-  if (item.assetType === 12 || item.assetTypeName.toLowerCase().includes("pant") || item.category === "pants") return "pants";
-  if (item.assetType === 2 || item.assetTypeName.toLowerCase().includes("t-shirt") || item.category === "tshirts") return "tshirt";
-  return "shirt";
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error(`Não foi possível ler ${file.name}.`));
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.readAsDataURL(file);
+  });
 }
 
-function demandValue(item: ScannedMarketItem): number {
-  return item.saleCount != null ? item.saleCount : item.favoriteCount;
+function cleanFileName(fileName: string): string {
+  return fileName
+    .replace(/\.[^.]+$/, "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 50);
 }
 
-function demandLabel(item: ScannedMarketItem): string {
-  return item.saleCount != null ? "vendas públicas" : "favoritos";
-}
-
-function formatFav(val: number): string {
-  if (val >= 1000000) return `${(val / 1000000).toFixed(1)}m`;
-  if (val >= 1000) return `${(val / 1000).toFixed(1)}k`;
-  return String(val);
-}
-
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat("pt-BR").format(value);
-}
-
-function statusIcon(status?: BatchState) {
-  if (!status || status.state === "waiting") return <Clock3 className="h-3.5 w-3.5" />;
-  if (status.state === "creating") return <LoaderCircle className="h-3.5 w-3.5 animate-spin" />;
-  if (status.state === "queued") return <CheckCircle2 className="h-3.5 w-3.5" />;
-  return <XCircle className="h-3.5 w-3.5" />;
+function newBatchFile(file: File): BatchFile {
+  return {
+    id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
+    file,
+    rawImage: "",
+    templateImage: null,
+    mannequinImage: null,
+    kind: "shirt",
+    name: cleanFileName(file.name) || "Classic Roblox Clothing",
+    price: 5,
+    state: "preparing",
+    error: null,
+  };
 }
 
 export function MassUploadPage() {
-  const [items, setItems] = useState<ScannedMarketItem[]>([]);
+  const [items, setItems] = useState<BatchFile[]>([]);
   const [groups, setGroups] = useState<UploadGroup[]>([]);
   const [connected, setConnected] = useState(false);
   const [groupId, setGroupId] = useState<number | null>(null);
-  const [filter, setFilter] = useState<CatalogFilter>("both");
-  const [price, setPrice] = useState(5);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [loading, setLoading] = useState(true);
-  const [running, setRunning] = useState(false);
+  const [loadingAccount, setLoadingAccount] = useState(true);
+  const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
-  const [antiBan, setAntiBan] = useState(true);
-  const [batch, setBatch] = useState<Record<number, BatchState>>({});
-
-  const selectedItems = useMemo(
-    () => items.filter((item) => selected.has(item.id)),
-    [items, selected]
-  );
-
-  const estimatedFee = useMemo(
-    () => selectedItems.reduce((sum, item) => sum + (candidateKind(item) === "tshirt" ? 0 : 10), 0),
-    [selectedItems]
-  );
-
-  async function refreshTrends(nextFilter: CatalogFilter = filter) {
-    setLoading(true);
-    setError(null);
-    setBatch({});
-    try {
-      const result = await scanMarketCatalog({
-        strategy: "bestselling",
-        timePeriod: "week",
-        assetType: nextFilter,
-        limit: 30,
-        shirtPantsRatio: 50,
-      });
-      const ranked = [...result.items]
-        .filter((item) => {
-          const type = Number(item.assetType);
-          if ([2, 11, 12].includes(type)) return true;
-          const name = (item.assetTypeName || "").toLowerCase();
-          if (name.includes("shirt") || name.includes("pant")) return true;
-          return item.category === "shirts" || item.category === "pants" || item.category === "tshirts";
-        })
-        .sort((a, b) => demandValue(b) - demandValue(a));
-      setItems(ranked);
-      setSelected(new Set(ranked.slice(0, Math.min(4, MAX_BATCH)).map((item) => item.id)));
-      setUpdatedAt(new Date());
-      if (!ranked.length) {
-        setError("O catálogo não retornou roupas para esse filtro. Tente atualizar novamente.");
-      }
-    } catch (err) {
-      setItems([]);
-      setSelected(new Set());
-      setError(err instanceof Error ? err.message : "Não foi possível carregar as roupas do catálogo.");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   useEffect(() => {
     fetchUploads()
@@ -140,422 +93,367 @@ export function MassUploadPage() {
         const available = board.groups.filter((group) => group.canPost !== false);
         setConnected(board.connected);
         setGroups(available);
-        setGroupId(available[0]?.id ?? null);
+        const preferred = board.lastGroupId && available.some((group) => group.id === board.lastGroupId)
+          ? board.lastGroupId
+          : null;
+        setGroupId(preferred);
       })
-      .catch(() => {
-        setConnected(false);
-        setGroups([]);
-      });
-    void refreshTrends("both");
+      .catch((err) => setError(err instanceof Error ? err.message : "Não foi possível carregar a conta."))
+      .finally(() => setLoadingAccount(false));
   }, []);
 
-  function toggleItem(id: number) {
-    if (running) return;
-    setSelected((current) => {
-      const next = new Set(current);
-      if (next.has(id)) {
-        next.delete(id);
-      } else if (next.size < MAX_BATCH) {
-        next.add(id);
+  const readyItems = items.filter((item) => item.state === "ready");
+  const estimatedUploadFee = useMemo(
+    () => readyItems.reduce((total, item) => total + (item.kind === "tshirt" ? 0 : 10), 0),
+    [readyItems]
+  );
+
+  function patchItem(id: string, patch: Partial<BatchFile>) {
+    setItems((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+  }
+
+  async function prepareOne(initial: BatchFile) {
+    try {
+      if (/\.(rbxm|rbxmx|rbxl|rbxlx|fbx|obj|mesh|blend)$/i.test(initial.file.name)) {
+        throw new Error("Arquivo 3D exige o Studio (Save to Roblox → Avatar Asset).");
       }
-      return next;
-    });
+      if (!/\.(png|jpe?g)$/i.test(initial.file.name)) {
+        throw new Error("Use um arquivo PNG ou JPEG.");
+      }
+      const rawImage = await fileToDataUrl(initial.file);
+      const prepared = await prepareUpload({
+        image: rawImage,
+        fileName: initial.file.name,
+      });
+      const mannequinImage = await renderAvatarPreview(prepared.image, prepared.kind);
+      patchItem(initial.id, {
+        rawImage,
+        templateImage: prepared.image,
+        mannequinImage,
+        kind: prepared.kind,
+        name: prepared.suggestedName,
+        price: prepared.suggestedPrice,
+        state: "ready",
+        error: null,
+      });
+    } catch (err) {
+      patchItem(initial.id, {
+        state: "failed",
+        error: err instanceof Error ? err.message : "Não foi possível preparar este arquivo.",
+      });
+    }
   }
 
-  function selectTop() {
-    setSelected(new Set(items.slice(0, MAX_BATCH).map((item) => item.id)));
+  function addFiles(fileList: FileList | File[]) {
+    const incoming = Array.from(fileList);
+    const freeSlots = Math.max(0, MAX_BATCH - items.length);
+    if (!freeSlots) {
+      setError(`O limite é de ${MAX_BATCH} arquivos por lote.`);
+      return;
+    }
+    const accepted = incoming.slice(0, freeSlots).map(newBatchFile);
+    if (incoming.length > freeSlots) {
+      setError(`Somente ${freeSlots} arquivo(s) foram adicionados; o limite é ${MAX_BATCH}.`);
+    } else {
+      setError(null);
+    }
+    setItems((current) => [...current, ...accepted]);
+    accepted.forEach((item) => void prepareOne(item));
   }
 
-  async function runMassUpload() {
+  async function changeKind(item: BatchFile, kind: ClothingKind) {
+    if (!item.rawImage || publishing) return;
+    patchItem(item.id, { kind, state: "preparing", error: null });
+    try {
+      const prepared = await prepareUpload({
+        image: item.rawImage,
+        fileName: item.file.name,
+        kind,
+      });
+      patchItem(item.id, {
+        kind: prepared.kind,
+        templateImage: prepared.image,
+        mannequinImage: await renderAvatarPreview(prepared.image, prepared.kind),
+        price: prepared.kind === "tshirt" ? 0 : Math.max(5, item.price),
+        state: "ready",
+      });
+    } catch (err) {
+      patchItem(item.id, {
+        state: "failed",
+        error: err instanceof Error ? err.message : "Não foi possível trocar o tipo.",
+      });
+    }
+  }
+
+  async function publishBatch() {
     if (!connected) {
-      setError("Conecte sua conta Roblox antes de iniciar o lote.");
-      toastManager.error("Conta Desconectada", "Conecte sua conta Roblox antes de iniciar o lote.");
+      setError("Conecte sua conta Roblox antes de publicar.");
       return;
     }
-    if (!groupId) {
-      setError("Escolha um grupo em que sua conta tenha permissão para publicar.");
-      toastManager.error("Grupo Não Selecionado", "Escolha um grupo para publicar as peças.");
-      return;
-    }
-    if (!selectedItems.length) {
-      setError("Selecione pelo menos uma peça em alta.");
-      toastManager.info("Nenhuma Peça Selecionada", "Selecione pelo menos 1 peça para o envio.");
+    if (!readyItems.length) {
+      setError("Adicione pelo menos um arquivo válido.");
       return;
     }
 
-    setRunning(true);
+    setPublishing(true);
     setError(null);
-    toastManager.info("Processando Lote", `Iniciando cópia de ${selectedItems.length} peças para o grupo...`);
+    let queued = 0;
+    let failed = 0;
 
-    let successCount = 0;
-    let failCount = 0;
-
-    for (const item of selectedItems.slice(0, MAX_BATCH)) {
-      setBatch((current) => ({
-        ...current,
-        [item.id]: { state: "creating", message: "Copiando molde real..." },
-      }));
-
+    for (const item of readyItems) {
+      if (!item.templateImage) continue;
+      patchItem(item.id, { state: "preparing", error: null });
       try {
-        const kind = candidateKind(item);
-        const result = await cloneAssetToGroup({
-          assetId: item.id,
+        await queueUpload({
+          image: item.templateImage,
+          fileName: item.file.name,
           name: item.name,
-          kind,
-          price,
+          description: `${item.name} — classic ${item.kind}.`,
+          kind: item.kind,
+          price: item.price,
           groupId,
-          mode: antiBan ? "ai_remake" : "original",
         });
-
-        if (!result.ok) {
-          throw new Error(result.error || "Falha ao copiar molde da peça.");
-        }
-
-        successCount++;
-        setBatch((current) => ({
-          ...current,
-          [item.id]: {
-            state: "queued",
-            message: result.job?.name ? `Na fila: ${result.job.name}` : "Molde copiado com sucesso!",
-          },
-        }));
+        queued += 1;
+        patchItem(item.id, { state: "queued" });
       } catch (err) {
-        failCount++;
-        setBatch((current) => ({
-          ...current,
-          [item.id]: {
-            state: "failed",
-            message: err instanceof Error ? err.message : "Falha ao copiar esta peça.",
-          },
-        }));
+        failed += 1;
+        patchItem(item.id, {
+          state: "failed",
+          error: err instanceof Error ? err.message : "Falha ao adicionar à fila.",
+        });
       }
     }
-    setRunning(false);
 
-    if (successCount > 0) {
-      toastManager.success(
-        "Lote Publicado com Sucesso!",
-        `${successCount} peça${successCount > 1 ? "s" : ""} enviada${successCount > 1 ? "s" : ""} para a fila de publicação do grupo.`
-      );
+    setPublishing(false);
+    if (queued) {
+      toastManager.success("Lote adicionado", `${queued} peça(s) foram enviadas para a fila.`);
     }
-    if (failCount > 0) {
-      toastManager.error(
-        "Aviso no Lote",
-        `${failCount} peça${failCount > 1 ? "s falharam" : " falhou"}. Verifique o saldo do grupo ou detalhes no card.`
-      );
+    if (failed) {
+      toastManager.error("Lote incompleto", `${failed} peça(s) falharam.`);
     }
   }
-
-  const queuedCount = Object.values(batch).filter((entry) => entry.state === "queued").length;
-  const failedCount = Object.values(batch).filter((entry) => entry.state === "failed").length;
 
   return (
     <div className="h-full overflow-y-auto px-6 py-7 sm:px-8 lg:px-10">
       <div className="mx-auto max-w-[1480px] pb-16">
-        <section className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a0a0a] p-6 shadow-2xl backdrop-blur-xl sm:p-8">
-          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+        <section className="rounded-2xl border border-white/[0.08] bg-[#0a0a0a] p-6 shadow-2xl sm:p-8">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-blue-400">
                 <Layers3 className="h-4 w-4" />
-                Mass Upload
+                Lote de arquivos próprios
               </div>
               <h1 className="text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
                 Upload em Massa
               </h1>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-white/50">
-                Selecione as roupas do catálogo para baixar os moldes e publicar direto no seu grupo do Roblox.
+              <p className="mt-3 text-sm leading-6 text-white/50">
+                Solte até {MAX_BATCH} texturas ou templates PNG/JPEG. UGC 3D (mesh + textura) fica em
+                Products → UGC 3D: o app monta o Accessory.
               </p>
             </div>
-
             <div className="grid min-w-full grid-cols-3 gap-2 sm:min-w-[430px]">
-              <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3">
-                <div className="text-[10px] uppercase tracking-wider text-white/40">Selecionadas</div>
-                <div className="mt-1 text-xl font-semibold text-blue-400">{selected.size}/{MAX_BATCH}</div>
-              </div>
-              <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3">
-                <div className="text-[10px] uppercase tracking-wider text-white/40">Taxa total</div>
-                <div className="mt-1 text-xl font-semibold text-white">{estimatedFee} R$</div>
-              </div>
-              <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3">
-                <div className="text-[10px] uppercase tracking-wider text-white/40">Taxa por peça</div>
-                <div className="mt-1 text-xl font-semibold text-white">10 R$</div>
-              </div>
+              <Stat label="Arquivos" value={`${items.length}/${MAX_BATCH}`} />
+              <Stat label="Prontos" value={String(readyItems.length)} />
+              <Stat label="Taxa estimada" value={`${estimatedUploadFee} R$`} />
             </div>
           </div>
         </section>
 
-        <section className="mt-5 flex flex-col lg:flex-row gap-5 items-start">
-          <div className="flex-1 min-w-0 w-full rounded-2xl border border-white/[0.08] bg-[#0a0a0a] overflow-hidden">
-            <div className="flex flex-col gap-4 border-b border-white/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                  <TrendingUp className="h-4 w-4 text-blue-400" />
-                  Mais vendidos do catálogo
-                </div>
-                <p className="mt-1 text-xs text-white/40">
-                  {updatedAt ? `Atualizado às ${updatedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : "Carregando catálogo..."}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={filter}
-                  disabled={running}
-                  onChange={(event) => {
-                    const value = event.target.value as CatalogFilter;
-                    setFilter(value);
-                    void refreshTrends(value);
-                  }}
-                  className="rounded-xl border border-white/[0.08] bg-[#121212] px-3 py-2 text-xs text-white/80 outline-none focus:border-blue-500/50"
-                >
-                  {FILTERS.map((entry) => <option key={entry.value} value={entry.value}>{entry.label}</option>)}
-                </select>
-                <button
-                  type="button"
-                  disabled={loading || running}
-                  onClick={() => void refreshTrends()}
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] px-3 py-2 text-xs font-medium text-white/80 transition disabled:opacity-40"
-                >
-                  <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-                  Atualizar
-                </button>
-                <button
-                  type="button"
-                  disabled={running || !items.length}
-                  onClick={selectTop}
-                  className="rounded-xl border border-blue-500/30 bg-blue-500/15 hover:bg-blue-500/25 px-3 py-2 text-xs font-medium text-blue-300 transition disabled:opacity-40"
-                >
-                  Selecionar {Math.min(MAX_BATCH, items.length)} itens
-                </button>
-              </div>
-            </div>
+        {error && (
+          <div className="mt-5 flex items-start gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
-            {error && (
-              <div className="mx-5 mt-5 flex items-start gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <div
-              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3.5 p-4"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-                gap: "14px",
+        <section className="mt-5 grid gap-5 lg:grid-cols-[1fr_340px]">
+          <div className="min-w-0 space-y-4">
+            <label
+              className="flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-[#0a0a0a] p-7 text-center transition hover:border-blue-400/50 hover:bg-blue-500/[0.03]"
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                addFiles(event.dataTransfer.files);
               }}
             >
-              {loading
-                ? Array.from({ length: 12 }).map((_, index) => (
-                    <div key={index} className="h-64 animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.02]" />
-                  ))
-                : items.map((item, index) => {
-                    const checked = selected.has(item.id);
-                    const status = batch[item.id];
-                    return (
-                      <button
-                        type="button"
-                        key={item.id}
-                        onClick={() => toggleItem(item.id)}
-                        className={`rounded-2xl bg-[#0a0a0a] p-3 flex flex-col justify-between gap-2.5 transition-all text-left w-full group relative overflow-hidden border cursor-pointer ${
-                          checked
-                            ? "border-blue-500/80 ring-1 ring-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.15)]"
-                            : "border-white/[0.08] hover:border-white/[0.18]"
-                        }`}
-                      >
-                        {/* Top Thumbnail with Type and Price Badges */}
-                        <div className="relative aspect-square w-full rounded-xl bg-black/60 overflow-hidden flex items-center justify-center border border-white/[0.04]">
-                          {item.thumbnailUrl ? (
-                            <img
-                              src={item.thumbnailUrl}
-                              alt={item.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <Shirt className="w-10 h-10 text-white/20" />
-                          )}
+              <input
+                type="file"
+                accept="image/png,image/jpeg"
+                multiple
+                hidden
+                disabled={publishing || items.length >= MAX_BATCH}
+                onChange={(event) => {
+                  if (event.target.files) addFiles(event.target.files);
+                  event.target.value = "";
+                }}
+              />
+              <UploadCloud className="h-8 w-8 text-blue-400" />
+              <p className="mt-3 text-sm font-semibold text-white">Solte seus arquivos aqui</p>
+              <p className="mt-1 text-xs text-white/40">PNG/JPEG próprio · textura ou template 585×559</p>
+            </label>
 
-                          {/* Type Badge - Top Left */}
-                          <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-md text-[9px] font-bold tracking-wider uppercase text-white/80 border border-white/10">
-                            {item.assetTypeName}
-                          </div>
-
-                          {/* Price Badge - Top Right */}
-                          <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-emerald-950/80 backdrop-blur-md text-[10px] font-bold text-blue-400 border border-blue-500/30">
-                            {item.price != null ? `${item.price} R$` : "5 R$"}
-                          </div>
-
-                          {/* Ranking Badge - Bottom Left */}
-                          <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-md text-[9px] font-bold text-white/60 border border-white/10">
-                            #{index + 1}
-                          </div>
-
-                          {/* Selection Checkmark - Bottom Right */}
-                          <div className={`absolute bottom-2 right-2 flex h-5 w-5 items-center justify-center rounded-full border transition-all ${
-                            checked
-                              ? "border-blue-400 bg-blue-600 text-white shadow-sm scale-110"
-                              : "border-white/20 bg-black/60 text-transparent group-hover:border-white/40"
-                          }`}>
-                            <Check className="h-3 w-3 stroke-[3]" />
-                          </div>
-                        </div>
-
-                        {/* Item Metadata */}
-                        <div className="space-y-1">
-                          <h4
-                            className="text-xs font-semibold text-white/90 line-clamp-2 leading-tight group-hover:text-blue-300 transition-colors"
-                            title={item.name}
+            {items.length === 0 ? (
+              <div className="rounded-2xl border border-white/[0.08] bg-[#0a0a0a] p-10 text-center">
+                <Images className="mx-auto h-9 w-9 text-white/20" />
+                <p className="mt-3 text-sm text-white/45">Nenhum arquivo no lote.</p>
+              </div>
+            ) : (
+              <div className="grid gap-4 xl:grid-cols-2">
+                {items.map((item) => (
+                  <article key={item.id} className="rounded-2xl border border-white/[0.08] bg-[#0a0a0a] p-4">
+                    <div className="flex gap-3">
+                      <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-black/40">
+                        {item.state === "preparing" ? (
+                          <LoaderCircle className="h-6 w-6 animate-spin text-blue-400" />
+                        ) : item.mannequinImage ? (
+                          <img src={item.mannequinImage} alt="" className="h-full w-full object-contain" />
+                        ) : (
+                          <Shirt className="h-8 w-8 text-white/20" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <input
+                            value={item.name}
+                            maxLength={50}
+                            disabled={publishing || item.state === "queued"}
+                            onChange={(event) => patchItem(item.id, { name: event.target.value })}
+                            className="min-w-0 flex-1 rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white outline-none"
+                          />
+                          <button
+                            type="button"
+                            disabled={publishing}
+                            onClick={() => setItems((current) => current.filter((entry) => entry.id !== item.id))}
+                            className="rounded-lg p-2 text-white/30 transition hover:bg-rose-500/10 hover:text-rose-300"
+                            title="Remover arquivo"
                           >
-                            {item.name}
-                          </h4>
-
-                          <div className="flex items-center justify-between text-[10px] text-white/40 pt-1">
-                            <span className="truncate max-w-[100px] font-medium" title={item.creatorName}>
-                              {item.creatorName}
-                            </span>
-                            <span className="text-amber-400/90 font-mono shrink-0">
-                              ★ {formatFav(demandValue(item))}
-                            </span>
-                          </div>
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
 
-                        {/* Selection / Action Button */}
-                        <div className="pt-2 border-t border-white/[0.06] flex flex-col gap-1 w-full">
-                          <div
-                            className={`p-2 rounded-lg transition-all flex items-center justify-center gap-1.5 text-[10px] font-bold shadow-sm ${
-                              checked
-                                ? "bg-blue-500/25 text-blue-200 border border-blue-500/50"
-                                : "bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 hover:text-blue-100 border border-blue-500/30 hover:border-blue-500/50"
-                            }`}
-                          >
-                            {checked ? (
-                              <>
-                                <Check className="w-3 h-3 text-blue-400" />
-                                <span>Selecionada</span>
-                              </>
-                            ) : (
-                              <>
-                                <Plus className="w-3 h-3 text-blue-400" />
-                                <span>Selecionar</span>
-                              </>
-                            )}
-                          </div>
-
-                          {status && (
-                            <div className={`mt-1 flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] ${
-                              status.state === "queued"
-                                ? "bg-blue-400/10 border-blue-500/30 text-blue-300"
-                                : status.state === "failed"
-                                ? "bg-rose-400/10 border-rose-500/30 text-rose-300"
-                                : "bg-blue-400/10 border-blue-500/30 text-blue-200"
-                            }`}>
-                              {statusIcon(status)}
-                              <span className="line-clamp-1">{status.message}</span>
-                            </div>
-                          )}
+                        <div className="mt-2 flex gap-1.5">
+                          {(["shirt", "pants", "tshirt"] as ClothingKind[]).map((kind) => (
+                            <button
+                              key={kind}
+                              type="button"
+                              disabled={publishing || item.state === "preparing" || item.state === "queued"}
+                              onClick={() => void changeKind(item, kind)}
+                              className={`rounded-md px-2 py-1 text-[10px] font-semibold transition ${
+                                item.kind === kind
+                                  ? "bg-white text-black"
+                                  : "bg-white/[0.04] text-white/45 hover:text-white"
+                              }`}
+                            >
+                              {KIND_LABEL[kind]}
+                            </button>
+                          ))}
                         </div>
-                      </button>
-                    );
-                  })}
-            </div>
+
+                        <div className="mt-2 flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={item.kind === "tshirt" ? 0 : 5}
+                            value={item.price}
+                            disabled={publishing || item.state === "queued"}
+                            onChange={(event) =>
+                              patchItem(item.id, {
+                                price: item.kind === "tshirt"
+                                  ? Math.max(0, Number(event.target.value) || 0)
+                                  : Math.max(5, Number(event.target.value) || 5),
+                              })
+                            }
+                            className="w-20 rounded-lg bg-white/[0.04] px-2 py-1.5 text-xs text-white outline-none"
+                          />
+                          <span className="text-[10px] text-white/35">Robux</span>
+                          <StateLabel item={item} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {item.templateImage && (
+                      <details className="mt-3">
+                        <summary className="cursor-pointer text-[10px] text-blue-300/70">Ver template UV normalizado</summary>
+                        <img src={item.templateImage} alt="Template UV" className="mt-2 max-h-52 w-full object-contain" />
+                      </details>
+                    )}
+                    {item.error && <p className="mt-3 text-[11px] text-rose-300">{item.error}</p>}
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
 
-          <aside className="w-full lg:w-[340px] shrink-0 h-fit rounded-2xl border border-white/[0.08] bg-[#0a0a0a] p-5 space-y-4 lg:sticky lg:top-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-white">
-              <UploadCloud className="h-4 w-4 text-blue-400" />
-              Configurar publicação
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-medium uppercase tracking-wider text-white/40">Grupo de destino</label>
-              <select
-                value={groupId ?? ""}
-                disabled={running || !connected}
-                onChange={(event) => setGroupId(event.target.value ? Number(event.target.value) : null)}
-                className="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#121212] px-3.5 py-3 text-sm text-white/80 outline-none focus:border-blue-500/50 disabled:opacity-50"
-              >
-                <option value="">Selecione um grupo</option>
-                {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-medium uppercase tracking-wider text-white/40">Preço por peça</label>
-              <div className="mt-2 flex items-center rounded-xl border border-white/[0.08] bg-[#121212] px-3.5">
-                <input
-                  type="number"
-                  min={5}
-                  max={999}
-                  value={price}
-                  disabled={running}
-                  onChange={(event) => setPrice(Math.max(5, Math.floor(Number(event.target.value) || 5)))}
-                  className="min-w-0 flex-1 bg-transparent py-3 text-sm text-white outline-none"
-                />
-                <span className="text-xs font-semibold text-blue-400">Robux</span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              disabled={running}
-              onClick={() => setAntiBan((value) => !value)}
-              className="flex w-full items-start gap-3 rounded-xl border border-white/[0.08] bg-white/[0.025] hover:bg-white/[0.05] p-3 text-left transition"
+          <aside className="h-fit space-y-4 rounded-2xl border border-white/[0.08] bg-[#0a0a0a] p-5 lg:sticky lg:top-4">
+            <h2 className="text-sm font-semibold text-white">Destino da publicação</h2>
+            <select
+              value={groupId ?? ""}
+              disabled={publishing || loadingAccount}
+              onChange={(event) => setGroupId(event.target.value ? Number(event.target.value) : null)}
+              className="w-full rounded-xl border border-white/[0.08] bg-[#121212] px-3.5 py-3 text-sm text-white/80 outline-none"
             >
-              <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${antiBan ? "border-blue-400 bg-blue-600 text-white" : "border-white/20 bg-black/40 text-transparent"}`}>
-                <Check className="h-3.5 w-3.5 stroke-[3]" />
-              </span>
-              <span>
-                <span className="flex items-center gap-1.5 text-xs font-semibold text-blue-400">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Proteção Anti-Ban
-                </span>
-                <span className="mt-1 block text-[11px] leading-4 text-white/40">
-                  Altera sutilmente os pixels e o hash do arquivo para o Roblox não bloquear como duplicado.
-                </span>
-              </span>
-            </button>
+              <option value="">Minha conta pessoal</option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>{group.name}</option>
+              ))}
+            </select>
 
-            <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-3">
-              <div className="flex items-center gap-2 text-xs font-medium text-amber-200">
-                <ShieldCheck className="h-4 w-4" />
-                Informações de envio
-              </div>
-              <p className="mt-1.5 text-[11px] leading-4 text-white/40">
-                Cada peça tem taxa de 10 Robux cobrada pelo próprio Roblox para publicação no grupo.
-              </p>
+            <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-3 text-[11px] leading-4 text-white/45">
+              O Roblox cobra a taxa oficial e faz a moderação. Camisa/calça: 10 R$ por arquivo;
+              t-shirt: 0 R$.
             </div>
 
             {!connected ? (
-              <Link to="/painel/conta" className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-3.5 text-sm font-bold shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98]">
+              <Link
+                to="/painel/conta"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-blue-500"
+              >
                 Conectar conta Roblox <ExternalLink className="h-4 w-4" />
               </Link>
             ) : (
               <button
                 type="button"
-                disabled={running || selected.size === 0 || !groupId}
-                onClick={() => void runMassUpload()}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-3.5 text-sm font-bold shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed"
+                disabled={publishing || readyItems.length === 0}
+                onClick={() => void publishBatch()}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-35"
               >
-                {running ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Layers3 className="h-4 w-4" />}
-                {running ? "Enviando lote..." : `Publicar ${selected.size} peça${selected.size === 1 ? "" : "s"} no grupo`}
+                {publishing ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Layers3 className="h-4 w-4" />}
+                {publishing ? "Enviando lote..." : `Publicar ${readyItems.length} arquivo(s)`}
               </button>
             )}
 
-            {(queuedCount > 0 || failedCount > 0) && (
-              <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-3.5 text-xs text-white/55">
-                <div className="font-medium text-white/80">Lote processado</div>
-                <div className="mt-2 flex gap-4">
-                  <span className="text-blue-300 font-semibold">{queuedCount} na fila</span>
-                  {failedCount > 0 && <span className="text-rose-300 font-semibold">{failedCount} falharam</span>}
-                </div>
-                <Link to="/painel/upload" className="mt-2.5 inline-flex items-center gap-1 font-medium text-blue-400 hover:text-blue-300">
-                  Acompanhar fila <ExternalLink className="h-3 w-3" />
-                </Link>
-              </div>
+            {items.some((item) => item.state === "queued") && (
+              <Link
+                to="/painel/upload"
+                className="flex items-center justify-center gap-1 text-xs font-medium text-blue-400 hover:text-blue-300"
+              >
+                Acompanhar fila <ExternalLink className="h-3 w-3" />
+              </Link>
             )}
           </aside>
         </section>
       </div>
     </div>
   );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3">
+      <div className="text-[10px] uppercase tracking-wider text-white/40">{label}</div>
+      <div className="mt-1 text-xl font-semibold text-white">{value}</div>
+    </div>
+  );
+}
+
+function StateLabel({ item }: { item: BatchFile }) {
+  if (item.state === "preparing") {
+    return <span className="ml-auto flex items-center gap-1 text-[10px] text-blue-300"><LoaderCircle className="h-3 w-3 animate-spin" /> Preparando</span>;
+  }
+  if (item.state === "queued") {
+    return <span className="ml-auto flex items-center gap-1 text-[10px] text-blue-300"><CheckCircle2 className="h-3 w-3" /> Na fila</span>;
+  }
+  if (item.state === "failed") {
+    return <span className="ml-auto flex items-center gap-1 text-[10px] text-rose-300"><XCircle className="h-3 w-3" /> Falhou</span>;
+  }
+  return <span className="ml-auto flex items-center gap-1 text-[10px] text-emerald-300"><CheckCircle2 className="h-3 w-3" /> Pronto</span>;
 }

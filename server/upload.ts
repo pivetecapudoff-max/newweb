@@ -2,26 +2,42 @@ import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { bumpOps, loadAccount, loadAccountForOwner } from "./account.js";
+import { normalizeClothingImage } from "./clothingTemplate.js";
 import { currentOwnerKey } from "./context.js";
 import { notifyDiscord } from "./discord.js";
 import { listPostableGroups, type GroupAccess } from "./groups.js";
+import {
+  decodeAccessoryInput,
+  inspectAccessoryFile,
+  type AccessoryTypeName,
+} from "./ugcAccessory.js";
+import { assembleUgcFromParts, buildAccessoryRbxmx } from "./ugcAssembler.js";
 
 const rootDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dataDir = path.join(rootDir, "data");
 const queueDir = path.join(dataDir, "queue");
 const queuePath = path.join(dataDir, "uploads.json");
+const prefsPath = path.join(dataDir, "upload-prefs.json");
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
 
 export type ClothingKind = "shirt" | "pants" | "tshirt";
+export type UploadKind = ClothingKind | "accessory";
 export type JobStatus = "queued" | "uploading" | "live" | "failed" | "moderated";
 
 export interface UploadJob {
   id: string;
   name: string;
   description: string;
-  kind: ClothingKind;
+  kind: UploadKind;
+  accessoryType?: AccessoryTypeName | "Unknown" | null;
+  meshFilePath?: string | null;
+  textureFilePath?: string | null;
+  handleX?: number | null;
+  handleY?: number | null;
+  handleZ?: number | null;
+  attachY?: number | null;
   price: number;
   groupId: number | null;
   ownerDiscordId: string | null;
@@ -31,6 +47,8 @@ export interface UploadJob {
   status: JobStatus;
   assetId: number | null;
   catalogUrl: string | null;
+  thumbnailUrl: string | null;
+  saleWarning: string | null;
   error: string | null;
   createdAt: string;
   updatedAt: string;
@@ -42,18 +60,24 @@ const ASSET_TYPE_ID: Record<ClothingKind, number> = {
   tshirt: 2,
 };
 
-const ASSET_TYPE_NAME: Record<ClothingKind, string> = {
+const ASSET_TYPE_NAME: Record<UploadKind, string> = {
   shirt: "Shirt",
   pants: "Pants",
   tshirt: "TShirt",
+  accessory: "Model",
 };
 
-/** Roblox upload fee for classic 2D clothing (shirt/pants: 10 R$, t-shirt: 0 R$). */
-const UPLOAD_FEE: Record<ClothingKind, number> = {
+/** Roblox upload fee for classic 2D clothing (shirt/pants: 10 R$, t-shirt: 0 R$). Model inventory upload is free; marketplace UGC fee is paid in Studio. */
+const UPLOAD_FEE: Record<UploadKind, number> = {
   shirt: 10,
   pants: 10,
   tshirt: 0,
+  accessory: 0,
 };
+
+function isClassicKind(kind: UploadKind): kind is ClothingKind {
+  return kind === "shirt" || kind === "pants" || kind === "tshirt";
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -69,6 +93,8 @@ function parseActualFee(text: string): number | null {
 
 let csrfToken: string | null = null;
 let pumping = false;
+const thumbnailChecks = new Map<number, number>();
+const saleChecks = new Map<number, number>();
 
 function ensureDirs(): void {
   mkdirSync(queueDir, { recursive: true });
@@ -126,7 +152,10 @@ export function queueStats(): {
 }
 
 export function listJobs(): UploadJob[] {
-  return jobsForCurrentUser().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const jobs = jobsForCurrentUser().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  void refreshPendingThumbnails(jobs).catch(() => undefined);
+  void refreshPendingSales(jobs).catch(() => undefined);
+  return jobs;
 }
 
 export function getJob(id: string): UploadJob | null {
@@ -139,24 +168,32 @@ export async function listUploadGroups(): Promise<GroupAccess[]> {
   return listPostableGroups(account.cookie, account.userId);
 }
 
-function decodeImage(dataUrl: string): { bytes: Buffer; mime: string; ext: string } {
-  const match = dataUrl.match(/^data:(image\/(?:png|jpeg|jpg));base64,(.+)$/i);
-  const raw = match ? match[2] : dataUrl.replace(/^data:[^;]+;base64,/, "");
-  const mime = match ? match[1].toLowerCase() : "image/png";
-  if (mime !== "image/png" && mime !== "image/jpeg" && mime !== "image/jpg") {
-    throw new Error("Use a PNG or JPEG clothing template.");
+function loadPrefs(): Record<string, number | null> {
+  try {
+    const raw = JSON.parse(readFileSync(prefsPath, "utf8")) as
+      | Record<string, number | null>
+      | { lastGroupId?: number | null };
+    if ("lastGroupId" in raw) {
+      return { local: raw.lastGroupId ?? null };
+    }
+    return raw;
+  } catch {
+    return {};
   }
-  const bytes = Buffer.from(raw, "base64");
-  if (bytes.length < 80) throw new Error("Image is empty.");
-  if (bytes.length > 12 * 1024 * 1024) throw new Error("Image is over 12 MB.");
-  return {
-    bytes,
-    mime: mime === "image/jpg" ? "image/jpeg" : mime,
-    ext: mime.includes("png") ? "png" : "jpg",
-  };
 }
 
-export function enqueueUpload(input: {
+export function lastUploadGroupId(): number | null {
+  return loadPrefs()[currentOwnerKey()] ?? null;
+}
+
+function saveLastGroup(groupId: number | null): void {
+  ensureDirs();
+  const prefs = loadPrefs();
+  prefs[currentOwnerKey()] = groupId;
+  writeFileSync(prefsPath, JSON.stringify(prefs, null, 2), "utf8");
+}
+
+export async function enqueueUpload(input: {
   name: string;
   description?: string;
   kind?: string;
@@ -164,10 +201,16 @@ export function enqueueUpload(input: {
   groupId?: number | null;
   fileName?: string;
   image: string;
-}): UploadJob {
+}): Promise<UploadJob> {
   if (!loadAccount()) {
-    throw new Error("Connect your own Roblox cookie on Account first.");
+    throw new Error("Conecte o cookie da sua conta Roblox em Account primeiro.");
   }
+  const fileName = String(input.fileName || "template.png");
+  const normalized = await normalizeClothingImage({
+    image: String(input.image || ""),
+    fileName,
+    kind: input.kind,
+  });
   let name = String(input.name || "")
     .replace(/#\d+/g, "")
     .replace(/#/g, "")
@@ -186,7 +229,7 @@ export function enqueueUpload(input: {
     .replace(/\bsexy\b/gi, "Aesthetic")
     .replace(/\s+/g, " ")
     .trim();
-  if (name.length < 2) name = "Classic Roblox Clothing";
+  if (name.length < 2) name = normalized.suggestedName || "Classic Roblox Clothing";
   if (name.length > 50) name = name.slice(0, 50).trim();
 
   let description = String(input.description || "")
@@ -198,32 +241,168 @@ export function enqueueUpload(input: {
     .slice(0, 500)
     .trim();
   if (!description) {
-    description = `${name} - High quality classic clothing piece on Roblox. Created with Farol Studio.`;
+    description = `${name} — classic ${normalized.kind}.`;
   }
 
-  const kind = (["shirt", "pants", "tshirt"].includes(String(input.kind))
-    ? input.kind
-    : "shirt") as ClothingKind;
-  const price = Math.max(0, Math.floor(Number(input.price) || 0));
-  const image = decodeImage(String(input.image || ""));
+  const kind = normalized.kind;
+  const priceRaw = Number(input.price);
+  const price = kind === "tshirt"
+    ? Math.max(0, Math.floor(Number.isFinite(priceRaw) ? priceRaw : 0))
+    : Math.max(5, Math.floor(Number.isFinite(priceRaw) && priceRaw > 0 ? priceRaw : 5));
   ensureDirs();
   const id = `up_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-  const filePath = path.join(queueDir, `${id}.${image.ext}`);
-  writeFileSync(filePath, image.bytes);
+  const filePath = path.join(queueDir, `${id}.png`);
+  writeFileSync(filePath, normalized.png);
+  const groupId = input.groupId && Number.isFinite(input.groupId) ? Number(input.groupId) : null;
+  saveLastGroup(groupId);
   const job: UploadJob = {
     id,
     name,
     description,
     kind,
-    price: kind === "tshirt" ? price : Math.max(price, 5),
-    groupId: input.groupId && Number.isFinite(input.groupId) ? Number(input.groupId) : null,
+    price,
+    groupId,
     ownerDiscordId: currentOwnerKey() === "local" ? null : currentOwnerKey(),
-    fileName: String(input.fileName || `template.${image.ext}`),
+    fileName: "template.png",
     filePath,
-    mime: image.mime,
+    mime: "image/png",
     status: "queued",
     assetId: null,
     catalogUrl: null,
+    thumbnailUrl: null,
+    saleWarning: null,
+    error: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  saveJobs([job, ...loadJobs()]);
+  void pumpQueue();
+  return job;
+}
+
+function sanitizeItemName(raw: string, fallback: string): string {
+  let name = String(raw || "")
+    .replace(/#/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (name.length < 2) name = fallback;
+  if (name.length > 50) name = name.slice(0, 50).trim();
+  return name;
+}
+
+export async function enqueueAssembledUgc(input: {
+  name?: string;
+  description?: string;
+  groupId?: number | null;
+  accessoryType?: string;
+  mesh: string;
+  meshName?: string;
+  texture: string;
+  textureName?: string;
+}): Promise<UploadJob> {
+  if (!loadAccount()) {
+    throw new Error("Conecte o cookie da sua conta Roblox em Account primeiro.");
+  }
+  const assembled = await assembleUgcFromParts({
+    mesh: input.mesh,
+    meshName: input.meshName,
+    texture: input.texture,
+    textureName: input.textureName,
+    accessoryType: input.accessoryType,
+    name: input.name,
+  });
+  const name = sanitizeItemName(input.name || assembled.suggestedName, assembled.suggestedName);
+  let description = String(input.description || "").slice(0, 500).trim();
+  if (!description) description = `${name} — UGC Accessory (${assembled.accessoryType}).`;
+  ensureDirs();
+  const id = `ugc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  const filePath = path.join(queueDir, `${id}.rbxmx`);
+  const meshFilePath = path.join(queueDir, `${id}.mesh`);
+  const textureFilePath = path.join(queueDir, `${id}.png`);
+  writeFileSync(filePath, assembled.rbxmx, "utf8");
+  writeFileSync(meshFilePath, assembled.mesh);
+  writeFileSync(textureFilePath, assembled.texture);
+  const groupId = input.groupId && Number.isFinite(input.groupId) ? Number(input.groupId) : null;
+  saveLastGroup(groupId);
+  const job: UploadJob = {
+    id,
+    name,
+    description,
+    kind: "accessory",
+    accessoryType: assembled.accessoryType,
+    meshFilePath,
+    textureFilePath,
+    handleX: assembled.handle.x,
+    handleY: assembled.handle.y,
+    handleZ: assembled.handle.z,
+    attachY: assembled.attachY,
+    price: 0,
+    groupId,
+    ownerDiscordId: currentOwnerKey() === "local" ? null : currentOwnerKey(),
+    fileName: "accessory.rbxmx",
+    filePath,
+    mime: "application/octet-stream",
+    status: "queued",
+    assetId: null,
+    catalogUrl: null,
+    thumbnailUrl: null,
+    saleWarning: null,
+    error: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  saveJobs([job, ...loadJobs()]);
+  void pumpQueue();
+  return job;
+}
+
+export function enqueueAccessoryUpload(input: {
+  name?: string;
+  description?: string;
+  groupId?: number | null;
+  fileName?: string;
+  file: string;
+}): UploadJob {
+  if (!loadAccount()) {
+    throw new Error("Conecte o cookie da sua conta Roblox em Account primeiro.");
+  }
+  const fileName = String(input.fileName || "accessory.rbxm");
+  const bytes = decodeAccessoryInput(input.file);
+  const inspected = inspectAccessoryFile(bytes, fileName);
+  let name = String(input.name || inspected.suggestedName)
+    .replace(/#/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (name.length < 2) name = inspected.suggestedName;
+  if (name.length > 50) name = name.slice(0, 50).trim();
+  let description = String(input.description || "").slice(0, 500).trim();
+  if (!description) {
+    description = `${name} — UGC Accessory${inspected.accessoryType !== "Unknown" ? ` (${inspected.accessoryType})` : ""}.`;
+  }
+  ensureDirs();
+  const id = `ugc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  const ext = inspected.format === "rbxmx" ? "rbxmx" : "rbxm";
+  const filePath = path.join(queueDir, `${id}.${ext}`);
+  writeFileSync(filePath, bytes);
+  const groupId = input.groupId && Number.isFinite(input.groupId) ? Number(input.groupId) : null;
+  saveLastGroup(groupId);
+  const job: UploadJob = {
+    id,
+    name,
+    description,
+    kind: "accessory",
+    accessoryType: inspected.accessoryType,
+    price: 0,
+    groupId,
+    ownerDiscordId: currentOwnerKey() === "local" ? null : currentOwnerKey(),
+    fileName: `accessory.${ext}`,
+    filePath,
+    mime: "application/octet-stream",
+    status: "queued",
+    assetId: null,
+    catalogUrl: null,
+    thumbnailUrl: null,
+    saleWarning: null,
     error: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -237,9 +416,10 @@ export function removeJob(id: string): void {
   const job = getJob(id);
   if (!job) return;
   const jobs = loadJobs();
-  if (job.filePath) {
+  for (const extra of [job.filePath, job.meshFilePath, job.textureFilePath]) {
+    if (!extra) continue;
     try {
-      unlinkSync(job.filePath);
+      unlinkSync(extra);
     } catch {
       // already gone
     }
@@ -249,7 +429,14 @@ export function removeJob(id: string): void {
 
 export function retryJob(id: string): UploadJob {
   if (!getJob(id)) throw new Error("Upload not found.");
-  const job = patchJob(id, { status: "queued", error: null });
+  const job = patchJob(id, {
+    status: "queued",
+    assetId: null,
+    catalogUrl: null,
+    thumbnailUrl: null,
+    saleWarning: null,
+    error: null,
+  });
   if (!job) throw new Error("Upload not found.");
   void pumpQueue();
   return job;
@@ -338,6 +525,9 @@ async function uploadClassic(
   job: UploadJob,
   bytes: Buffer
 ): Promise<number> {
+  if (!isClassicKind(job.kind)) {
+    throw new Error("Upload clássico só aceita shirt, pants ou t-shirt.");
+  }
   const params = new URLSearchParams({
     assetTypeId: String(ASSET_TYPE_ID[job.kind]),
     name: job.name,
@@ -354,7 +544,9 @@ async function uploadClassic(
         "Content-Type": job.mime || "application/octet-stream",
         Requester: "Client",
       },
-      body: bytes,
+      body: new Blob([Uint8Array.from(bytes)], {
+        type: job.mime || "application/octet-stream",
+      }),
     }
   );
   const assetId = parseAssetId(result);
@@ -403,7 +595,8 @@ async function uploadUserAuth(
       assetType: ASSET_TYPE_NAME[job.kind],
       displayName: job.name,
       description: job.description || job.name,
-      creationContext: { creator, expectedPrice },
+      creationContext:
+        expectedPrice > 0 ? { creator, expectedPrice } : { creator },
     })
   );
   form.append(
@@ -442,6 +635,122 @@ async function uploadUserAuth(
   throw new Error(errorMsg || `Asset API failed (${result.status}).`);
 }
 
+async function uploadNamedAsset(
+  cookie: string,
+  userId: number,
+  groupId: number | null,
+  assetType: "Decal" | "Mesh" | "Model",
+  name: string,
+  description: string,
+  bytes: Buffer,
+  fileName: string,
+  mime: string
+): Promise<number> {
+  const creator = groupId ? { groupId: String(groupId) } : { userId: String(userId) };
+  const form = new FormData();
+  form.append(
+    "request",
+    JSON.stringify({
+      assetType,
+      displayName: name,
+      description,
+      creationContext: { creator },
+    })
+  );
+  form.append("fileContent", new Blob([new Uint8Array(bytes)], { type: mime }), fileName);
+  const result = await robloxSend(cookie, "https://apis.roblox.com/assets/user-auth/v1/assets", {
+    method: "POST",
+    body: form,
+  });
+  const assetId = parseAssetId(result);
+  if (assetId) return assetId;
+  const opPath = String((result.json as { path?: string } | null)?.path || "");
+  if (opPath && /operation/i.test(opPath)) {
+    const fromOp = await waitForAssetOp(cookie, opPath);
+    if (fromOp) return fromOp;
+  }
+  const errorMsg = extractRobloxError(result.text, result.json);
+  if (looksModerated(result.text)) {
+    throw Object.assign(
+      new Error(`Moderação do Roblox: ${errorMsg || "Arquivo reprovado pelo filtro do Roblox"}`),
+      { moderated: true, raw: result.text }
+    );
+  }
+  throw new Error(errorMsg || `Falha ao enviar ${assetType} (${result.status}).`);
+}
+
+async function fetchRobux(cookie: string, userId: number): Promise<number | null> {
+  try {
+    const result = await robloxSend(cookie, `https://economy.roblox.com/v1/users/${userId}/currency`, {
+      method: "GET",
+    });
+    const robux = Number((result.json as { robux?: number } | null)?.robux);
+    return Number.isFinite(robux) ? robux : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchGroupRobux(cookie: string, groupId: number): Promise<number | null> {
+  try {
+    const result = await robloxSend(cookie, `https://economy.roblox.com/v1/groups/${groupId}/currency`, {
+      method: "GET",
+    });
+    const robux = Number((result.json as { robux?: number } | null)?.robux);
+    return Number.isFinite(robux) ? robux : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchCatalogThumb(assetId: number): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://thumbnails.roblox.com/v1/assets?assetIds=${assetId}&size=420x420&format=Png&isCircular=false`,
+      { headers: { "User-Agent": UA, Accept: "application/json" } }
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      data?: Array<{ state?: string; imageUrl?: string }>;
+    };
+    const row = json.data?.[0];
+    return row?.imageUrl && String(row.state || "").toLowerCase() === "completed"
+      ? row.imageUrl
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+async function waitForCatalogThumb(assetId: number): Promise<string | null> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const imageUrl = await fetchCatalogThumb(assetId);
+    if (imageUrl) return imageUrl;
+    if (attempt < 2) await sleep(1500);
+  }
+  return null;
+}
+
+async function refreshPendingThumbnails(jobs: UploadJob[]): Promise<void> {
+  const now = Date.now();
+  const pending = jobs
+    .filter((job) => job.status === "live" && job.assetId && !job.thumbnailUrl)
+    .filter((job) => {
+      const last = thumbnailChecks.get(job.assetId!) || 0;
+      if (now - last < 30_000) return false;
+      thumbnailChecks.set(job.assetId!, now);
+      return true;
+    })
+    .slice(0, 8);
+
+  await Promise.all(
+    pending.map(async (job) => {
+      const thumbnailUrl = await fetchCatalogThumb(job.assetId!);
+      if (thumbnailUrl) patchJob(job.id, { thumbnailUrl });
+    })
+  );
+}
+
 async function putOnSale(cookie: string, assetId: number, price: number): Promise<void> {
   const bodies = [
     {
@@ -463,6 +772,7 @@ async function putOnSale(cookie: string, assetId: number, price: number): Promis
       },
     },
   ];
+  let lastError = "O Roblox não ativou a venda do item.";
   for (const attempt of bodies) {
     const result = await robloxSend(cookie, attempt.url, {
       method: "POST",
@@ -470,19 +780,133 @@ async function putOnSale(cookie: string, assetId: number, price: number): Promis
       body: JSON.stringify(attempt.json),
     });
     if (result.status >= 200 && result.status < 300) return;
+    lastError = extractRobloxError(result.text, result.json) || `HTTP ${result.status}`;
   }
+  throw new Error(lastError);
+}
+
+async function refreshPendingSales(jobs: UploadJob[]): Promise<void> {
+  const now = Date.now();
+  const pending = jobs
+    .filter((job) => job.status === "live" && job.assetId && job.saleWarning && job.kind !== "accessory")
+    .filter((job) => {
+      const last = saleChecks.get(job.assetId!) || 0;
+      if (now - last < 60_000) return false;
+      saleChecks.set(job.assetId!, now);
+      return true;
+    })
+    .slice(0, 4);
+
+  await Promise.all(
+    pending.map(async (job) => {
+      const account = await loadAccountForOwner(job.ownerDiscordId);
+      if (!account) return;
+      try {
+        await putOnSale(account.cookie, job.assetId!, job.price);
+        patchJob(job.id, { saleWarning: null });
+      } catch {
+        // Moderation can take hours. A later dashboard poll retries automatically.
+      }
+    })
+  );
 }
 
 async function processJob(job: UploadJob): Promise<void> {
   const account = await loadAccountForOwner(job.ownerDiscordId);
-  if (!account) throw new Error("Connect your own Roblox cookie on Account first.");
+  if (!account) throw new Error("Conecte o cookie da sua conta Roblox em Account primeiro.");
   if (job.groupId) {
     const allowed = await listPostableGroups(account.cookie, account.userId);
     if (!allowed.some((group) => group.id === job.groupId)) {
-      throw new Error("That group is not one you can post clothing to.");
+      throw new Error("Esse grupo não tem permissão para publicar roupa.");
     }
   }
   patchJob(job.id, { status: "uploading", error: null });
+  const fee = UPLOAD_FEE[job.kind];
+  if (job.kind === "accessory") {
+    let bytes = readFileSync(job.filePath);
+    if (job.meshFilePath && job.textureFilePath) {
+      const textureId = await uploadNamedAsset(
+        account.cookie,
+        account.userId,
+        job.groupId,
+        "Decal",
+        `${job.name} Texture`,
+        job.description,
+        readFileSync(job.textureFilePath),
+        "texture.png",
+        "image/png"
+      );
+      const meshId = await uploadNamedAsset(
+        account.cookie,
+        account.userId,
+        job.groupId,
+        "Mesh",
+        `${job.name} Mesh`,
+        job.description,
+        readFileSync(job.meshFilePath),
+        "model.mesh",
+        "application/octet-stream"
+      );
+      const rbxmx = buildAccessoryRbxmx({
+        name: job.name,
+        accessoryType: (job.accessoryType && job.accessoryType !== "Unknown" ? job.accessoryType : "Hat"),
+        meshId,
+        textureId,
+        handle: {
+          x: job.handleX || 1,
+          y: job.handleY || 1,
+          z: job.handleZ || 1,
+        },
+        attachY: job.attachY || 0.05,
+      });
+      writeFileSync(job.filePath, rbxmx, "utf8");
+      bytes = Buffer.from(rbxmx, "utf8");
+    }
+    const assetId = await uploadNamedAsset(
+      account.cookie,
+      account.userId,
+      job.groupId,
+      "Model",
+      job.name,
+      job.description,
+      bytes,
+      job.fileName,
+      "application/octet-stream"
+    );
+    const thumbnailUrl = await waitForCatalogThumb(assetId);
+    const saleWarning =
+      "Accessory montado e salvo como Model. Para listar no catálogo: Studio → Save to Roblox → Avatar Asset (taxa e thumb oficiais).";
+    patchJob(job.id, {
+      status: "live",
+      assetId,
+      catalogUrl: `https://www.roblox.com/library/${assetId}`,
+      thumbnailUrl,
+      saleWarning,
+      error: null,
+    });
+    await bumpOps({ sessionUploads: 1 }, job.ownerDiscordId);
+    void notifyDiscord({
+      title: "UGC Accessory uploaded",
+      body: `${job.name} is in your inventory as a Model.`,
+      fields: [
+        { name: "Type", value: job.accessoryType || "Accessory", inline: true },
+        { name: "Asset", value: String(assetId), inline: true },
+      ],
+      color: 0x3d9e6a,
+    });
+    return;
+  }
+  if (fee > 0) {
+    const robux = job.groupId
+      ? await fetchGroupRobux(account.cookie, job.groupId)
+      : await fetchRobux(account.cookie, account.userId);
+    if (robux != null && robux < fee) {
+      const target = job.groupId ? "no fundo do grupo" : "na sua conta";
+      throw new Error(
+        `Saldo insuficiente: O Roblox cobra ${fee} Robux ${target} para enviar este ${job.kind}. Recarregue e tente novamente.`
+      );
+    }
+  }
   const bytes = readFileSync(job.filePath);
   let assetId: number | null = null;
   let lastError = "";
@@ -501,15 +925,19 @@ async function processJob(job: UploadJob): Promise<void> {
     }
   }
   if (!assetId) throw new Error(lastError || "Roblox did not return an asset id.");
+  let saleWarning: string | null = null;
   try {
     await putOnSale(account.cookie, assetId, job.price);
   } catch {
-    // uploaded even if sale toggle fails
+    saleWarning = "Publicado, venda não ligada.";
   }
+  const thumbnailUrl = await waitForCatalogThumb(assetId);
   patchJob(job.id, {
     status: "live",
     assetId,
     catalogUrl: `https://www.roblox.com/catalog/${assetId}`,
+    thumbnailUrl,
+    saleWarning,
     error: null,
   });
   await bumpOps({ sessionUploads: 1 }, job.ownerDiscordId);
