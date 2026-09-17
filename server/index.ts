@@ -1,6 +1,7 @@
 import "./env.js";
 import cors from "cors";
 import express from "express";
+import sharp from "sharp";
 import path from "node:path";
 import * as zlib from "node:zlib";
 import { existsSync, readFileSync } from "node:fs";

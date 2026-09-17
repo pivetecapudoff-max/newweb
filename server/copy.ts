@@ -79,10 +79,21 @@ export async function ripUgcAsset(params: {
     args.push("--cookie", cookie);
   }
 
+  const pyCmd = process.env.PYTHON_PATH || (process.platform === "win32" ? "python" : "python3");
+
   return new Promise((resolve, reject) => {
-    const py = spawn("python", args, {
-      cwd: path.dirname(pythonScriptPath),
-      env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+    let py: any;
+    try {
+      py = spawn(pyCmd, args, {
+        cwd: path.dirname(pythonScriptPath),
+        env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+      });
+    } catch (err: any) {
+      return reject(new Error(`Falha ao iniciar processo Python: ${err.message}`));
+    }
+
+    py.on("error", (err: any) => {
+      reject(new Error(`Interpretador Python (${pyCmd}) não pôde ser executado: ${err.message}`));
     });
 
     const logs: string[] = [];
