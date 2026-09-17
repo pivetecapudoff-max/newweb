@@ -101,6 +101,35 @@ body {
   animation: shiny 6s linear infinite;
 }
 
+.text-shiny-blue {
+  background-image: linear-gradient(to right, #2563eb 0%, #3b82f6 20%, #60a5fa 35%, #bfdbfe 50%, #60a5fa 65%, #3b82f6 80%, #2563eb 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: shiny 6s linear infinite;
+  display: inline-block;
+}
+
+.blur-glow-aura {
+  position: relative;
+}
+
+.blur-glow-aura::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 10%;
+  transform: translateY(-50%);
+  width: 240px;
+  height: 65px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.35) 0%, rgba(59, 130, 246, 0.15) 50%, transparent 70%);
+  filter: blur(24px);
+  pointer-events: none;
+  z-index: 0;
+}
+
 @keyframes gradient-x {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }

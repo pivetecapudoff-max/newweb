@@ -367,13 +367,15 @@ export function fetchDashboard(groupId?: string): Promise<DashboardData> {
 }
 
 export type ClothingKind = "shirt" | "pants" | "tshirt";
+export type UploadKind = ClothingKind | "accessory";
 export type UploadStatus = "queued" | "uploading" | "live" | "failed" | "moderated";
 
 export interface UploadJob {
   id: string;
   name: string;
   description: string;
-  kind: ClothingKind;
+  kind: UploadKind;
+  accessoryType?: string | null;
   price: number;
   groupId: number | null;
   fileName: string;
@@ -381,6 +383,8 @@ export interface UploadJob {
   status: UploadStatus;
   assetId: number | null;
   catalogUrl: string | null;
+  thumbnailUrl?: string | null;
+  saleWarning?: string | null;
   error: string | null;
   createdAt: string;
   updatedAt: string;
@@ -397,12 +401,112 @@ export interface UploadGroup {
 
 export interface UploadBoard {
   connected: boolean;
+  lastGroupId?: number | null;
   jobs: UploadJob[];
   groups: UploadGroup[];
 }
 
+export interface PreparedUpload {
+  kind: ClothingKind;
+  alreadyTemplate: boolean;
+  suggestedName: string;
+  suggestedPrice: number;
+  image: string;
+}
+
 export function fetchUploads(): Promise<UploadBoard> {
   return api("/api/uploads").then((res) => readJson<UploadBoard>(res));
+}
+
+export function prepareUpload(body: {
+  image: string;
+  fileName?: string;
+  kind?: ClothingKind;
+}): Promise<PreparedUpload> {
+  return api("/api/uploads/prepare", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).then((res) => readJson<PreparedUpload>(res));
+}
+
+export interface PreFlightReport {
+  triangleCount: number;
+  triangleBudget: number;
+  trianglePassed: boolean;
+  textureWidth: number;
+  textureHeight: number;
+  texturePassed: boolean;
+  boundingBox: { width: number; height: number; depth: number };
+  boundsPassed: boolean;
+  uvIntegrity: boolean;
+  overallPassed: boolean;
+  repaired: boolean;
+}
+
+export interface PreparedAccessory {
+  mode: "parts" | "accessory";
+  format?: "rbxm" | "rbxmx";
+  accessoryType: string;
+  suggestedName: string;
+  triangleCount?: number;
+  attachment?: string;
+  texture?: string;
+  geometry?: {
+    positions: number[];
+    normals: number[];
+    uvs: number[];
+    indices: number[];
+  };
+  preFlight?: PreFlightReport;
+}
+
+export function prepareUgcAccessory(body: {
+  file?: string;
+  fileName?: string;
+  mesh?: string;
+  meshName?: string;
+  texture?: string;
+  textureName?: string;
+  accessoryType?: string;
+  name?: string;
+  autoRepair?: boolean;
+}): Promise<PreparedAccessory> {
+  return api("/api/uploads/prepare-ugc", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).then((res) => readJson<PreparedAccessory>(res));
+}
+
+export function mutateImageHash(imageBase64: string): Promise<{ success: boolean; mutatedDataUrl: string }> {
+  return api("/api/copy/mutate-hash", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ imageBase64 }),
+  }).then((res) => readJson<{ success: boolean; mutatedDataUrl: string }>(res));
+}
+
+export function queueUgcAccessory(body: {
+  name?: string;
+  description?: string;
+  groupId: number | null;
+  fileName?: string;
+  file?: string;
+  mesh?: string;
+  meshName?: string;
+  texture?: string;
+  textureName?: string;
+  accessoryType?: string;
+  isLimited?: boolean;
+  totalQuantity?: number;
+  priceInRobux?: number;
+}): Promise<UploadJob> {
+  return api("/api/uploads/ugc", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).then((res) => readJson<UploadJob>(res));
 }
 
 export function queueUpload(body: {

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { RotateCw, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import type { UgcClothingKind } from "../lib/ugcTemplate";
 
@@ -10,62 +11,7 @@ interface RobloxAvatar3DProps {
   title?: string;
 }
 
-/**
- * Creates the classic Roblox smiley face on an offscreen canvas
- */
-function createRobloxFaceTexture(): THREE.CanvasTexture {
-  const canvas = document.createElement("canvas");
-  canvas.width = 256;
-  canvas.height = 256;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return new THREE.CanvasTexture(canvas);
-
-  // Studio light gray head background
-  ctx.fillStyle = "#e5e7eb";
-  ctx.fillRect(0, 0, 256, 256);
-
-  // Classic Roblox Face: Shiny oval eyes with circular catchlight
-  ctx.fillStyle = "#111827";
-
-  // Left Eye (avatar perspective: avatar's right, screen left)
-  ctx.beginPath();
-  ctx.ellipse(82, 98, 14, 21, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Right Eye (avatar perspective: avatar's left, screen right)
-  ctx.beginPath();
-  ctx.ellipse(174, 98, 14, 21, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // White twinkle highlights in eyes
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.arc(77, 90, 5.5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(169, 90, 5.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Iconic Roblox Smile Arc
-  ctx.strokeStyle = "#111827";
-  ctx.lineWidth = 9;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.arc(128, 136, 44, 0.18 * Math.PI, 0.82 * Math.PI, false);
-  ctx.stroke();
-
-  // Cheerful upturned smile dimples
-  ctx.beginPath();
-  ctx.arc(88, 160, 5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(168, 160, 5, 0, Math.PI * 2);
-  ctx.fill();
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
-}
+export type AvatarRigType = "r6" | "r15";
 
 /**
  * Maps the 6 faces of a Three.js BoxGeometry to exact pixel coordinates
@@ -118,12 +64,12 @@ async function buildCompositeTexture(
   const ctx = canvas.getContext("2d");
   if (!ctx) return new THREE.CanvasTexture(canvas);
 
-  // Avatar skin tone (Classic studio light gray)
+  // Avatar skin tone (Classic studio light gray mannequin)
   const skinColor = "#e5e7eb";
 
   // Fill limbs and torso with default base textures
   if (kind === "pants") {
-    // Torso upper chest (Y: 74..128) - Skin & White Studio Undershirt/Camisole
+    // Torso upper chest (Y: 74..128) - Skin & White Studio Undershirt
     ctx.fillStyle = skinColor;
     ctx.fillRect(231, 74, 128, 56);
     ctx.fillRect(427, 74, 128, 56);
@@ -172,7 +118,7 @@ async function buildCompositeTexture(
     ctx.fillRect(361, 74, 64, 128);
   }
 
-  // Draw the generated Roblox clothing template on top!
+  // Draw the generated Roblox clothing template on top
   if (templateDataUrl) {
     await new Promise<void>((resolve) => {
       const img = new Image();
@@ -201,6 +147,7 @@ export const RobloxAvatar3D: React.FC<RobloxAvatar3DProps> = ({
   title: _title = "Roblox Avatar 3D",
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [rigType, setRigType] = useState<AvatarRigType>("r6");
   const [autoRotate, setAutoRotate] = useState<boolean>(true);
   const [zoomLevel, setZoomLevel] = useState<number>(0);
   const avatarGroupRef = useRef<THREE.Group | null>(null);
@@ -225,8 +172,8 @@ export const RobloxAvatar3D: React.FC<RobloxAvatar3DProps> = ({
 
     // 2. Camera (perspective centered on Roblox avatar)
     const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
-    camera.position.set(0, 0.4, 7.0 - zoomLevel * 0.8);
-    camera.lookAt(0, 0.1, 0);
+    camera.position.set(0, 0.35, 7.0 - zoomLevel * 0.8);
+    camera.lookAt(0, 0.05, 0);
     cameraRef.current = camera;
 
     // 3. Renderer with transparent background
@@ -243,25 +190,25 @@ export const RobloxAvatar3D: React.FC<RobloxAvatar3DProps> = ({
     container.replaceChildren(renderer.domElement);
 
     // 4. Lighting (Roblox Studio Key + Rim + Ambient)
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
     scene.add(ambientLight);
 
-    // Key Light (warm studio spotlight from top-right)
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
+    // Key Light
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.15);
     keyLight.position.set(4, 6, 5);
     scene.add(keyLight);
 
-    // Rim Light (cool blue studio highlight from rear-left)
+    // Rim Light
     const rimLight = new THREE.DirectionalLight(0x60a5fa, 0.7);
     rimLight.position.set(-4, 3, -5);
     scene.add(rimLight);
 
-    // Fill Light (soft front-low illumination)
+    // Fill Light
     const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.35);
     fillLight.position.set(0, -3, 4);
     scene.add(fillLight);
 
-    // Floor Shadow Disc (Iconic soft Roblox avatar ground shadow)
+    // Floor Shadow Disc
     const shadowCanvas = document.createElement("canvas");
     shadowCanvas.width = 128;
     shadowCanvas.height = 128;
@@ -286,163 +233,394 @@ export const RobloxAvatar3D: React.FC<RobloxAvatar3DProps> = ({
     floorShadow.position.y = -2.99;
     scene.add(floorShadow);
 
-    // 5. Build Roblox R6 Avatar Group
+    // 5. Build Avatar Root Group
     const avatarGroup = new THREE.Group();
     avatarGroupRef.current = avatarGroup;
     scene.add(avatarGroup);
 
-    // Base skin plastic material
+    // Official Skin Material (Roblox Studio Mannequin)
     const skinMat = new THREE.MeshStandardMaterial({
       color: 0xe5e7eb,
-      roughness: 0.35,
+      roughness: 0.38,
       metalness: 0.05,
     });
 
-    // 5.1 HEAD (Roblox R6 classic head: 1.25 x 1.25 x 1.25 with top stud)
-    const headMatArray = [
-      skinMat, // +X (avatar left)
-      skinMat, // -X (avatar right)
-      skinMat, // +Y (top)
-      skinMat, // -Y (bottom)
-      new THREE.MeshStandardMaterial({
-        map: createRobloxFaceTexture(),
-        roughness: 0.35,
-        metalness: 0.05,
-      }), // +Z (Front with classic face)
-      skinMat, // -Z (back)
-    ];
-
-    const headGeo = new THREE.BoxGeometry(1.25, 1.25, 1.25);
-    const headMesh = new THREE.Mesh(headGeo, headMatArray);
-    headMesh.position.set(0, 1.625, 0);
-    avatarGroup.add(headMesh);
-
-    // Top Head Stud (The signature Roblox cylinder on top of the head)
-    const studGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.18, 24);
-    const studMat = new THREE.MeshStandardMaterial({
-      color: 0xd1d5db,
-      roughness: 0.3,
-      metalness: 0.1,
-    });
-    const studMesh = new THREE.Mesh(studGeo, studMat);
-    studMesh.position.set(0, 2.34, 0);
-    avatarGroup.add(studMesh);
-
-    // 5.2 TORSO (2.0 x 2.0 x 1.0)
-    const torsoGeo = new THREE.BoxGeometry(2.0, 2.0, 1.0);
-    applyRobloxUVs(torsoGeo, {
-      right: [361, 74, 64, 128],  // +X (avatar left side)
-      left: [165, 74, 64, 128],   // -X (avatar right side)
-      top: [231, 10, 128, 64],    // +Y (top shoulders)
-      bottom: [231, 204, 128, 64],// -Y (crotch underside)
-      front: [231, 74, 128, 128], // +Z (front torso)
-      back: [427, 74, 128, 128],  // -Z (back torso)
-    });
-
-    // 5.3 RIGHT ARM (-1.5, 0, 0)
-    const rightArmGeo = new THREE.BoxGeometry(1.0, 2.0, 1.0);
-    applyRobloxUVs(rightArmGeo, {
-      right: [19, 355, 64, 128],   // +X (inner side)
-      left: [151, 355, 64, 128],   // -X (outer side)
-      top: [217, 289, 64, 64],     // +Y (top shoulder)
-      bottom: [217, 485, 64, 64],  // -Y (bottom wrist)
-      front: [217, 355, 64, 128],  // +Z (front)
-      back: [85, 355, 64, 128],    // -Z (back)
-    });
-
-    // 5.4 LEFT ARM (+1.5, 0, 0)
-    const leftArmGeo = new THREE.BoxGeometry(1.0, 2.0, 1.0);
-    applyRobloxUVs(leftArmGeo, {
-      right: [374, 355, 64, 128],  // +X (outer side)
-      left: [506, 355, 64, 128],   // -X (inner side)
-      top: [308, 289, 64, 64],     // +Y (top shoulder)
-      bottom: [308, 485, 64, 64],  // -Y (bottom wrist)
-      front: [308, 355, 64, 128],  // +Z (front)
-      back: [440, 355, 64, 128],   // -Z (back)
-    });
-
-    // 5.5 RIGHT LEG (-0.5, -2.0, 0)
-    const rightLegGeo = new THREE.BoxGeometry(1.0, 2.0, 1.0);
-    applyRobloxUVs(rightLegGeo, {
-      right: [19, 355, 64, 128],   // +X (inner side)
-      left: [151, 355, 64, 128],   // -X (outer side)
-      top: [217, 289, 64, 64],     // +Y (top thigh)
-      bottom: [217, 485, 64, 64],  // -Y (sole of foot)
-      front: [217, 355, 64, 128],  // +Z (front)
-      back: [85, 355, 64, 128],    // -Z (back)
-    });
-
-    // 5.6 LEFT LEG (+0.5, -2.0, 0)
-    const leftLegGeo = new THREE.BoxGeometry(1.0, 2.0, 1.0);
-    applyRobloxUVs(leftLegGeo, {
-      right: [374, 355, 64, 128],  // +X (outer side)
-      left: [506, 355, 64, 128],   // -X (inner side)
-      top: [308, 289, 64, 64],     // +Y (top thigh)
-      bottom: [308, 485, 64, 64],  // -Y (sole of foot)
-      front: [308, 355, 64, 128],  // +Z (front)
-      back: [440, 355, 64, 128],   // -Z (back)
-    });
-
-    // Build Meshes with Placeholder Material
+    // Default Clothing Material
     const defaultClothingMat = new THREE.MeshStandardMaterial({
       color: 0x27272a,
       roughness: 0.45,
-      metalness: 0.1,
+      metalness: 0.08,
     });
 
-    const torsoMesh = new THREE.Mesh(torsoGeo, defaultClothingMat);
-    torsoMesh.position.set(0, 0, 0);
-    avatarGroup.add(torsoMesh);
+    // Official Roblox Face Decal Texture
+    const faceTexture = new THREE.TextureLoader().load("/roblox_face.png");
+    faceTexture.colorSpace = THREE.SRGBColorSpace;
 
-    const rightArmMesh = new THREE.Mesh(rightArmGeo, defaultClothingMat);
-    rightArmMesh.position.set(-1.5, 0, 0);
-    avatarGroup.add(rightArmMesh);
+    // Track all meshes for animation and cleanup
+    const animatedParts: {
+      head?: THREE.Object3D;
+      torso?: THREE.Object3D;
+      arms?: THREE.Object3D[];
+    } = {};
+    const createdGeometries: THREE.BufferGeometry[] = [shadowGeo];
 
-    const leftArmMesh = new THREE.Mesh(leftArmGeo, defaultClothingMat);
-    leftArmMesh.position.set(1.5, 0, 0);
-    avatarGroup.add(leftArmMesh);
+    // ==========================================
+    // RIG BUILDERS: R6 vs R15
+    // ==========================================
+    if (rigType === "r6") {
+      // ---------------- R6 RIG (Official Roblox Dimensions: NO LEGO STUD) ----------------
+      // 1. Head (Official Roblox SpecialMesh dimensions: 2.0w x 1.25h x 1.25d, smooth beveled)
+      const headGeo = new RoundedBoxGeometry(2.0, 1.25, 1.25, 6, 0.22);
+      const headMesh = new THREE.Mesh(headGeo, skinMat);
+      headMesh.position.set(0, 1.625, 0);
+      avatarGroup.add(headMesh);
+      createdGeometries.push(headGeo);
 
-    const rightLegMesh = new THREE.Mesh(rightLegGeo, defaultClothingMat);
-    rightLegMesh.position.set(-0.5, -2.0, 0);
-    avatarGroup.add(rightLegMesh);
+      // Face Decal Plane (Official Roblox Default Smile)
+      const faceMat = new THREE.MeshBasicMaterial({
+        map: faceTexture,
+        transparent: true,
+        depthWrite: false,
+      });
+      const faceGeo = new THREE.PlaneGeometry(1.15, 1.15);
+      const faceMesh = new THREE.Mesh(faceGeo, faceMat);
+      faceMesh.position.set(0, 0, 0.635);
+      headMesh.add(faceMesh);
+      createdGeometries.push(faceGeo);
 
-    const leftLegMesh = new THREE.Mesh(leftLegGeo, defaultClothingMat);
-    leftLegMesh.position.set(0.5, -2.0, 0);
-    avatarGroup.add(leftLegMesh);
+      // 2. Torso (2.0 x 2.0 x 1.0)
+      const torsoGeo = new THREE.BoxGeometry(2.0, 2.0, 1.0);
+      applyRobloxUVs(torsoGeo, {
+        right: [361, 74, 64, 128],
+        left: [165, 74, 64, 128],
+        top: [231, 10, 128, 64],
+        bottom: [231, 204, 128, 64],
+        front: [231, 74, 128, 128],
+        back: [427, 74, 128, 128],
+      });
+      const torsoMesh = new THREE.Mesh(torsoGeo, defaultClothingMat);
+      torsoMesh.position.set(0, 0, 0);
+      avatarGroup.add(torsoMesh);
+      createdGeometries.push(torsoGeo);
+
+      // 3. Right Arm (-1.5, 0, 0)
+      const rightArmGeo = new THREE.BoxGeometry(1.0, 2.0, 1.0);
+      applyRobloxUVs(rightArmGeo, {
+        right: [19, 355, 64, 128],
+        left: [151, 355, 64, 128],
+        top: [217, 289, 64, 64],
+        bottom: [217, 485, 64, 64],
+        front: [217, 355, 64, 128],
+        back: [85, 355, 64, 128],
+      });
+      const rightArmMesh = new THREE.Mesh(rightArmGeo, defaultClothingMat);
+      rightArmMesh.position.set(-1.5, 0, 0);
+      rightArmMesh.rotation.z = 0.05;
+      avatarGroup.add(rightArmMesh);
+      createdGeometries.push(rightArmGeo);
+
+      // 4. Left Arm (+1.5, 0, 0)
+      const leftArmGeo = new THREE.BoxGeometry(1.0, 2.0, 1.0);
+      applyRobloxUVs(leftArmGeo, {
+        right: [374, 355, 64, 128],
+        left: [506, 355, 64, 128],
+        top: [308, 289, 64, 64],
+        bottom: [308, 485, 64, 64],
+        front: [308, 355, 64, 128],
+        back: [440, 355, 64, 128],
+      });
+      const leftArmMesh = new THREE.Mesh(leftArmGeo, defaultClothingMat);
+      leftArmMesh.position.set(1.5, 0, 0);
+      leftArmMesh.rotation.z = -0.05;
+      avatarGroup.add(leftArmMesh);
+      createdGeometries.push(leftArmGeo);
+
+      // 5. Right Leg (-0.5, -2.0, 0)
+      const rightLegGeo = new THREE.BoxGeometry(1.0, 2.0, 1.0);
+      applyRobloxUVs(rightLegGeo, {
+        right: [19, 355, 64, 128],
+        left: [151, 355, 64, 128],
+        top: [217, 289, 64, 64],
+        bottom: [217, 485, 64, 64],
+        front: [217, 355, 64, 128],
+        back: [85, 355, 64, 128],
+      });
+      const rightLegMesh = new THREE.Mesh(rightLegGeo, defaultClothingMat);
+      rightLegMesh.position.set(-0.5, -2.0, 0);
+      avatarGroup.add(rightLegMesh);
+      createdGeometries.push(rightLegGeo);
+
+      // 6. Left Leg (+0.5, -2.0, 0)
+      const leftLegGeo = new THREE.BoxGeometry(1.0, 2.0, 1.0);
+      applyRobloxUVs(leftLegGeo, {
+        right: [374, 355, 64, 128],
+        left: [506, 355, 64, 128],
+        top: [308, 289, 64, 64],
+        bottom: [308, 485, 64, 64],
+        front: [308, 355, 64, 128],
+        back: [440, 355, 64, 128],
+      });
+      const leftLegMesh = new THREE.Mesh(leftLegGeo, defaultClothingMat);
+      leftLegMesh.position.set(0.5, -2.0, 0);
+      avatarGroup.add(leftLegMesh);
+      createdGeometries.push(leftLegGeo);
+
+      animatedParts.head = headMesh;
+      animatedParts.torso = torsoMesh;
+      animatedParts.arms = [rightArmMesh, leftArmMesh];
+
+      // Texture Binding
+      buildCompositeTexture(templateDataUrl, kind).then((tex) => {
+        const mat = new THREE.MeshStandardMaterial({
+          map: tex,
+          roughness: 0.4,
+          metalness: 0.08,
+        });
+        torsoMesh.material = mat;
+        rightArmMesh.material = mat;
+        leftArmMesh.material = mat;
+        rightLegMesh.material = mat;
+        leftLegMesh.material = mat;
+      });
+    } else {
+      // ---------------- R15 RIG (15 Articulated Parts with Official Idle Stance) ----------------
+      // 1. Head
+      const headGeo = new RoundedBoxGeometry(2.0, 1.25, 1.25, 6, 0.22);
+      const headMesh = new THREE.Mesh(headGeo, skinMat);
+      headMesh.position.set(0, 1.72, 0);
+      avatarGroup.add(headMesh);
+      createdGeometries.push(headGeo);
+
+      // Face Decal Plane
+      const faceMat = new THREE.MeshBasicMaterial({
+        map: faceTexture,
+        transparent: true,
+        depthWrite: false,
+      });
+      const faceGeo = new THREE.PlaneGeometry(1.15, 1.15);
+      const faceMesh = new THREE.Mesh(faceGeo, faceMat);
+      faceMesh.position.set(0, 0, 0.635);
+      headMesh.add(faceMesh);
+      createdGeometries.push(faceGeo);
+
+      // 2. UpperTorso (2.0 x 1.35 x 1.0)
+      const upperTorsoGeo = new THREE.BoxGeometry(2.0, 1.35, 1.0);
+      applyRobloxUVs(upperTorsoGeo, {
+        right: [361, 74, 64, 86],
+        left: [165, 74, 64, 86],
+        top: [231, 10, 128, 64],
+        bottom: [231, 160, 128, 20],
+        front: [231, 74, 128, 86],
+        back: [427, 74, 128, 86],
+      });
+      const upperTorsoMesh = new THREE.Mesh(upperTorsoGeo, defaultClothingMat);
+      upperTorsoMesh.position.set(0, 0.42, 0);
+      avatarGroup.add(upperTorsoMesh);
+      createdGeometries.push(upperTorsoGeo);
+
+      // 3. LowerTorso (1.95 x 0.65 x 0.95)
+      const lowerTorsoGeo = new THREE.BoxGeometry(1.95, 0.65, 0.95);
+      applyRobloxUVs(lowerTorsoGeo, {
+        right: [361, 160, 64, 42],
+        left: [165, 160, 64, 42],
+        top: [231, 160, 128, 20],
+        bottom: [231, 204, 128, 64],
+        front: [231, 160, 128, 42],
+        back: [427, 160, 128, 42],
+      });
+      const lowerTorsoMesh = new THREE.Mesh(lowerTorsoGeo, defaultClothingMat);
+      lowerTorsoMesh.position.set(0, -0.45, 0);
+      avatarGroup.add(lowerTorsoMesh);
+      createdGeometries.push(lowerTorsoGeo);
+
+      // Limbs Containers
+      const clothingMeshes: THREE.Mesh[] = [upperTorsoMesh, lowerTorsoMesh];
+
+      // Arm Builder (UpperArm, LowerArm, Hand)
+      const buildArm = (isLeft: boolean) => {
+        const armGroup = new THREE.Group();
+        const sign = isLeft ? 1 : -1;
+        armGroup.position.set(sign * 1.5, 0.85, 0);
+
+        // Natural R15 idle stance angles
+        armGroup.rotation.z = sign * -0.12;
+        armGroup.rotation.x = -0.06;
+
+        const uFront = isLeft ? 308 : 217;
+        const uBack = isLeft ? 440 : 85;
+        const uLeft = isLeft ? 374 : 151;
+        const uRight = isLeft ? 506 : 19;
+        const uTop = isLeft ? 308 : 217;
+
+        // UpperArm
+        const upperArmGeo = new THREE.BoxGeometry(0.98, 1.05, 0.98);
+        applyRobloxUVs(upperArmGeo, {
+          right: [uRight, 355, 64, 64],
+          left: [uLeft, 355, 64, 64],
+          top: [uTop, 289, 64, 64],
+          bottom: [uTop, 419, 64, 15],
+          front: [uFront, 355, 64, 64],
+          back: [uBack, 355, 64, 64],
+        });
+        const upperArmMesh = new THREE.Mesh(upperArmGeo, defaultClothingMat);
+        upperArmMesh.position.set(0, -0.45, 0);
+        armGroup.add(upperArmMesh);
+        clothingMeshes.push(upperArmMesh);
+        createdGeometries.push(upperArmGeo);
+
+        // Elbow Joint Group
+        const elbowGroup = new THREE.Group();
+        elbowGroup.position.set(0, -0.98, 0);
+        elbowGroup.rotation.x = 0.22; // subtle forward elbow bend
+        elbowGroup.rotation.z = sign * 0.05;
+        armGroup.add(elbowGroup);
+
+        // LowerArm
+        const lowerArmGeo = new THREE.BoxGeometry(0.95, 0.95, 0.95);
+        applyRobloxUVs(lowerArmGeo, {
+          right: [uRight, 419, 64, 45],
+          left: [uLeft, 419, 64, 45],
+          top: [uTop, 419, 64, 15],
+          bottom: [uTop, 464, 64, 15],
+          front: [uFront, 419, 64, 45],
+          back: [uBack, 419, 64, 45],
+        });
+        const lowerArmMesh = new THREE.Mesh(lowerArmGeo, defaultClothingMat);
+        lowerArmMesh.position.set(0, -0.42, 0);
+        elbowGroup.add(lowerArmMesh);
+        clothingMeshes.push(lowerArmMesh);
+        createdGeometries.push(lowerArmGeo);
+
+        // Hand
+        const handGeo = new THREE.BoxGeometry(0.92, 0.35, 0.92);
+        applyRobloxUVs(handGeo, {
+          right: [uRight, 464, 64, 19],
+          left: [uLeft, 464, 64, 19],
+          top: [uTop, 464, 64, 15],
+          bottom: [uTop, 485, 64, 64],
+          front: [uFront, 464, 64, 19],
+          back: [uBack, 464, 64, 19],
+        });
+        const handMesh = new THREE.Mesh(handGeo, skinMat);
+        handMesh.position.set(0, -1.02, 0);
+        elbowGroup.add(handMesh);
+        createdGeometries.push(handGeo);
+
+        avatarGroup.add(armGroup);
+        return armGroup;
+      };
+
+      const rightArmGroup = buildArm(false);
+      const leftArmGroup = buildArm(true);
+
+      // Leg Builder (UpperLeg, LowerLeg, Foot)
+      const buildLeg = (isLeft: boolean) => {
+        const legGroup = new THREE.Group();
+        const sign = isLeft ? 1 : -1;
+        legGroup.position.set(sign * 0.52, -0.78, 0);
+
+        const uFront = isLeft ? 308 : 217;
+        const uBack = isLeft ? 440 : 85;
+        const uLeft = isLeft ? 374 : 151;
+        const uRight = isLeft ? 506 : 19;
+        const uTop = isLeft ? 308 : 217;
+
+        // UpperLeg
+        const upperLegGeo = new THREE.BoxGeometry(0.98, 1.1, 0.98);
+        applyRobloxUVs(upperLegGeo, {
+          right: [uRight, 355, 64, 64],
+          left: [uLeft, 355, 64, 64],
+          top: [uTop, 289, 64, 64],
+          bottom: [uTop, 419, 64, 15],
+          front: [uFront, 355, 64, 64],
+          back: [uBack, 355, 64, 64],
+        });
+        const upperLegMesh = new THREE.Mesh(upperLegGeo, defaultClothingMat);
+        upperLegMesh.position.set(0, -0.5, 0);
+        legGroup.add(upperLegMesh);
+        clothingMeshes.push(upperLegMesh);
+        createdGeometries.push(upperLegGeo);
+
+        // Knee Joint Group
+        const kneeGroup = new THREE.Group();
+        kneeGroup.position.set(0, -1.05, 0);
+        legGroup.add(kneeGroup);
+
+        // LowerLeg
+        const lowerLegGeo = new THREE.BoxGeometry(0.95, 1.05, 0.95);
+        applyRobloxUVs(lowerLegGeo, {
+          right: [uRight, 419, 64, 45],
+          left: [uLeft, 419, 64, 45],
+          top: [uTop, 419, 64, 15],
+          bottom: [uTop, 464, 64, 15],
+          front: [uFront, 419, 64, 45],
+          back: [uBack, 419, 64, 45],
+        });
+        const lowerLegMesh = new THREE.Mesh(lowerLegGeo, defaultClothingMat);
+        lowerLegMesh.position.set(0, -0.48, 0);
+        kneeGroup.add(lowerLegMesh);
+        clothingMeshes.push(lowerLegMesh);
+        createdGeometries.push(lowerLegGeo);
+
+        // Foot
+        const footGeo = new THREE.BoxGeometry(0.95, 0.35, 1.05);
+        applyRobloxUVs(footGeo, {
+          right: [uRight, 464, 64, 19],
+          left: [uLeft, 464, 64, 19],
+          top: [uTop, 464, 64, 15],
+          bottom: [uTop, 485, 64, 64],
+          front: [uFront, 464, 64, 19],
+          back: [uBack, 464, 64, 19],
+        });
+        const footMesh = new THREE.Mesh(footGeo, defaultClothingMat);
+        footMesh.position.set(0, -1.1, 0.05);
+        kneeGroup.add(footMesh);
+        clothingMeshes.push(footMesh);
+        createdGeometries.push(footGeo);
+
+        avatarGroup.add(legGroup);
+        return legGroup;
+      };
+
+      buildLeg(false);
+      buildLeg(true);
+
+      animatedParts.head = headMesh;
+      animatedParts.torso = upperTorsoMesh;
+      animatedParts.arms = [rightArmGroup, leftArmGroup];
+
+      // Texture Binding for R15
+      buildCompositeTexture(templateDataUrl, kind).then((tex) => {
+        const mat = new THREE.MeshStandardMaterial({
+          map: tex,
+          roughness: 0.4,
+          metalness: 0.08,
+        });
+        for (const m of clothingMeshes) {
+          m.material = mat;
+        }
+      });
+    }
 
     // Initial slight 3/4 catalog angle
     avatarGroup.rotation.y = 0.35;
-
-    // Load composite clothing texture
-    buildCompositeTexture(templateDataUrl, kind).then((texture) => {
-      const clothingMat = new THREE.MeshStandardMaterial({
-        map: texture,
-        roughness: 0.4,
-        metalness: 0.08,
-      });
-
-      torsoMesh.material = clothingMat;
-      rightArmMesh.material = clothingMat;
-      leftArmMesh.material = clothingMat;
-      rightLegMesh.material = clothingMat;
-      leftLegMesh.material = clothingMat;
-    });
 
     // 6. Animation Loop
     let clock = new THREE.Clock();
 
     const animate = () => {
       reqIdRef.current = requestAnimationFrame(animate);
-      const delta = clock.getDelta();
       const elapsedTime = clock.getElapsedTime();
 
       // Subtle breathing idle animation
       const breath = Math.sin(elapsedTime * 2.2) * 0.012;
-      torsoMesh.position.y = breath;
-      headMesh.position.y = 1.625 + breath * 1.3;
-      studMesh.position.y = 2.34 + breath * 1.3;
-      rightArmMesh.position.y = breath * 0.6;
-      leftArmMesh.position.y = breath * 0.6;
+      if (animatedParts.torso) animatedParts.torso.position.y += breath * 0.05;
+      if (animatedParts.head) animatedParts.head.position.y += breath * 0.08;
+      if (animatedParts.arms) {
+        animatedParts.arms.forEach((arm) => {
+          arm.position.y += breath * 0.04;
+        });
+      }
 
       // Auto-rotation when not actively dragging
       if (autoRotate && !isDraggingRef.current) {
@@ -482,16 +660,9 @@ export const RobloxAvatar3D: React.FC<RobloxAvatar3DProps> = ({
       cancelAnimationFrame(reqIdRef.current);
       resizeObserver.disconnect();
       renderer.dispose();
-      torsoGeo.dispose();
-      headGeo.dispose();
-      studGeo.dispose();
-      rightArmGeo.dispose();
-      leftArmGeo.dispose();
-      rightLegGeo.dispose();
-      leftLegGeo.dispose();
-      shadowGeo.dispose();
+      createdGeometries.forEach((g) => g.dispose());
     };
-  }, [templateDataUrl, kind]);
+  }, [templateDataUrl, kind, rigType]);
 
   // Handle Zoom change
   useEffect(() => {
@@ -553,14 +724,34 @@ export const RobloxAvatar3D: React.FC<RobloxAvatar3DProps> = ({
       {/* 3D WebGL Canvas Container */}
       <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
-      {/* Floating Roblox R6 Badge */}
-      <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-black/70 border border-white/10 backdrop-blur-md pointer-events-none">
-        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-        <span className="text-[10px] font-bold tracking-wider text-blue-300 uppercase">Roblox R6 3D</span>
+      {/* Floating R6 vs R15 Toggle Switch */}
+      <div className="absolute top-2 left-2 flex items-center bg-black/80 border border-white/10 rounded-lg p-0.5 backdrop-blur-md z-10 shadow-lg">
+        <button
+          type="button"
+          onClick={() => setRigType("r6")}
+          className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold tracking-wider transition-all uppercase ${
+            rigType === "r6"
+              ? "bg-blue-600 text-white shadow-sm"
+              : "text-white/50 hover:text-white hover:bg-white/5"
+          }`}
+        >
+          Roblox R6
+        </button>
+        <button
+          type="button"
+          onClick={() => setRigType("r15")}
+          className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold tracking-wider transition-all uppercase ${
+            rigType === "r15"
+              ? "bg-blue-600 text-white shadow-sm"
+              : "text-white/50 hover:text-white hover:bg-white/5"
+          }`}
+        >
+          Roblox R15
+        </button>
       </div>
 
       {/* 3D Interaction Control Toolbar */}
-      <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/75 border border-white/10 p-1 rounded-lg backdrop-blur-md shadow-xl">
+      <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/75 border border-white/10 p-1 rounded-lg backdrop-blur-md shadow-xl z-10">
         <button
           type="button"
           onClick={() => setAutoRotate((prev) => !prev)}
@@ -600,7 +791,7 @@ export const RobloxAvatar3D: React.FC<RobloxAvatar3DProps> = ({
       </div>
 
       {/* Subtle bottom drag hint */}
-      <div className="absolute bottom-2 left-2 text-[9px] text-white/30 font-mono pointer-events-none">
+      <div className="absolute bottom-2 left-2 text-[9px] text-white/30 font-mono pointer-events-none z-10">
         Arraste para girar 360°
       </div>
     </div>

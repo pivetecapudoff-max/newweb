@@ -17,12 +17,15 @@ import {
   RefreshCw,
   FolderArchive,
   ArrowRight,
+  ShieldCheck,
+  Wand2,
 } from "lucide-react";
-import { ripUgcItem, type UgcRipResult } from "../lib/api";
+import { ripUgcItem, mutateImageHash, type UgcRipResult } from "../lib/api";
 import { useNavigate } from "react-router-dom";
 import { LiquidMetalButton } from "@/components/ui/liquid-metal-button";
 import { SeoOptimizationModal } from "../components/SeoOptimizationModal";
 import { toastManager } from "@/components/ui/toast";
+import { RobloxAvatar3D } from "../components/RobloxAvatar3D";
 
 interface HistoryItem {
   assetId: string;
@@ -45,6 +48,9 @@ export function CopyPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<UgcRipResult | null>(null);
+  const [currentTextureUrl, setCurrentTextureUrl] = useState<string | null>(null);
+  const [mutating, setMutating] = useState(false);
+  const [hashMutated, setHashMutated] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [seoModalOpen, setSeoModalOpen] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>(() => {
@@ -108,10 +114,12 @@ export function CopyPage() {
       }
 
       setResult(res);
+      setCurrentTextureUrl(res.textureUrl || null);
+      setHashMutated(false);
       saveToHistory(res);
       toastManager.success(
-        "Modelo 3D Extraído!",
-        `Arquivos de "${res.name || "Item"}" prontos para download.`
+        "Item Extraído com Sucesso!",
+        `Arquivos de "${res.name || "Item"}" prontos para uso.`
       );
     } catch (err: any) {
       const errorMsg = err?.message || "Erro inesperado ao copiar o item UGC.";
@@ -122,19 +130,96 @@ export function CopyPage() {
     }
   };
 
+  const handleMutateHash = async () => {
+    if (!currentTextureUrl) return;
+    setMutating(true);
+    try {
+      let b64 = currentTextureUrl;
+      if (b64.startsWith("http") || b64.startsWith("/")) {
+        const resp = await fetch(b64);
+        const blob = await resp.blob();
+        b64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+      }
+      const res = await mutateImageHash(b64);
+      if (res.success) {
+        setCurrentTextureUrl(res.mutatedDataUrl);
+        setHashMutated(true);
+        toastManager.success("Mutação Anti-Ban Aplicada!", "Hash SHA-256 alterado com micro-ruído imperceptível.");
+      }
+    } catch (err: any) {
+      toastManager.error("Erro na Mutação", err.message || "Falha ao mutar imagem.");
+    } finally {
+      setMutating(false);
+    }
+  };
+
+  const handleSendToUpload2D = () => {
+    if (!result || !currentTextureUrl) return;
+    const isPants = result.type.toLowerCase().includes("calça") || result.type.toLowerCase().includes("pants");
+    navigate("/painel/upload", {
+      state: {
+        mode: "2d",
+        image: currentTextureUrl,
+        name: result.name,
+        kind: isPants ? "pants" : "shirt",
+      },
+    });
+  };
+
+  const handleSendToUploadUgc = async () => {
+    if (!result) return;
+    const objFile = result.files.find((f) => f.type === "obj");
+    const texFile = result.files.find((f) => f.type === "texture");
+    if (!objFile || !texFile) {
+      toastManager.error("Arquivos Faltando", "O item não possui malha OBJ e textura PNG.");
+      return;
+    }
+    try {
+      const readBlobAsB64 = (url: string): Promise<string> =>
+        fetch(url)
+          .then((r) => r.blob())
+          .then(
+            (b) =>
+              new Promise((resolve) => {
+                const r = new FileReader();
+                r.onloadend = () => resolve(r.result as string);
+                r.readAsDataURL(b);
+              })
+          );
+      const [objData, texData] = await Promise.all([readBlobAsB64(objFile.url), readBlobAsB64(texFile.url)]);
+      navigate("/painel/upload", {
+        state: {
+          mode: "ugc",
+          mesh: objData,
+          meshName: objFile.name,
+          texture: texData,
+          textureName: texFile.name,
+          name: result.name,
+          accessoryType: result.type,
+        },
+      });
+    } catch (err: any) {
+      toastManager.error("Erro ao carregar", err.message || "Não foi possível preparar o envio.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-transparent p-6 lg:p-10 max-w-7xl mx-auto space-y-8 pb-20">
       {/* Header */}
       <div className="border-b border-white/[0.08] pb-6">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-            Copy
-            <span className="text-xs font-normal px-2.5 py-1 rounded-lg bg-white/5 border border-white/[0.08] text-white/60">
-              Blender & Studio Ready
+        <div className="blur-glow-aura">
+          <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight flex items-center gap-3">
+            <span className="text-shiny-blue">Copy &amp; Cloner de Catálogo</span>
+            <span className="text-xs font-normal px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300 font-mono">
+              2D &amp; 3D Ready
             </span>
           </h1>
           <p className="text-sm text-white/50 mt-1 max-w-2xl">
-            Extraia o modelo 3D (.OBJ, .MTL) e textura original (.PNG) de qualquer item do catálogo Roblox com 1 clique.
+            Extraia o modelo 3D (.OBJ, .MTL) e texturas originais (.PNG) de qualquer item ou roupa clássica do catálogo com 1 clique.
           </p>
         </div>
       </div>
@@ -314,6 +399,30 @@ export function CopyPage() {
               </div>
             )}
 
+            {/* 3D Roblox Avatar Preview for Clothing */}
+            {result.isClothing && currentTextureUrl && (
+              <div className="rounded-2xl border border-white/[0.08] bg-black/50 p-5 space-y-4 shadow-xl">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white flex items-center gap-2">
+                    <Box className="w-4 h-4 text-blue-400" />
+                    Visualização no Avatar Oficial Roblox (R6 &amp; R15)
+                  </span>
+                  <span className="text-[10px] uppercase font-mono text-blue-300 bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20">
+                    Molde 585×559 Mapeado
+                  </span>
+                </div>
+
+                <div className="w-full flex justify-center">
+                  <RobloxAvatar3D
+                    templateDataUrl={currentTextureUrl}
+                    kind={result.type.toLowerCase().includes("calça") || result.type.toLowerCase().includes("pants") ? "pants" : "shirt"}
+                    title={result.name}
+                    className="w-full max-w-lg h-[400px]"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Extracted Files Grid */}
             <div>
               <h4 className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -355,7 +464,7 @@ export function CopyPage() {
               </div>
             </div>
 
-            {/* Quick Actions Footer */}
+            {/* Quick Actions Footer & Direct Pipeline Buttons */}
             <div className="pt-4 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <a
@@ -379,14 +488,46 @@ export function CopyPage() {
                 )}
               </div>
 
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => navigate("/painel/upload")}
-                  className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-xs font-medium text-white transition-all flex items-center gap-2 cursor-pointer"
-                >
-                  <span>Publicar no Catálogo</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-blue-400" />
-                </button>
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Anti-Ban Hash Mutation Button */}
+                {currentTextureUrl && (
+                  <button
+                    type="button"
+                    onClick={handleMutateHash}
+                    disabled={mutating}
+                    className={`px-3.5 py-2 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-md ${
+                      hashMutated
+                        ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
+                        : "bg-purple-500/15 border-purple-500/30 text-purple-200 hover:bg-purple-500/25"
+                    }`}
+                  >
+                    {mutating ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+                    )}
+                    <span>{hashMutated ? "✓ Hash Mutado (Anti-Ban)" : "Mutação Anti-Ban (Hash)"}</span>
+                  </button>
+                )}
+
+                {/* Direct 1-Click Action to Upload */}
+                {result.isClothing ? (
+                  <button
+                    onClick={handleSendToUpload2D}
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-lg"
+                  >
+                    <span>Enviar para Publicar Roupa (2D)</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSendToUploadUgc}
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-lg"
+                  >
+                    <span>Enviar para Publicar UGC 3D (Tectonic)</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
 

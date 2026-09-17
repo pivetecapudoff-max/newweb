@@ -25,7 +25,7 @@ import {
   analyzeGroupSalesPerformance,
   optimizeItemSeoMultimodal,
 } from "./ai.js";
-import { isHosted, isSecureRequest, listenTarget } from "./host.js";
+import { isDesktopRuntime, isHosted, isSecureRequest, listenTarget } from "./host.js";
 import {
   authContext,
   authStatus,
@@ -47,8 +47,11 @@ import {
 } from "./gamepass.js";
 import { bustGroupCache } from "./groups.js";
 import {
+  enqueueAccessoryUpload,
+  enqueueAssembledUgc,
   enqueueUpload,
   getJob,
+  lastUploadGroupId,
   listJobs,
   listUploadGroups,
   pumpQueue,
@@ -56,6 +59,9 @@ import {
   retryJob,
   type ClothingKind,
 } from "./upload.js";
+import { normalizeClothingImage } from "./clothingTemplate.js";
+import { inspectAccessoryInput } from "./ugcAccessory.js";
+import { assembleUgcFromParts } from "./ugcAssembler.js";
 import {
   debounceKey,
   isDiscordWebhook,
@@ -151,7 +157,7 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: "16mb" }));
+app.use(express.json({ limit: "20mb" }));
 app.use(authContext);
 
 app.use((req, res, next) => {
@@ -200,6 +206,10 @@ app.use((req, res, next) => {
 
 // Authentication & Protection Middleware
 function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction): void {
+  if (isDesktopRuntime()) {
+    next();
+    return;
+  }
   const account = publicAccount();
   if ((account.discordEnabled || isHosted()) && !account.discord) {
     res.status(401).json({ error: "Unauthorized. Sign in with Discord first." });
@@ -662,14 +672,16 @@ app.get("/api/account", (_req, res) => {
 
 app.post("/api/account", async (req, res) => {
   const identity = publicAccount();
-  if (identity.discordEnabled && !identity.discord) {
+  if (!isDesktopRuntime() && identity.discordEnabled && !identity.discord) {
     res.status(401).json({ error: "Sign in with Discord first." });
     return;
   }
 
   // Cloudflare Turnstile anti-bot verification
   const turnstileToken = req.body?.turnstileToken ? String(req.body.turnstileToken) : undefined;
-  const turnstileCheck = await verifyTurnstile(turnstileToken, req.ip);
+  const turnstileCheck = isDesktopRuntime()
+    ? { success: true as const }
+    : await verifyTurnstile(turnstileToken, req.ip);
   if (!turnstileCheck.success) {
     res.status(403).json({ error: turnstileCheck.error });
     return;
@@ -730,15 +742,150 @@ app.get("/api/uploads", requireAuth, async (_req, res) => {
     const groups = await listUploadGroups();
     res.json({
       connected: Boolean(loadAccount()),
+      lastGroupId: lastUploadGroupId(),
       jobs: listJobs().map((job) => ({
         ...job,
         filePath: undefined,
+        meshFilePath: undefined,
+        textureFilePath: undefined,
       })),
       groups,
     });
   } catch (error) {
     res.status(500).json({
       error: error instanceof Error ? error.message : "Could not load the upload queue.",
+    });
+  }
+});
+
+app.post("/api/uploads/prepare", requireAuth, async (req, res) => {
+  try {
+    const prepared = await normalizeClothingImage({
+      image: req.body?.image,
+      fileName: req.body?.fileName,
+      kind: req.body?.kind,
+    });
+    res.json({
+      kind: prepared.kind,
+      alreadyTemplate: prepared.alreadyTemplate,
+      suggestedName: prepared.suggestedName,
+      suggestedPrice: prepared.suggestedPrice,
+      image: prepared.dataUrl,
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: error instanceof Error ? error.message : "Não foi possível preparar o template.",
+    });
+  }
+});
+
+app.post("/api/uploads/prepare-ugc", requireAuth, async (req, res) => {
+  try {
+    if (req.body?.mesh && req.body?.texture) {
+      const assembled = await assembleUgcFromParts({
+        mesh: req.body.mesh,
+        meshName: req.body.meshName,
+        texture: req.body.texture,
+        textureName: req.body.textureName,
+        accessoryType: req.body.accessoryType,
+        name: req.body.name,
+        autoRepair: Boolean(req.body.autoRepair),
+      });
+      res.json({
+        mode: "parts",
+        accessoryType: assembled.accessoryType,
+        suggestedName: assembled.suggestedName,
+        triangleCount: assembled.triangleCount,
+        attachment: assembled.attachment,
+        texture: assembled.textureDataUrl,
+        geometry: assembled.geometry,
+        preFlight: assembled.preFlight,
+      });
+      return;
+    }
+    const inspected = inspectAccessoryInput({
+      file: req.body?.file,
+      fileName: req.body?.fileName,
+    });
+    res.json({ mode: "accessory", ...inspected });
+  } catch (error) {
+    res.status(400).json({
+      error: error instanceof Error ? error.message : "Não foi possível montar o UGC.",
+    });
+  }
+});
+
+app.post("/api/copy/mutate-hash", requireAuth, async (req, res) => {
+  try {
+    const { imageBase64 } = req.body;
+    if (!imageBase64) throw new Error("Imagem não informada.");
+    const raw = String(imageBase64).replace(/^data:image\/[a-z]+;base64,/, "");
+    const buf = Buffer.from(raw, "base64");
+    // Subtle pixel and metadata perturbation to generate a totally unique SHA-256 hash
+    const mutated = await sharp(buf)
+      .withMetadata({
+        exif: {
+          IFD0: {
+            Software: `Farol Mutator v${Date.now()}`,
+          },
+        },
+      })
+      .png({ quality: 100, compressionLevel: 9 })
+      .toBuffer();
+    res.json({
+      success: true,
+      mutatedDataUrl: `data:image/png;base64,${mutated.toString("base64")}`,
+    });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || "Falha ao aplicar mutação anti-ban." });
+  }
+});
+
+app.post("/api/uploads/ugc", requireAuth, async (req, res) => {
+  try {
+    const groupId = req.body?.groupId ? Number(req.body.groupId) : null;
+    if (groupId) {
+      const allowed = await listUploadGroups();
+      if (!allowed.some((group) => group.id === groupId && group.canPost)) {
+        res.status(400).json({
+          error: "Esse grupo não tem permissão para publicar UGC.",
+        });
+        return;
+      }
+    }
+    const job = req.body?.mesh && req.body?.texture
+      ? await enqueueAssembledUgc({
+          name: req.body?.name,
+          description: req.body?.description,
+          groupId,
+          accessoryType: req.body?.accessoryType,
+          mesh: req.body.mesh,
+          meshName: req.body.meshName,
+          texture: req.body.texture,
+          textureName: req.body.textureName,
+        })
+      : enqueueAccessoryUpload({
+          name: req.body?.name,
+          description: req.body?.description,
+          groupId,
+          fileName: req.body?.fileName,
+          file: req.body?.file,
+        });
+    res.status(202).json({
+      ...job,
+      filePath: undefined,
+    });
+    void notifyDiscord({
+      title: "UGC Accessory queued",
+      body: job.name,
+      fields: [
+        { name: "Type", value: job.accessoryType || "Accessory", inline: true },
+        { name: "Group", value: job.groupId ? String(job.groupId) : "My account", inline: true },
+      ],
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: error instanceof Error ? error.message : "Não foi possível enfileirar o Accessory.",
     });
   }
 });
@@ -750,12 +897,12 @@ app.post("/api/uploads", requireAuth, async (req, res) => {
       const allowed = await listUploadGroups();
       if (!allowed.some((group) => group.id === groupId && group.canPost)) {
         res.status(400).json({
-          error: "That group is not one you can post clothing to.",
+          error: "Esse grupo não tem permissão para publicar roupa.",
         });
         return;
       }
     }
-    const job = enqueueUpload({
+    const job = await enqueueUpload({
       name: req.body?.name,
       description: req.body?.description,
       kind: req.body?.kind,
@@ -1378,7 +1525,7 @@ app.post("/api/market-scanner/clone-asset", requireAuth, async (req, res) => {
 
     if (account) {
       try {
-        job = enqueueUpload({
+        job = await enqueueUpload({
           name: finalName,
           description: itemDescription,
           kind,
