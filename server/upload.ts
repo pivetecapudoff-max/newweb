@@ -251,12 +251,27 @@ export async function enqueueUpload(input: {
   const price = kind === "tshirt"
     ? Math.max(0, Math.floor(Number.isFinite(priceRaw) ? priceRaw : 0))
     : Math.max(5, Math.floor(Number.isFinite(priceRaw) && priceRaw > 0 ? priceRaw : 5));
+  const groupId = input.groupId && Number.isFinite(input.groupId) ? Number(input.groupId) : null;
+  saveLastGroup(groupId);
+
+  // Proteção contra gasto acidental de Robux por envio duplo
+  const recentDuplicate = loadJobs().find(
+    (j) =>
+      (j.status === "queued" || j.status === "uploading" || Date.now() - new Date(j.createdAt).getTime() < 45_000) &&
+      j.name.trim().toLowerCase() === name.trim().toLowerCase() &&
+      j.kind === kind &&
+      j.groupId === groupId
+  );
+  if (recentDuplicate) {
+    throw new Error(
+      "Este item já está na fila ou foi enviado recentemente. Bloqueamos o envio duplicado para não gastar Robux atoa."
+    );
+  }
+
   ensureDirs();
   const id = `up_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
   const filePath = path.join(queueDir, `${id}.png`);
   writeFileSync(filePath, normalized.png);
-  const groupId = input.groupId && Number.isFinite(input.groupId) ? Number(input.groupId) : null;
-  saveLastGroup(groupId);
   const job: UploadJob = {
     id,
     name,
@@ -318,6 +333,22 @@ export async function enqueueAssembledUgc(input: {
   const name = sanitizeItemName(input.name || assembled.suggestedName, assembled.suggestedName);
   let description = String(input.description || "").slice(0, 500).trim();
   if (!description) description = `${name} — UGC Accessory (${assembled.accessoryType}).`;
+  const groupId = input.groupId && Number.isFinite(input.groupId) ? Number(input.groupId) : null;
+  saveLastGroup(groupId);
+
+  const recentDuplicate = loadJobs().find(
+    (j) =>
+      (j.status === "queued" || j.status === "uploading" || Date.now() - new Date(j.createdAt).getTime() < 45_000) &&
+      j.name.trim().toLowerCase() === name.trim().toLowerCase() &&
+      j.kind === "accessory" &&
+      j.groupId === groupId
+  );
+  if (recentDuplicate) {
+    throw new Error(
+      "Este acessório já está na fila ou foi processado recentemente. Evitamos envio duplicado para sua segurança."
+    );
+  }
+
   ensureDirs();
   const id = `ugc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
   const filePath = path.join(queueDir, `${id}.rbxmx`);
@@ -326,8 +357,6 @@ export async function enqueueAssembledUgc(input: {
   writeFileSync(filePath, assembled.rbxmx, "utf8");
   writeFileSync(meshFilePath, assembled.mesh);
   writeFileSync(textureFilePath, assembled.texture);
-  const groupId = input.groupId && Number.isFinite(input.groupId) ? Number(input.groupId) : null;
-  saveLastGroup(groupId);
   const job: UploadJob = {
     id,
     name,
@@ -616,6 +645,11 @@ async function uploadUserAuth(
   });
   const actualFee = parseActualFee(result.text);
   if (actualFee != null && actualFee !== expectedPrice) {
+    if (actualFee > UPLOAD_FEE[job.kind]) {
+      throw new Error(
+        `Proteção de Saldo Farol: O Roblox solicitou uma taxa imprevista de ${actualFee} Robux (o padrão oficial é ${UPLOAD_FEE[job.kind]} Robux). Operação cancelada para proteger seu saldo.`
+      );
+    }
     return uploadUserAuth(cookie, job, bytes, userId, actualFee);
   }
   if (/insufficient|not enough|does not have suffiecient|cannot afford/i.test(result.text)) {

@@ -45,6 +45,7 @@ import {
 import { SeoOptimizationModal } from "../components/SeoOptimizationModal";
 import { renderAvatarPreview } from "../lib/ugcTemplate";
 import { RobloxUgcViewer3D, type UgcMeshGeometry } from "../components/RobloxUgcViewer3D";
+import { RobloxAvatar3D } from "../components/RobloxAvatar3D";
 import { renderUgcMeshPreview } from "../lib/ugcMeshPreview";
 
 const KINDS: { id: ClothingKind; label: string; hint: string }[] = [
@@ -808,10 +809,12 @@ export function UploadPage() {
       {/* Tab 2: Publish New Clothing */}
       {activeTab === "upload" && (
         <form onSubmit={onSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: File Dropzone */}
+          {/* Left Column: File Dropzone with Authentic 3D Avatar */}
           <div className="lg:col-span-5">
             <label
-              className="group relative flex h-[360px] w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border border-white/[0.09] bg-[#0a0a0a] p-6 text-center transition-colors hover:border-white/15 hover:bg-[#0d0d0d]"
+              className={`group relative flex w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/[0.09] bg-[#0a0a0a] text-center transition-colors hover:border-white/15 hover:bg-[#0d0d0d] ${
+                preview ? "p-3 min-h-[450px]" : "p-6 h-[360px]"
+              }`}
               onDragOver={(event) => event.preventDefault()}
               onDrop={(event) => {
                 event.preventDefault();
@@ -828,16 +831,18 @@ export function UploadPage() {
               {preparing ? (
                 <p className="text-sm text-white/60">Normalizando template 585×559…</p>
               ) : preview ? (
-                <div className="w-full h-full flex flex-col items-center justify-center">
-                  <div className="flex w-full flex-1 items-center justify-center gap-3">
-                    <img src={preview} alt="Template UV" className="max-h-[220px] object-contain rounded-lg" />
-                    {mannequin ? (
-                      <img src={mannequin} alt="Thumb do manequim" className="max-h-[220px] object-contain rounded-lg bg-[#111]" />
-                    ) : null}
+                <div className="w-full h-full flex flex-col space-y-3">
+                  <div className="w-full h-[400px] rounded-xl overflow-hidden bg-[#000000] border border-white/[0.08] shadow-2xl relative">
+                    <RobloxAvatar3D templateDataUrl={preview} kind={kind} />
                   </div>
-                  <span className="mt-3 text-[11px] font-medium text-blue-400/75">
-                    Template + preview da thumb. Clique para trocar o arquivo.
-                  </span>
+                  <div className="flex items-center justify-between text-xs px-1">
+                    <span className="text-[11px] font-mono text-blue-400 font-semibold">
+                      Preview Oficial Roblox 3D (R6 &amp; R15)
+                    </span>
+                    <span className="text-[11px] text-white/50 underline hover:text-white">
+                      Trocar Arquivo
+                    </span>
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center">

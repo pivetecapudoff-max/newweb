@@ -56,16 +56,15 @@ export const RobloxUgcViewer3D: React.FC<RobloxUgcViewer3DProps> = ({
     // 1. Scene
     const scene = new THREE.Scene();
     sceneRef.current = scene;
-    scene.background = new THREE.Color("#050508");
 
-    // 2. Camera: Positioned to capture Upper Body, Face, and full Hair/Hat with headroom
+    // 2. Camera: Positioned to capture authentic Roblox Avatar (40 deg FOV, centered)
     const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
-    camera.position.set(0, 1.25, 6.4);
-    camera.lookAt(0, 1.05, 0);
+    camera.position.set(0, 0.45, 6.8 - zoomLevel * 0.8);
+    camera.lookAt(0, 0.2, 0);
     cameraRef.current = camera;
 
-    // 3. WebGL Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    // 3. WebGL Renderer with clean transparent output
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -76,83 +75,78 @@ export const RobloxUgcViewer3D: React.FC<RobloxUgcViewer3DProps> = ({
     }
     container.appendChild(renderer.domElement);
 
-    // 4. Lighting Suite: Studio 3-Point with Soft Shadows and Neon Rim
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+    // 4. Lighting Suite: Authentic Roblox Studio (Key + Rim + Ambient)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.25);
-    keyLight.position.set(3.5, 5, 4.5);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    keyLight.position.set(4, 6, 5);
     scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0xbfdbfe, 0.55);
-    fillLight.position.set(-3.5, 2.5, 2.5);
-    scene.add(fillLight);
-
-    const rimLight = new THREE.DirectionalLight(0x3b82f6, 1.6);
-    rimLight.position.set(0, 3.5, -4.5);
+    const rimLight = new THREE.DirectionalLight(0x60a5fa, 0.65);
+    rimLight.position.set(-4, 3, -5);
     scene.add(rimLight);
 
-    const topHairLight = new THREE.DirectionalLight(0x93c5fd, 0.7);
-    topHairLight.position.set(0, 6, 0);
-    scene.add(topHairLight);
+    const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.35);
+    fillLight.position.set(0, -2, 4);
+    scene.add(fillLight);
 
-    // 5. Studio Pedestal with Cyan Glowing Neon Ring
-    const platformGroup = new THREE.Group();
-    scene.add(platformGroup);
-
-    const baseGeo = new THREE.CylinderGeometry(1.65, 1.75, 0.2, 48);
-    const baseMat = new THREE.MeshStandardMaterial({
-      color: 0x0a0a0f,
-      roughness: 0.6,
-      metalness: 0.2,
+    // 5. Authentic Floor Shadow Disc (just like official Roblox Avatar Editor)
+    const shadowCanvas = document.createElement("canvas");
+    shadowCanvas.width = 128;
+    shadowCanvas.height = 128;
+    const sCtx = shadowCanvas.getContext("2d");
+    if (sCtx) {
+      const grad = sCtx.createRadialGradient(64, 64, 4, 64, 64, 64);
+      grad.addColorStop(0, "rgba(0, 0, 0, 0.55)");
+      grad.addColorStop(0.5, "rgba(0, 0, 0, 0.22)");
+      grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+      sCtx.fillStyle = grad;
+      sCtx.fillRect(0, 0, 128, 128);
+    }
+    const shadowTex = new THREE.CanvasTexture(shadowCanvas);
+    const shadowGeo = new THREE.PlaneGeometry(4.2, 4.2);
+    const shadowMat = new THREE.MeshBasicMaterial({
+      map: shadowTex,
+      transparent: true,
+      depthWrite: false,
     });
-    const baseMesh = new THREE.Mesh(baseGeo, baseMat);
-    baseMesh.position.set(0, -2.1, 0);
-    platformGroup.add(baseMesh);
-
-    const ringGeo = new THREE.RingGeometry(1.63, 1.72, 64);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0x3b82f6,
-      side: THREE.DoubleSide,
-    });
-    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-    ringMesh.rotation.x = -Math.PI / 2;
-    ringMesh.position.set(0, -1.99, 0);
-    platformGroup.add(ringMesh);
-
-    const gridHelper = new THREE.GridHelper(3.3, 8, 0x2563eb, 0x1e293b);
-    gridHelper.position.set(0, -1.98, 0);
-    platformGroup.add(gridHelper);
+    const floorShadow = new THREE.Mesh(shadowGeo, shadowMat);
+    floorShadow.rotation.x = -Math.PI / 2;
+    floorShadow.position.y = -3.0;
+    scene.add(floorShadow);
 
     // 6. Avatar Group
     const avatarGroup = new THREE.Group();
     scene.add(avatarGroup);
     avatarGroupRef.current = avatarGroup;
 
-    // Authentic Mannequin Materials
+    // Authentic Studio Mannequin Materials
     const skinMat = new THREE.MeshStandardMaterial({
       color: 0xe5e7eb,
       roughness: 0.38,
-      metalness: 0.04,
+      metalness: 0.05,
     });
 
-    const torsoMat = new THREE.MeshStandardMaterial({
-      color: 0x18181b,
+    const clothingMat = new THREE.MeshStandardMaterial({
+      color: 0x27272a,
       roughness: 0.45,
       metalness: 0.08,
     });
 
-    // ---------------- AUTHENTIC ROBLOX AVATAR BODY ----------------
-    // In Roblox, Head SpecialMesh is 1.25 x 1.25 x 1.25 (NOT a giant 2.0 rectangle!)
-    const headWidth = bodyType === "slender" ? 1.15 : 1.25;
+    // ---------------- AUTHENTIC ROBLOX AVATAR RIG ----------------
+    const isSlender = bodyType === "slender";
+
+    // 1. Head (Official Roblox Dimensions: 2.0w x 1.25h x 1.25d)
+    const headWidth = isSlender ? 1.75 : 2.0;
     const headHeight = 1.25;
     const headDepth = 1.25;
-    const headGeo = new RoundedBoxGeometry(headWidth, headHeight, headDepth, 8, 0.24);
+    const headGeo = new RoundedBoxGeometry(headWidth, headHeight, headDepth, 8, 0.22);
     const headMesh = new THREE.Mesh(headGeo, skinMat);
     headMesh.position.set(0, 1.625, 0);
     avatarGroup.add(headMesh);
 
-    // Official Roblox Face Decal
+    // Official Roblox Face Smile Decal
     const faceTexLoader = new THREE.TextureLoader();
     faceTexLoader.load("/roblox_face.png", (faceTex) => {
       faceTex.colorSpace = THREE.SRGBColorSpace;
@@ -161,62 +155,48 @@ export const RobloxUgcViewer3D: React.FC<RobloxUgcViewer3DProps> = ({
         transparent: true,
         depthWrite: false,
       });
-      const faceGeo = new THREE.PlaneGeometry(1.05, 1.05);
+      const faceGeo = new THREE.PlaneGeometry(1.15, 1.15);
       const faceMesh = new THREE.Mesh(faceGeo, faceMat);
-      faceMesh.position.set(0, 0, (headDepth / 2) + 0.005);
+      faceMesh.position.set(0, 0, headDepth / 2 + 0.005);
       headMesh.add(faceMesh);
     });
 
-    if (bodyType === "slender") {
-      // Slender / Woman Proportions
-      const upperTorsoGeo = new RoundedBoxGeometry(1.5, 1.3, 0.85, 4, 0.1);
-      const upperTorso = new THREE.Mesh(upperTorsoGeo, torsoMat);
-      upperTorso.position.set(0, 0.45, 0);
-      avatarGroup.add(upperTorso);
-
-      const lowerTorsoGeo = new RoundedBoxGeometry(1.35, 0.65, 0.8, 4, 0.08);
-      const lowerTorso = new THREE.Mesh(lowerTorsoGeo, torsoMat);
-      lowerTorso.position.set(0, -0.42, 0);
-      avatarGroup.add(lowerTorso);
+    if (isSlender) {
+      // Slender / Woman Rig
+      const torsoGeo = new RoundedBoxGeometry(1.7, 2.0, 0.9, 4, 0.1);
+      const torsoMesh = new THREE.Mesh(torsoGeo, clothingMat);
+      torsoMesh.position.set(0, 0, 0);
+      avatarGroup.add(torsoMesh);
 
       for (const sign of [-1, 1]) {
-        const armGeo = new RoundedBoxGeometry(0.72, 2.0, 0.72, 4, 0.08);
+        const armGeo = new RoundedBoxGeometry(0.85, 2.0, 0.85, 4, 0.08);
         const armMesh = new THREE.Mesh(armGeo, skinMat);
-        armMesh.position.set(sign * 1.2, 0.05, 0);
+        armMesh.position.set(sign * 1.32, 0, 0);
         armMesh.rotation.z = sign * -0.05;
         avatarGroup.add(armMesh);
-      }
 
-      for (const sign of [-1, 1]) {
-        const legGeo = new RoundedBoxGeometry(0.75, 2.0, 0.75, 4, 0.08);
-        const legMesh = new THREE.Mesh(legGeo, torsoMat);
-        legMesh.position.set(sign * 0.42, -1.75, 0);
+        const legGeo = new RoundedBoxGeometry(0.85, 2.0, 0.85, 4, 0.08);
+        const legMesh = new THREE.Mesh(legGeo, clothingMat);
+        legMesh.position.set(sign * 0.45, -2.0, 0);
         avatarGroup.add(legMesh);
       }
     } else {
-      // Classic Roblox Blocky R6/R15
-      const upperTorsoGeo = new RoundedBoxGeometry(2.0, 1.35, 1.0, 4, 0.08);
-      const upperTorso = new THREE.Mesh(upperTorsoGeo, torsoMat);
-      upperTorso.position.set(0, 0.42, 0);
-      avatarGroup.add(upperTorso);
-
-      const lowerTorsoGeo = new RoundedBoxGeometry(1.95, 0.65, 0.95, 4, 0.08);
-      const lowerTorso = new THREE.Mesh(lowerTorsoGeo, torsoMat);
-      lowerTorso.position.set(0, -0.45, 0);
-      avatarGroup.add(lowerTorso);
+      // Classic Roblox Blocky R6
+      const torsoGeo = new THREE.BoxGeometry(2.0, 2.0, 1.0);
+      const torsoMesh = new THREE.Mesh(torsoGeo, clothingMat);
+      torsoMesh.position.set(0, 0, 0);
+      avatarGroup.add(torsoMesh);
 
       for (const sign of [-1, 1]) {
-        const armGeo = new RoundedBoxGeometry(1.0, 2.0, 1.0, 4, 0.08);
+        const armGeo = new THREE.BoxGeometry(1.0, 2.0, 1.0);
         const armMesh = new THREE.Mesh(armGeo, skinMat);
-        armMesh.position.set(sign * 1.5, 0.05, 0);
+        armMesh.position.set(sign * 1.5, 0, 0);
         armMesh.rotation.z = sign * -0.05;
         avatarGroup.add(armMesh);
-      }
 
-      for (const sign of [-1, 1]) {
-        const legGeo = new RoundedBoxGeometry(1.0, 2.0, 1.0, 4, 0.08);
-        const legMesh = new THREE.Mesh(legGeo, torsoMat);
-        legMesh.position.set(sign * 0.5, -1.75, 0);
+        const legGeo = new THREE.BoxGeometry(1.0, 2.0, 1.0);
+        const legMesh = new THREE.Mesh(legGeo, clothingMat);
+        legMesh.position.set(sign * 0.5, -2.0, 0);
         avatarGroup.add(legMesh);
       }
     }
@@ -238,9 +218,11 @@ export const RobloxUgcViewer3D: React.FC<RobloxUgcViewer3DProps> = ({
       geo.computeBoundingBox();
 
       const bbox = geo.boundingBox || new THREE.Box3();
-      const heightSpan = Math.max(0.1, bbox.max.y - bbox.min.y);
+      const midX = (bbox.min.x + bbox.max.x) / 2;
+      const midY = (bbox.min.y + bbox.max.y) / 2;
+      const midZ = (bbox.min.z + bbox.max.z) / 2;
 
-      // Material: double-sided and solid so hair geometry NEVER disappears!
+      // Material: double-sided standard material
       const mat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
         roughness: 0.42,
@@ -274,42 +256,69 @@ export const RobloxUgcViewer3D: React.FC<RobloxUgcViewer3DProps> = ({
 
       const accessoryMesh = new THREE.Mesh(geo, mat);
 
-      // Attachment Positioning:
-      // Head Center: y = 1.625. Head Top (Crown): y = 2.25.
-      const midX = (bbox.min.x + bbox.max.x) / 2;
-      const midZ = (bbox.min.z + bbox.max.z) / 2;
+      // Check if mesh is ALREADY modeled in avatar coordinate space (e.g. ripped asset or studio export)
+      const isAlreadyInAvatarSpace =
+        (bbox.min.y >= 0.5 && bbox.max.y <= 3.8) ||
+        (Math.abs(midX) < 1.0 && bbox.min.y > -0.5 && bbox.max.y > 1.2);
 
-      let posX = -midX;
+      let posX = 0;
       let posY = 0;
-      let posZ = -midZ;
+      let posZ = 0;
 
-      const type = (accessoryType || "Hair").toLowerCase();
-
-      if (type.includes("hair") || type.includes("cabelo")) {
-        // Hair wraps around skull: crown of hair sits at y = 2.28
-        posY = 2.28 - bbox.max.y;
-      } else if (type.includes("hat") || type.includes("chapeu") || type.includes("chapéu")) {
-        // Hat brim sits at eyebrow level y = 1.85 ~ 1.90
-        posY = 1.90 - bbox.min.y;
-      } else if (type.includes("face") || type.includes("rosto") || type.includes("mascara")) {
-        posY = 1.625 - (bbox.min.y + bbox.max.y) / 2;
-        posZ = (headDepth / 2) + 0.04;
-      } else if (type.includes("neck") || type.includes("pescoco") || type.includes("colar")) {
-        posY = 1.05 - (bbox.min.y + bbox.max.y) / 2;
-      } else if (type.includes("shoulder") || type.includes("ombro")) {
-        posX = 1.4 - midX;
-        posY = 0.95 - (bbox.min.y + bbox.max.y) / 2;
-      } else if (type.includes("back") || type.includes("costas") || type.includes("capa")) {
-        posY = 0.45 - (bbox.min.y + bbox.max.y) / 2;
-        posZ = -0.55;
-      } else if (type.includes("front") || type.includes("peito")) {
-        posY = 0.45 - (bbox.min.y + bbox.max.y) / 2;
-        posZ = 0.55;
-      } else if (type.includes("waist") || type.includes("cintura")) {
-        posY = -0.45 - (bbox.min.y + bbox.max.y) / 2;
+      if (isAlreadyInAvatarSpace) {
+        // Keep modeled position intact!
+        posX = 0;
+        posY = 0;
+        posZ = 0;
       } else {
-        // Default: crown atop head
-        posY = 2.25 - bbox.max.y;
+        // Centered at local origin (0, 0, 0) - Apply official Roblox Attachment Socket solver!
+        const type = (accessoryType || "Hat").toLowerCase();
+        if (type.includes("hair") || type.includes("cabelo")) {
+          // Crown of hair aligns with top of skull (y = 2.25)
+          posX = -midX;
+          posY = 2.25 - bbox.max.y;
+          posZ = -midZ;
+        } else if (type.includes("hat") || type.includes("chapeu") || type.includes("chapéu")) {
+          // Hat brim sits at forehead/eyebrow level (y = 1.95)
+          posX = -midX;
+          posY = 1.95 - bbox.min.y;
+          posZ = -midZ;
+        } else if (type.includes("face") || type.includes("rosto") || type.includes("mascara")) {
+          // Centered on front face
+          posX = -midX;
+          posY = 1.625 - midY;
+          posZ = 0.635 + 0.02 - midZ;
+        } else if (type.includes("neck") || type.includes("pescoco") || type.includes("colar")) {
+          // Neck joint
+          posX = -midX;
+          posY = 1.0 - midY;
+          posZ = -midZ;
+        } else if (type.includes("shoulder") || type.includes("ombro")) {
+          // Right shoulder
+          posX = 1.5 - midX;
+          posY = 1.0 - bbox.min.y;
+          posZ = -midZ;
+        } else if (type.includes("back") || type.includes("costas") || type.includes("capa") || type.includes("sword") || type.includes("wing")) {
+          // Back of torso
+          posX = -midX;
+          posY = 0.5 - midY;
+          posZ = -0.55 - bbox.max.z;
+        } else if (type.includes("front") || type.includes("peito")) {
+          // Front of torso
+          posX = -midX;
+          posY = 0.5 - midY;
+          posZ = 0.55 - bbox.min.z;
+        } else if (type.includes("waist") || type.includes("cintura")) {
+          // Waist belt line
+          posX = -midX;
+          posY = -1.0 - midY;
+          posZ = -midZ;
+        } else {
+          // Default: top of skull
+          posX = -midX;
+          posY = 2.25 - bbox.max.y;
+          posZ = -midZ;
+        }
       }
 
       accessoryMesh.position.set(posX, posY, posZ);
@@ -417,7 +426,7 @@ export const RobloxUgcViewer3D: React.FC<RobloxUgcViewer3DProps> = ({
 
   return (
     <div
-      className={`relative w-full h-full min-h-[400px] select-none overflow-hidden rounded-2xl border border-white/[0.08] bg-[#050508] shadow-2xl ${className}`}
+      className={`relative w-full h-full min-h-[400px] select-none overflow-hidden rounded-2xl border border-white/[0.08] bg-[#000000] shadow-2xl ${className}`}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -430,7 +439,7 @@ export const RobloxUgcViewer3D: React.FC<RobloxUgcViewer3DProps> = ({
       <div className="absolute top-3 left-3 flex items-center gap-1 bg-black/85 border border-white/10 rounded-xl p-1 backdrop-blur-md z-10 shadow-lg">
         <span className="text-[10px] font-bold text-white/40 uppercase px-2 tracking-wider flex items-center gap-1">
           <Box className="w-3 h-3 text-blue-400" />
-          Fitting:
+          Rig:
         </span>
         <button
           type="button"
@@ -441,7 +450,7 @@ export const RobloxUgcViewer3D: React.FC<RobloxUgcViewer3DProps> = ({
               : "text-white/50 hover:text-white hover:bg-white/5"
           }`}
         >
-          Classic Blocky
+          Classic R6
         </button>
         <button
           type="button"
@@ -452,7 +461,7 @@ export const RobloxUgcViewer3D: React.FC<RobloxUgcViewer3DProps> = ({
               : "text-white/50 hover:text-white hover:bg-white/5"
           }`}
         >
-          Slender / Woman
+          Slender Rig
         </button>
       </div>
 
