@@ -1,5 +1,4 @@
 node_modules
-dist
 .env
 data/*.json
 data/account.json
@@ -9,5 +8,9 @@ public/*.zip
 public/downloads/
 artifacts/
 .codex-change/
-*.js
 scratch_test.txt
+debug_patch.js
+finish_remaining.js
+optimize_descriptions.js
+seo_check.js
+update_all_clean.js
