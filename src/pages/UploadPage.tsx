@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { SeoOptimizationModal } from "../components/SeoOptimizationModal";
 import { renderAvatarPreview } from "../lib/ugcTemplate";
+import { RobloxUgcViewer3D, type UgcMeshGeometry } from "../components/RobloxUgcViewer3D";
 import { renderUgcMeshPreview } from "../lib/ugcMeshPreview";
 
 const KINDS: { id: ClothingKind; label: string; hint: string }[] = [
@@ -78,6 +79,9 @@ export function UploadPage() {
   const [ugcMesh, setUgcMesh] = useState<{ file: File; data: string } | null>(null);
   const [ugcTexture, setUgcTexture] = useState<{ file: File; data: string } | null>(null);
   const [ugcPreview, setUgcPreview] = useState<string | null>(null);
+  const [ugcGeometry, setUgcGeometry] = useState<UgcMeshGeometry | null>(null);
+  const [ugcTextureUrl, setUgcTextureUrl] = useState<string | null>(null);
+  const ugcFileInputRef = useRef<HTMLInputElement>(null);
   const [ugcType, setUgcType] = useState("Hat");
   const [ugcTriangles, setUgcTriangles] = useState<number | null>(null);
   const [ugcBusy, setUgcBusy] = useState(false);
@@ -273,6 +277,14 @@ export function UploadPage() {
       if (!description.trim()) {
         setDescription(`${prepared.suggestedName} — UGC Accessory (${prepared.accessoryType}).`);
       }
+      if (prepared.geometry) {
+        setUgcGeometry(prepared.geometry);
+      }
+      if (prepared.texture) {
+        setUgcTextureUrl(prepared.texture);
+      } else if (texture.data) {
+        setUgcTextureUrl(texture.data);
+      }
       if (prepared.geometry && prepared.texture) {
         setUgcPreview(await renderUgcMeshPreview(prepared.geometry, prepared.texture));
       }
@@ -281,6 +293,8 @@ export function UploadPage() {
       }
     } catch (err) {
       setUgcPreview(null);
+      setUgcGeometry(null);
+      setUgcTextureUrl(null);
       setError(err instanceof Error ? err.message : "Não foi possível montar o UGC.");
     } finally {
       setPreparing(false);
@@ -347,6 +361,8 @@ export function UploadPage() {
       setUgcMesh(null);
       setUgcTexture(null);
       setUgcPreview(null);
+      setUgcGeometry(null);
+      setUgcTextureUrl(null);
       setUgcTriangles(null);
       setPreFlight(null);
       setName("");
@@ -939,61 +955,84 @@ export function UploadPage() {
           <form onSubmit={onSubmitUgc} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Left Column: Ingest Dropzone & Multi-Body Fitting */}
             <div className="lg:col-span-5 space-y-4">
-              {/* Dropzone */}
-              <label
-                className="group relative flex min-h-[340px] w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/[0.09] bg-[#0a0a0a] p-6 text-center transition-all hover:border-blue-500/30 hover:bg-[#0d0d0d] shadow-lg"
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  void onUgcFiles(event.dataTransfer.files);
-                }}
-              >
-                <input
-                  type="file"
-                  accept=".obj,.mesh,image/png,image/jpeg"
-                  multiple
-                  hidden
-                  onChange={(e) => void onUgcFiles(e.target.files)}
-                />
-                {preparing ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <RefreshCw className="w-8 h-8 animate-spin text-blue-400" />
-                    <p className="text-sm font-semibold text-white">Analisando malha e calculando Pre-Flight…</p>
-                    <span className="text-xs text-white/40 font-mono">Lendo polígonos, escala e coordenadas UV</span>
+              <input
+                ref={ugcFileInputRef}
+                type="file"
+                accept=".obj,.mesh,image/png,image/jpeg"
+                multiple
+                hidden
+                onChange={(e) => void onUgcFiles(e.target.files)}
+              />
+
+              {preparing ? (
+                <div className="flex min-h-[380px] flex-col items-center justify-center gap-3 rounded-2xl border border-white/[0.09] bg-[#0a0a0a] p-6 text-center shadow-lg">
+                  <RefreshCw className="w-8 h-8 animate-spin text-blue-400" />
+                  <p className="text-sm font-semibold text-white">Analisando malha e calculando Pre-Flight…</p>
+                  <span className="text-xs text-white/40 font-mono">Lendo polígonos, escala e coordenadas UV</span>
+                </div>
+              ) : ugcGeometry ? (
+                <div className="space-y-3">
+                  <div className="w-full h-[420px] overflow-hidden rounded-2xl border border-white/[0.09] bg-[#050508] shadow-2xl">
+                    <RobloxUgcViewer3D
+                      geometry={ugcGeometry}
+                      textureUrl={ugcTextureUrl}
+                      accessoryType={ugcType}
+                      multiBodyView={multiBodyView}
+                      onReplaceClick={() => ugcFileInputRef.current?.click()}
+                    />
                   </div>
-                ) : ugcPreview ? (
-                  <div className="w-full flex flex-col items-center">
-                    <img src={ugcPreview} alt="Preview do UGC" className="max-h-[220px] object-contain rounded-lg" />
-                    <div className="mt-3 flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 text-[10px] font-mono border border-blue-500/30">
+                  <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-300 text-xs font-mono border border-blue-500/25 flex items-center gap-1.5">
+                        <Box className="w-3.5 h-3.5" />
                         {ugcMesh?.file.name}
                       </span>
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-mono border border-emerald-500/30">
+                      <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 text-xs font-mono border border-emerald-500/25 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5" />
                         {ugcTexture?.file.name}
                       </span>
                     </div>
-                    <span className="mt-2 text-[11px] text-white/40">Clique para substituir malha ou textura</span>
+                    <button
+                      type="button"
+                      onClick={() => ugcFileInputRef.current?.click()}
+                      className="text-xs text-blue-400 hover:text-blue-300 underline font-medium transition-colors"
+                    >
+                      Trocar Arquivos
+                    </button>
                   </div>
-                ) : (
+                </div>
+              ) : (
+                <label
+                  className="group relative flex min-h-[380px] w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-white/[0.12] bg-[#0a0a0a] p-6 text-center transition-all hover:border-blue-500/40 hover:bg-[#0d0d0d] shadow-lg"
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    void onUgcFiles(event.dataTransfer.files);
+                  }}
+                  onClick={() => ugcFileInputRef.current?.click()}
+                >
                   <div className="flex flex-col items-center">
-                    <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/25 flex items-center justify-center text-blue-400 mb-3 group-hover:scale-105 transition-transform">
-                      <UploadCloud className="w-7 h-7" />
+                    <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/25 flex items-center justify-center text-blue-400 mb-3 group-hover:scale-105 transition-transform shadow-inner">
+                      <UploadCloud className="w-8 h-8" />
                     </div>
-                    <p className="text-sm font-bold text-white">Solte o Mesh 3D e a Textura</p>
+                    <p className="text-base font-bold text-white">Solte o Mesh 3D e a Textura</p>
                     <p className="mt-1 text-xs text-white/50 max-w-xs">
                       Arraste o arquivo <strong className="text-white/80">.OBJ</strong> ou <strong className="text-white/80">.mesh</strong> acompanhado da textura <strong className="text-white/80">.PNG</strong>.
                     </p>
-                    <div className="mt-4 flex items-center gap-2">
-                      <span className="text-[10px] text-white/40 font-mono px-2 py-1 rounded bg-white/[0.04] border border-white/[0.06]">
-                        Mesh: {ugcMesh ? "✓ Pronto" : "Faltando"}
+                    <div className="mt-5 flex items-center gap-2">
+                      <span className="text-[11px] text-white/50 font-mono px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+                        Mesh: {ugcMesh ? "✓ Pronto" : "Pendente"}
                       </span>
-                      <span className="text-[10px] text-white/40 font-mono px-2 py-1 rounded bg-white/[0.04] border border-white/[0.06]">
-                        Textura: {ugcTexture ? "✓ Pronta" : "Faltando"}
+                      <span className="text-[11px] text-white/50 font-mono px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+                        Textura: {ugcTexture ? "✓ Pronta" : "Pendente"}
                       </span>
                     </div>
+                    <div className="mt-4 px-3 py-1.5 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-300 text-xs font-semibold">
+                      Clique para Selecionar do Computador
+                    </div>
                   </div>
-                )}
-              </label>
+                </label>
+              )}
 
               {/* Multi-Body Fitting & Preview Switcher */}
               <div className="rounded-2xl border border-white/[0.08] bg-[#0a0a0a] p-4 space-y-3">
