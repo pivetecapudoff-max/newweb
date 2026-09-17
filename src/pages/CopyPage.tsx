@@ -200,6 +200,8 @@ export function CopyPage() {
           textureName: texFile.name,
           name: result.name,
           accessoryType: result.type,
+          meshId: result.meshId,
+          textureId: result.textureId,
         },
       });
     } catch (err: any) {

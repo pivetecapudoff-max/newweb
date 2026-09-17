@@ -501,6 +501,8 @@ export function queueUgcAccessory(body: {
   isLimited?: boolean;
   totalQuantity?: number;
   priceInRobux?: number;
+  meshId?: string | number | null;
+  textureId?: string | number | null;
 }): Promise<UploadJob> {
   return api("/api/uploads/ugc", {
     method: "POST",

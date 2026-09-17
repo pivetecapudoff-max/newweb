@@ -32,6 +32,8 @@ export interface UploadJob {
   description: string;
   kind: UploadKind;
   accessoryType?: AccessoryTypeName | "Unknown" | null;
+  meshId?: string | number | null;
+  textureId?: string | number | null;
   meshFilePath?: string | null;
   textureFilePath?: string | null;
   handleX?: number | null;
@@ -299,6 +301,8 @@ export async function enqueueAssembledUgc(input: {
   meshName?: string;
   texture: string;
   textureName?: string;
+  meshId?: string | number | null;
+  textureId?: string | number | null;
 }): Promise<UploadJob> {
   if (!loadAccount()) {
     throw new Error("Conecte o cookie da sua conta Roblox em Account primeiro.");
@@ -330,6 +334,8 @@ export async function enqueueAssembledUgc(input: {
     description,
     kind: "accessory",
     accessoryType: assembled.accessoryType,
+    meshId: input.meshId || null,
+    textureId: input.textureId || null,
     meshFilePath,
     textureFilePath,
     handleX: assembled.handle.x,
@@ -679,6 +685,49 @@ async function uploadNamedAsset(
   throw new Error(errorMsg || `Falha ao enviar ${assetType} (${result.status}).`);
 }
 
+async function uploadMeshAsset(
+  cookie: string,
+  userId: number,
+  groupId: number | null,
+  name: string,
+  description: string,
+  bytes: Buffer
+): Promise<number> {
+  const params = new URLSearchParams({
+    assetTypeId: "4",
+    name,
+    description: description || name,
+  });
+  if (groupId) params.set("groupId", String(groupId));
+  const result = await robloxSend(
+    cookie,
+    `https://data.roblox.com/Data/Upload.ashx?${params}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/octet-stream",
+        Requester: "Client",
+      },
+      body: new Blob([Uint8Array.from(bytes)], {
+        type: "application/octet-stream",
+      }),
+    }
+  );
+  const assetId = parseAssetId(result);
+  if (assetId) return assetId;
+  const errorMsg = extractRobloxError(result.text, result.json);
+  if (looksModerated(result.text)) {
+    throw Object.assign(
+      new Error(`Moderação do Roblox no Mesh: ${errorMsg || "Malha reprovada pelo filtro do Roblox"}`),
+      { moderated: true, raw: result.text }
+    );
+  }
+  throw new Error(
+    errorMsg ||
+      "O Roblox restringe envio de malhas raw via API web sem passar pelo Studio. Use o botão de Download no painel para abrir o acessório montado no Roblox Studio e publicar com 1 clique (Save to Roblox → Avatar Asset)."
+  );
+}
+
 async function fetchRobux(cookie: string, userId: number): Promise<number | null> {
   try {
     const result = await robloxSend(cookie, `https://economy.roblox.com/v1/users/${userId}/currency`, {
@@ -825,28 +874,31 @@ async function processJob(job: UploadJob): Promise<void> {
   if (job.kind === "accessory") {
     let bytes = readFileSync(job.filePath);
     if (job.meshFilePath && job.textureFilePath) {
-      const textureId = await uploadNamedAsset(
-        account.cookie,
-        account.userId,
-        job.groupId,
-        "Decal",
-        `${job.name} Texture`,
-        job.description,
-        readFileSync(job.textureFilePath),
-        "texture.png",
-        "image/png"
-      );
-      const meshId = await uploadNamedAsset(
-        account.cookie,
-        account.userId,
-        job.groupId,
-        "Mesh",
-        `${job.name} Mesh`,
-        job.description,
-        readFileSync(job.meshFilePath),
-        "model.mesh",
-        "application/octet-stream"
-      );
+      let textureId: string | number | null = job.textureId ? String(job.textureId).trim() : null;
+      if (!textureId || !/^\d+$/.test(textureId)) {
+        textureId = await uploadNamedAsset(
+          account.cookie,
+          account.userId,
+          job.groupId,
+          "Decal",
+          `${job.name} Texture`,
+          job.description,
+          readFileSync(job.textureFilePath),
+          "texture.png",
+          "image/png"
+        );
+      }
+      let meshId: string | number | null = job.meshId ? String(job.meshId).trim() : null;
+      if (!meshId || !/^\d+$/.test(meshId)) {
+        meshId = await uploadMeshAsset(
+          account.cookie,
+          account.userId,
+          job.groupId,
+          `${job.name} Mesh`,
+          job.description,
+          readFileSync(job.meshFilePath)
+        );
+      }
       const rbxmx = buildAccessoryRbxmx({
         name: job.name,
         accessoryType: (job.accessoryType && job.accessoryType !== "Unknown" ? job.accessoryType : "Hat"),

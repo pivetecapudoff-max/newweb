@@ -78,6 +78,8 @@ export function UploadPage() {
   const [activeTab, setActiveTab] = useState<"catalog" | "upload" | "ugc" | "queue">("ugc");
   const [ugcMesh, setUgcMesh] = useState<{ file: File; data: string } | null>(null);
   const [ugcTexture, setUgcTexture] = useState<{ file: File; data: string } | null>(null);
+  const [ugcMeshId, setUgcMeshId] = useState<string | number | null>(null);
+  const [ugcTextureId, setUgcTextureId] = useState<string | number | null>(null);
   const [ugcPreview, setUgcPreview] = useState<string | null>(null);
   const [ugcGeometry, setUgcGeometry] = useState<UgcMeshGeometry | null>(null);
   const [ugcTextureUrl, setUgcTextureUrl] = useState<string | null>(null);
@@ -239,6 +241,8 @@ export function UploadPage() {
         setUgcTexture(t);
         if (s.name) setName(s.name);
         if (s.accessoryType) setUgcType(s.accessoryType);
+        if (s.meshId) setUgcMeshId(s.meshId);
+        if (s.textureId) setUgcTextureId(s.textureId);
         void refreshUgcPreview(m, t, s.accessoryType || ugcType);
       } else if (s.mode === "2d" && s.image) {
         setActiveTab("upload");
@@ -383,10 +387,14 @@ export function UploadPage() {
         isLimited,
         totalQuantity: isLimited ? totalQuantity : undefined,
         priceInRobux: ugcPrice,
+        meshId: ugcMeshId,
+        textureId: ugcTextureId,
       });
       toastManager.success("UGC na fila", `${name || ugcMesh.file.name} montado e enviado.`);
       setUgcMesh(null);
       setUgcTexture(null);
+      setUgcMeshId(null);
+      setUgcTextureId(null);
       setUgcPreview(null);
       setUgcGeometry(null);
       setUgcTextureUrl(null);

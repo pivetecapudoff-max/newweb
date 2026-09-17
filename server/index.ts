@@ -864,6 +864,8 @@ app.post("/api/uploads/ugc", requireAuth, async (req, res) => {
           meshName: req.body.meshName,
           texture: req.body.texture,
           textureName: req.body.textureName,
+          meshId: req.body.meshId,
+          textureId: req.body.textureId,
         })
       : enqueueAccessoryUpload({
           name: req.body?.name,
