@@ -40,6 +40,7 @@ import {
   Check,
   ArrowRight,
   TrendingUp,
+  Download,
 } from "lucide-react";
 import { SeoOptimizationModal } from "../components/SeoOptimizationModal";
 import { renderAvatarPreview } from "../lib/ugcTemplate";
@@ -83,6 +84,7 @@ export function UploadPage() {
   const [ugcPreview, setUgcPreview] = useState<string | null>(null);
   const [ugcGeometry, setUgcGeometry] = useState<UgcMeshGeometry | null>(null);
   const [ugcTextureUrl, setUgcTextureUrl] = useState<string | null>(null);
+  const [ugcRbxmx, setUgcRbxmx] = useState<string | null>(null);
   const ugcFileInputRef = useRef<HTMLInputElement>(null);
   const [ugcType, setUgcType] = useState("Hat");
   const [ugcTriangles, setUgcTriangles] = useState<number | null>(null);
@@ -277,6 +279,9 @@ export function UploadPage() {
       if (prepared.preFlight) {
         setPreFlight(prepared.preFlight);
       }
+      if (prepared.rbxmx) {
+        setUgcRbxmx(prepared.rbxmx);
+      }
       if (!name.trim()) setName(prepared.suggestedName);
       if (!description.trim()) {
         setDescription(`${prepared.suggestedName} — UGC Accessory (${prepared.accessoryType}).`);
@@ -299,10 +304,26 @@ export function UploadPage() {
       setUgcPreview(null);
       setUgcGeometry(null);
       setUgcTextureUrl(null);
+      setUgcRbxmx(null);
       setError(err instanceof Error ? err.message : "Não foi possível montar o UGC.");
     } finally {
       setPreparing(false);
     }
+  }
+
+  function onDownloadAssembledRbxmx() {
+    if (!ugcRbxmx) return;
+    const blob = new Blob([ugcRbxmx], { type: "application/xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const safeName = (name || "accessory").replace(/[^a-zA-Z0-9_-]/g, "_");
+    a.download = `${safeName}.rbxmx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toastManager.success("Download Concluído", "Accessory .rbxmx baixado! Abra no Roblox Studio para publicar.");
   }
 
   async function onAutoRepair() {
@@ -400,6 +421,7 @@ export function UploadPage() {
       setUgcTextureUrl(null);
       setUgcTriangles(null);
       setPreFlight(null);
+      setUgcRbxmx(null);
       setName("");
       setDescription("");
       setActiveTab("queue");
@@ -1366,6 +1388,17 @@ export function UploadPage() {
                   </select>
                 </div>
 
+                {/* Sub-Asset Ownership Guidance */}
+                <div className="rounded-xl bg-blue-500/10 border border-blue-500/20 p-3.5 text-xs text-blue-300 space-y-1 backdrop-blur-sm">
+                  <div className="flex items-center gap-2 font-bold text-blue-200">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                    <span>Titularidade de IDs (Roblox Marketplace)</span>
+                  </div>
+                  <p className="text-[11px] text-blue-200/75 leading-relaxed">
+                    O Roblox exige que todos os sub-assets (malha e textura) pertençam à conta que vai postar. O Farol envia a textura como Decal próprio na sua conta e calibra o Attachment oficial para publicação no Studio com 1 clique.
+                  </p>
+                </div>
+
                 {error && (
                   <div className="rounded-xl bg-rose-500/10 border border-rose-500/25 p-3 text-xs text-rose-300 flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
@@ -1373,23 +1406,36 @@ export function UploadPage() {
                   </div>
                 )}
 
-                <DotButton
-                  type="submit"
-                  disabled={ugcBusy || preparing || !ugcMesh || !ugcTexture}
-                  wrapperClassName="w-full"
-                  className="w-full rounded-xl bg-white py-3.5 text-sm font-bold text-black hover:bg-neutral-200 transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  {preparing ? (
-                    "Processando malha no Tectonic..."
-                  ) : ugcBusy ? (
-                    "Publicando na frota Roblox..."
-                  ) : (
-                    <>
-                      <span>Publicar UGC 3D no Roblox</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  {ugcRbxmx && (
+                    <button
+                      type="button"
+                      onClick={onDownloadAssembledRbxmx}
+                      className="w-full rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 py-3.5 text-xs font-bold text-blue-300 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+                    >
+                      <Download className="w-4 h-4 text-blue-400" />
+                      <span>Baixar .rbxmx Studio-Ready</span>
+                    </button>
                   )}
-                </DotButton>
+
+                  <DotButton
+                    type="submit"
+                    disabled={ugcBusy || preparing || !ugcMesh || !ugcTexture}
+                    wrapperClassName={ugcRbxmx ? "w-full" : "w-full sm:col-span-2"}
+                    className="w-full rounded-xl bg-white py-3.5 text-xs font-bold text-black hover:bg-neutral-200 transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    {preparing ? (
+                      "Processando malha no Tectonic..."
+                    ) : ugcBusy ? (
+                      "Publicando na frota Roblox..."
+                    ) : (
+                      <>
+                        <span>Publicar UGC 3D no Roblox</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </DotButton>
+                </div>
               </div>
             </div>
           </form>

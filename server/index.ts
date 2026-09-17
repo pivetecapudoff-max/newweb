@@ -801,6 +801,7 @@ app.post("/api/uploads/prepare-ugc", requireAuth, async (req, res) => {
         texture: assembled.textureDataUrl,
         geometry: assembled.geometry,
         preFlight: assembled.preFlight,
+        rbxmx: assembled.rbxmx,
       });
       return;
     }

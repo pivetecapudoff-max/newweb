@@ -459,6 +459,7 @@ export interface PreparedAccessory {
     indices: number[];
   };
   preFlight?: PreFlightReport;
+  rbxmx?: string;
 }
 
 export function prepareUgcAccessory(body: {

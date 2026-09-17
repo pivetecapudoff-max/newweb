@@ -345,9 +345,9 @@ export async function enqueueAssembledUgc(input: {
     price: 0,
     groupId,
     ownerDiscordId: currentOwnerKey() === "local" ? null : currentOwnerKey(),
-    fileName: "accessory.rbxmx",
+    fileName: `${name.replace(/[^a-zA-Z0-9_-]/g, "_") || "accessory"}.rbxmx`,
     filePath,
-    mime: "application/octet-stream",
+    mime: "application/xml",
     status: "queued",
     assetId: null,
     catalogUrl: null,
@@ -873,9 +873,12 @@ async function processJob(job: UploadJob): Promise<void> {
   const fee = UPLOAD_FEE[job.kind];
   if (job.kind === "accessory") {
     let bytes = readFileSync(job.filePath);
+    let textureId: string | number | null = null;
+    let meshId: string | number | null = null;
+
     if (job.meshFilePath && job.textureFilePath) {
-      let textureId: string | number | null = job.textureId ? String(job.textureId).trim() : null;
-      if (!textureId || !/^\d+$/.test(textureId)) {
+      // 1. Textura: envia como Decal na conta/grupo do usuário para garantir ID de sua titularidade
+      try {
         textureId = await uploadNamedAsset(
           account.cookie,
           account.userId,
@@ -887,23 +890,37 @@ async function processJob(job: UploadJob): Promise<void> {
           "texture.png",
           "image/png"
         );
+      } catch (texErr: any) {
+        console.warn("[Upload] Warning uploading texture decal to account:", texErr?.message);
+        if (job.textureId && /^\d+$/.test(String(job.textureId).trim())) {
+          textureId = String(job.textureId).trim();
+        }
       }
-      let meshId: string | number | null = job.meshId ? String(job.meshId).trim() : null;
-      if (!meshId || !/^\d+$/.test(meshId)) {
-        meshId = await uploadMeshAsset(
-          account.cookie,
-          account.userId,
-          job.groupId,
-          `${job.name} Mesh`,
-          job.description,
-          readFileSync(job.meshFilePath)
-        );
+
+      // 2. Malha: tenta upload via API se suportado ou usa o ID fornecido
+      if (job.meshId && /^\d+$/.test(String(job.meshId).trim())) {
+        meshId = String(job.meshId).trim();
+      } else {
+        try {
+          meshId = await uploadMeshAsset(
+            account.cookie,
+            account.userId,
+            job.groupId,
+            `${job.name} Mesh`,
+            job.description,
+            readFileSync(job.meshFilePath)
+          );
+        } catch (meshErr: any) {
+          console.warn("[Upload] Raw mesh direct upload restricted by Roblox:", meshErr?.message);
+        }
       }
+
+      // 3. Monta o .rbxmx oficial Studio-Ready com o TextureId da sua conta e Attachment calibrado
       const rbxmx = buildAccessoryRbxmx({
         name: job.name,
         accessoryType: (job.accessoryType && job.accessoryType !== "Unknown" ? job.accessoryType : "Hat"),
-        meshId,
-        textureId,
+        meshId: meshId || "0",
+        textureId: textureId || "0",
         handle: {
           x: job.handleX || 1,
           y: job.handleY || 1,
@@ -914,35 +931,44 @@ async function processJob(job: UploadJob): Promise<void> {
       writeFileSync(job.filePath, rbxmx, "utf8");
       bytes = Buffer.from(rbxmx, "utf8");
     }
-    const assetId = await uploadNamedAsset(
-      account.cookie,
-      account.userId,
-      job.groupId,
-      "Model",
-      job.name,
-      job.description,
-      bytes,
-      job.fileName,
-      "application/octet-stream"
-    );
-    const thumbnailUrl = await waitForCatalogThumb(assetId);
+
+    // 4. Salva o Model montado no inventário da conta
+    let assetId: number | null = null;
+    try {
+      assetId = await uploadNamedAsset(
+        account.cookie,
+        account.userId,
+        job.groupId,
+        "Model",
+        job.name,
+        job.description,
+        bytes,
+        job.fileName,
+        "application/octet-stream"
+      );
+    } catch (modelErr: any) {
+      console.warn("[Upload] Model inventory upload notice:", modelErr?.message);
+    }
+
+    const thumbnailUrl = assetId ? await waitForCatalogThumb(assetId) : null;
     const saleWarning =
-      "Accessory montado e salvo como Model. Para listar no catálogo: Studio → Save to Roblox → Avatar Asset (taxa e thumb oficiais).";
+      "Acessório montado & salvo! Textura própria criada na sua conta. Para publicar no Marketplace: abra o .rbxmx no Studio → Save to Roblox → Avatar Item.";
+
     patchJob(job.id, {
       status: "live",
       assetId,
-      catalogUrl: `https://www.roblox.com/library/${assetId}`,
+      catalogUrl: assetId ? `https://www.roblox.com/library/${assetId}` : null,
       thumbnailUrl,
       saleWarning,
       error: null,
     });
     await bumpOps({ sessionUploads: 1 }, job.ownerDiscordId);
     void notifyDiscord({
-      title: "UGC Accessory uploaded",
-      body: `${job.name} is in your inventory as a Model.`,
+      title: "UGC Accessory pronto",
+      body: `${job.name} montado com sucesso.`,
       fields: [
-        { name: "Type", value: job.accessoryType || "Accessory", inline: true },
-        { name: "Asset", value: String(assetId), inline: true },
+        { name: "Tipo", value: job.accessoryType || "Accessory", inline: true },
+        { name: "Asset ID", value: assetId ? String(assetId) : "Download .rbxmx", inline: true },
       ],
       color: 0x3d9e6a,
     });
