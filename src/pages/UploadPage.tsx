@@ -317,9 +317,36 @@ export function UploadPage() {
     setError(null);
     let nextMesh = ugcMesh;
     let nextTexture = ugcTexture;
+    let detectedType = ugcType;
     for (const file of files) {
       if (/\.(obj|mesh)$/i.test(file.name)) {
         nextMesh = { file, data: await readFile(file) };
+        const lower = file.name.toLowerCase();
+        if (/\b(hair|cabelo|pelo|loirinha|brunette|blonde|wig)\b/i.test(lower)) {
+          detectedType = "Hair";
+          setUgcType("Hair");
+        } else if (/\b(face|rosto|mask|mascara|oculos|glasses)\b/i.test(lower)) {
+          detectedType = "Face";
+          setUgcType("Face");
+        } else if (/\b(neck|pescoco|colar|chain)\b/i.test(lower)) {
+          detectedType = "Neck";
+          setUgcType("Neck");
+        } else if (/\b(shoulder|ombro|wing|asa)\b/i.test(lower)) {
+          detectedType = "Shoulder";
+          setUgcType("Shoulder");
+        } else if (/\b(back|costas|cape|capa|sword|espada)\b/i.test(lower)) {
+          detectedType = "Back";
+          setUgcType("Back");
+        } else if (/\b(front|peito|chest)\b/i.test(lower)) {
+          detectedType = "Front";
+          setUgcType("Front");
+        } else if (/\b(waist|cintura|belt|cinto)\b/i.test(lower)) {
+          detectedType = "Waist";
+          setUgcType("Waist");
+        } else if (/\b(hat|bone|cap|beanie|chapeu|chapéu)\b/i.test(lower)) {
+          detectedType = "Hat";
+          setUgcType("Hat");
+        }
       } else if (/\.(png|jpe?g)$/i.test(file.name)) {
         nextTexture = { file, data: await readFile(file) };
       } else if (/\.(rbxm|rbxmx)$/i.test(file.name)) {
@@ -331,7 +358,7 @@ export function UploadPage() {
     setUgcMesh(nextMesh);
     setUgcTexture(nextTexture);
     if (nextMesh && nextTexture) {
-      await refreshUgcPreview(nextMesh, nextTexture);
+      await refreshUgcPreview(nextMesh, nextTexture, detectedType);
     }
   }
 
