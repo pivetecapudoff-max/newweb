@@ -5,6 +5,9 @@ import sharp from "sharp";
 import path from "node:path";
 import * as zlib from "node:zlib";
 import { existsSync, readFileSync } from "node:fs";
+import fs from "node:fs";
+import crypto from "node:crypto";
+import { repackZip } from "./meshConverter.js";
 import { fileURLToPath } from "node:url";
 import {
   clearAccount,
@@ -111,6 +114,7 @@ function withPreviews(cluster: ScoredCluster, items: CatalogItem[]): ScoredClust
 const app = express();
 const { port, host: bindHost } = listenTarget();
 const rootDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+const downloadsDir = path.join(rootDir, "public", "downloads");
 
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
@@ -819,24 +823,146 @@ app.post("/api/uploads/prepare-ugc", requireAuth, async (req, res) => {
 
 app.post("/api/copy/mutate-hash", requireAuth, async (req, res) => {
   try {
-    const { imageBase64 } = req.body;
+    const { imageBase64, assetId, textureUrl, zipUrl } = req.body;
     if (!imageBase64) throw new Error("Imagem não informada.");
     const raw = String(imageBase64).replace(/^data:image\/[a-z]+;base64,/, "");
     const buf = Buffer.from(raw, "base64");
-    // Subtle pixel and metadata perturbation to generate a totally unique SHA-256 hash
-    const mutated = await sharp(buf)
+
+    // 1. Decode raw pixels with sharp
+    const img = sharp(buf);
+    const meta = await img.metadata();
+    const width = meta.width || 1024;
+    const height = meta.height || 1024;
+    const channels = meta.channels || 4;
+    const rawPixels = await img.raw().toBuffer();
+
+    // 2. Micro-perturbation: toggle LSB of 8-16 random RGB bytes (imperceptible, unique raw pixel hash)
+    const numMod = Math.min(16, Math.max(6, Math.floor((width * height) / 2000)));
+    for (let i = 0; i < numMod; i++) {
+      const pixelIdx = Math.floor(Math.random() * (width * height));
+      const ch = Math.floor(Math.random() * Math.min(3, channels)); // RGB only
+      const offset = pixelIdx * channels + ch;
+      if (offset < rawPixels.length) {
+        rawPixels[offset] ^= 1;
+      }
+    }
+
+    // 3. Encode to PNG with randomized unique EXIF metadata
+    const uniqueToken = crypto.randomBytes(6).toString("hex");
+    const mutated = await sharp(rawPixels, {
+      raw: { width, height, channels },
+    })
       .withMetadata({
         exif: {
           IFD0: {
-            Software: `Farol Mutator v${Date.now()}`,
+            Software: `Farol Mutator v${Date.now()}_${uniqueToken}`,
+            DateTime: new Date().toISOString().replace(/T/, " ").substring(0, 19),
+            ImageDescription: `Farol AntiBan Mutation ${uniqueToken}`,
           },
         },
       })
       .png({ quality: 100, compressionLevel: 9 })
       .toBuffer();
+
+    const newHash = crypto.createHash("sha256").update(mutated).digest("hex");
+    const mutatedDataUrl = `data:image/png;base64,${mutated.toString("base64")}`;
+
+    let targetFolder: string | null = null;
+    let targetZipPath: string | null = null;
+    let updatedTextureUrl: string | undefined;
+    let mutatedTextureUrl: string | undefined;
+    let updatedZipUrl: string | undefined;
+    let mutatedZipUrl: string | undefined;
+
+    // 4. Locate texture file on disk and update it
+    if (textureUrl) {
+      const cleanTex = String(textureUrl).split("?")[0].replace(/^\/?downloads\//, "");
+      if (cleanTex) {
+        const texDiskPath = path.resolve(downloadsDir, cleanTex);
+        if (texDiskPath.startsWith(downloadsDir) && fs.existsSync(texDiskPath)) {
+          fs.writeFileSync(texDiskPath, mutated);
+          targetFolder = path.dirname(texDiskPath);
+          updatedTextureUrl = `/downloads/${cleanTex}?t=${Date.now()}`;
+
+          const ext = path.extname(texDiskPath);
+          const mutTexName = `texture_mutated${ext}`;
+          const mutatedTexPath = path.join(targetFolder, mutTexName);
+          fs.writeFileSync(mutatedTexPath, mutated);
+          mutatedTextureUrl = `/downloads/${encodeURIComponent(path.basename(targetFolder))}/${encodeURIComponent(mutTexName)}?t=${Date.now()}`;
+        }
+      }
+    }
+
+    // If targetFolder not found yet, search downloadsDir by assetId
+    if (!targetFolder && assetId) {
+      try {
+        const entries = fs.readdirSync(downloadsDir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.isDirectory() && entry.name.endsWith(`_${assetId}`)) {
+            targetFolder = path.join(downloadsDir, entry.name);
+            const subFiles = fs.readdirSync(targetFolder);
+            const texFile =
+              subFiles.find((f) => /^(texture|template|preview)\.(png|jpg)$/i.test(f)) ||
+              subFiles.find((f) => /\.(png|jpg)$/i.test(f));
+            if (texFile) {
+              const texDiskPath = path.join(targetFolder, texFile);
+              fs.writeFileSync(texDiskPath, mutated);
+              updatedTextureUrl = `/downloads/${encodeURIComponent(entry.name)}/${encodeURIComponent(texFile)}?t=${Date.now()}`;
+
+              const ext = path.extname(texDiskPath);
+              const mutTexName = `texture_mutated${ext}`;
+              const mutatedTexPath = path.join(targetFolder, mutTexName);
+              fs.writeFileSync(mutatedTexPath, mutated);
+              mutatedTextureUrl = `/downloads/${encodeURIComponent(entry.name)}/${encodeURIComponent(mutTexName)}?t=${Date.now()}`;
+            }
+            break;
+          }
+        }
+      } catch (e) {
+        console.warn("[Mutator] Error searching asset folder:", e);
+      }
+    }
+
+    // 5. Update original ZIP and generate dedicated mutated ZIP
+    if (targetFolder) {
+      const folderBase = path.basename(targetFolder);
+      const defaultZip = path.join(downloadsDir, `${folderBase}.zip`);
+      if (fs.existsSync(defaultZip)) {
+        targetZipPath = defaultZip;
+      } else if (zipUrl) {
+        const cleanZip = String(zipUrl).split("?")[0].replace(/^\/?downloads\//, "");
+        const zPath = path.resolve(downloadsDir, cleanZip);
+        if (zPath.startsWith(downloadsDir) && fs.existsSync(zPath)) {
+          targetZipPath = zPath;
+        }
+      }
+
+      if (targetZipPath) {
+        try {
+          await repackZip(targetFolder, targetZipPath);
+          updatedZipUrl = `/downloads/${encodeURIComponent(path.basename(targetZipPath))}?t=${Date.now()}`;
+        } catch (zipErr) {
+          console.warn("[Mutator] Failed to repack original zip:", zipErr);
+        }
+      }
+
+      try {
+        const mutZipPath = path.join(downloadsDir, `${folderBase}_mutated.zip`);
+        await repackZip(targetFolder, mutZipPath);
+        mutatedZipUrl = `/downloads/${encodeURIComponent(`${folderBase}_mutated.zip`)}?t=${Date.now()}`;
+      } catch (zipErr) {
+        console.warn("[Mutator] Failed to create mutated zip:", zipErr);
+      }
+    }
+
     res.json({
       success: true,
-      mutatedDataUrl: `data:image/png;base64,${mutated.toString("base64")}`,
+      mutatedDataUrl,
+      hash: newHash,
+      zipUrl: updatedZipUrl || (zipUrl ? `${zipUrl}?t=${Date.now()}` : undefined),
+      mutatedZipUrl: mutatedZipUrl || updatedZipUrl,
+      textureUrl: updatedTextureUrl || (textureUrl ? `${textureUrl}?t=${Date.now()}` : undefined),
+      mutatedTextureUrl,
     });
   } catch (err: any) {
     res.status(400).json({ error: err.message || "Falha ao aplicar mutação anti-ban." });
@@ -1184,7 +1310,6 @@ app.get("/api/export.csv", (req, res) => {
   });
 });
 
-const downloadsDir = path.join(rootDir, "public", "downloads");
 app.use("/downloads", express.static(downloadsDir));
 
 app.post("/api/copy/download", requireAuth, async (req, res) => {

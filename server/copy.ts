@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadAccount } from "./account.js";
 import { convertRobloxMeshToObj, repackZip } from "./meshConverter.js";
+import { buildAccessoryRbxmx } from "./ugcAssembler.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,10 +37,11 @@ export interface UgcRipResult {
   zipUrl: string;
   textureUrl?: string;
   objUrl?: string;
+  rbxmxUrl?: string;
   files: {
     name: string;
     url: string;
-    type: "zip" | "texture" | "obj" | "mtl" | "mesh" | "other";
+    type: "zip" | "texture" | "obj" | "mtl" | "mesh" | "rbxmx" | "other";
   }[];
   logs: string[];
 }
@@ -169,6 +171,47 @@ export async function ripUgcAsset(params: {
             }
           }
 
+          // Generate Studio-Ready .rbxmx accessory file for 3D items if applicable
+          let rbxmxUrl: string | undefined;
+          if (!d.is_clothing && Array.isArray(d.files) && d.files.length > 0) {
+            try {
+              const itemDir = path.dirname(d.files[0]);
+              const cleanName = (d.name || `Asset_${d.asset_id}`).replace(/[^a-zA-Z0-9_-]/g, "_");
+              const rbxmxName = `${cleanName}.rbxmx`;
+              const rbxmxPath = path.join(itemDir, rbxmxName);
+
+              const rawType = String(d.type || "").toLowerCase();
+              let accType: any = "Hat";
+              if (rawType.includes("hair") || rawType.includes("cabelo")) accType = "Hair";
+              else if (rawType.includes("face") || rawType.includes("rosto")) accType = "Face";
+              else if (rawType.includes("neck") || rawType.includes("pescoço")) accType = "Neck";
+              else if (rawType.includes("shoulder") || rawType.includes("ombro")) accType = "Shoulder";
+              else if (rawType.includes("front") || rawType.includes("frontal")) accType = "Front";
+              else if (rawType.includes("back") || rawType.includes("costas")) accType = "Back";
+              else if (rawType.includes("waist") || rawType.includes("cintura")) accType = "Waist";
+
+              const rbxmxContent = buildAccessoryRbxmx({
+                name: d.name || `Asset_${d.asset_id}`,
+                accessoryType: accType,
+                meshId: d.mesh_id || d.asset_id,
+                textureId: d.texture_id || d.asset_id,
+                handle: { x: 2, y: 2, z: 2 },
+                attachY: 0.5,
+              });
+
+              fs.writeFileSync(rbxmxPath, rbxmxContent, "utf-8");
+              if (!d.files.includes(rbxmxPath)) {
+                d.files.push(rbxmxPath);
+              }
+              if (d.zip_path && fs.existsSync(itemDir)) {
+                await repackZip(itemDir, d.zip_path);
+              }
+              logs.push(`[+] Arquivo Studio-Ready (.RBXMX) gerado com sucesso para importação direta no Roblox Studio!`);
+            } catch (rbxmxErr: any) {
+              logs.push(`[!] Aviso ao gerar .rbxmx: ${rbxmxErr?.message}`);
+            }
+          }
+
           const zipFileName = path.basename(d.zip_path);
           const zipUrl = `/downloads/${encodeURIComponent(zipFileName)}`;
 
@@ -193,6 +236,9 @@ export async function ripUgcAsset(params: {
               } else if (lower.endsWith(".obj")) {
                 fileType = "obj";
                 objUrl = fileUrl;
+              } else if (lower.endsWith(".rbxmx") || lower.endsWith(".rbxm")) {
+                fileType = "rbxmx";
+                rbxmxUrl = fileUrl;
               } else if (lower.endsWith(".mtl")) {
                 fileType = "mtl";
               } else if (lower.endsWith(".mesh")) {
@@ -221,6 +267,7 @@ export async function ripUgcAsset(params: {
             zipUrl,
             textureUrl,
             objUrl,
+            rbxmxUrl,
             files: filesList,
             logs,
           });

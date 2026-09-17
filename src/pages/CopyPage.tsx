@@ -51,6 +51,7 @@ export function CopyPage() {
   const [currentTextureUrl, setCurrentTextureUrl] = useState<string | null>(null);
   const [mutating, setMutating] = useState(false);
   const [hashMutated, setHashMutated] = useState(false);
+  const [mutatedHash, setMutatedHash] = useState<string | null>(null);
   const [showLogs, setShowLogs] = useState(false);
   const [seoModalOpen, setSeoModalOpen] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>(() => {
@@ -116,6 +117,7 @@ export function CopyPage() {
       setResult(res);
       setCurrentTextureUrl(res.textureUrl || null);
       setHashMutated(false);
+      setMutatedHash(null);
       saveToHistory(res);
       toastManager.success(
         "Item Extraído com Sucesso!",
@@ -131,7 +133,7 @@ export function CopyPage() {
   };
 
   const handleMutateHash = async () => {
-    if (!currentTextureUrl) return;
+    if (!currentTextureUrl) return null;
     setMutating(true);
     try {
       let b64 = currentTextureUrl;
@@ -144,17 +146,103 @@ export function CopyPage() {
           reader.readAsDataURL(blob);
         });
       }
-      const res = await mutateImageHash(b64);
+      const res = await mutateImageHash({
+        imageBase64: b64,
+        assetId: result?.assetId,
+        textureUrl: result?.textureUrl || currentTextureUrl,
+        zipUrl: result?.zipUrl,
+      });
       if (res.success) {
         setCurrentTextureUrl(res.mutatedDataUrl);
         setHashMutated(true);
-        toastManager.success("Mutação Anti-Ban Aplicada!", "Hash SHA-256 alterado com micro-ruído imperceptível.");
+        if (res.hash) setMutatedHash(res.hash);
+
+        if (result) {
+          const updatedZip = res.mutatedZipUrl || res.zipUrl || result.zipUrl;
+          const updatedTex = res.mutatedTextureUrl || res.textureUrl || res.mutatedDataUrl;
+          const updatedFiles = result.files.map((f) => {
+            if (f.type === "texture") {
+              return {
+                ...f,
+                url: updatedTex,
+                name: f.name.includes("mutated") ? f.name : f.name.replace(/\.(png|jpg)$/i, "_mutated.png"),
+              };
+            }
+            if (f.type === "zip") {
+              return { ...f, url: updatedZip };
+            }
+            return f;
+          });
+          setResult({
+            ...result,
+            zipUrl: updatedZip,
+            textureUrl: updatedTex,
+            files: updatedFiles,
+          });
+        }
+
+        toastManager.success(
+          "Mutação Anti-Ban Aplicada!",
+          `Hash SHA-256 alterado (${res.hash ? res.hash.slice(0, 10) + "..." : "inédito"}). O pacote .ZIP foi atualizado com a textura mutada!`
+        );
+        return res;
       }
     } catch (err: any) {
       toastManager.error("Erro na Mutação", err.message || "Falha ao mutar imagem.");
     } finally {
       setMutating(false);
     }
+    return null;
+  };
+
+  const handleDownloadMutatedZip = async () => {
+    if (!result) return;
+    let targetZip = result.zipUrl;
+    if (!hashMutated) {
+      const res = await handleMutateHash();
+      if (res?.mutatedZipUrl || res?.zipUrl) {
+        targetZip = res.mutatedZipUrl || res.zipUrl;
+      }
+    }
+    const a = document.createElement("a");
+    a.href = targetZip;
+    const cleanName = result.name.replace(/[^a-zA-Z0-9_-]/g, "_");
+    a.download = `${cleanName}_mutated.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const downloadTextureFile = (filename = "texture.png") => {
+    if (!currentTextureUrl) return;
+    const a = document.createElement("a");
+    a.href = currentTextureUrl;
+    a.download = hashMutated && !filename.includes("mutated") ? filename.replace(/\.(png|jpg)$/i, "_mutated.png") : filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const downloadObjFile = () => {
+    const objFile = result?.files.find((f) => f.type === "obj");
+    if (!objFile) return;
+    const a = document.createElement("a");
+    a.href = objFile.url;
+    a.download = objFile.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const downloadRbxmxFile = () => {
+    const rbxmxFile = result?.files.find((f) => f.type === "rbxmx");
+    if (!rbxmxFile) return;
+    const a = document.createElement("a");
+    a.href = rbxmxFile.url;
+    a.download = rbxmxFile.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const handleSendToUpload2D = () => {
@@ -174,7 +262,7 @@ export function CopyPage() {
     if (!result) return;
     const objFile = result.files.find((f) => f.type === "obj");
     const texFile = result.files.find((f) => f.type === "texture");
-    if (!objFile || !texFile) {
+    if (!objFile || (!texFile && !currentTextureUrl)) {
       toastManager.error("Arquivos Faltando", "O item não possui malha OBJ e textura PNG.");
       return;
     }
@@ -190,14 +278,21 @@ export function CopyPage() {
                 r.readAsDataURL(b);
               })
           );
-      const [objData, texData] = await Promise.all([readBlobAsB64(objFile.url), readBlobAsB64(texFile.url)]);
+      const [objData, texData] = await Promise.all([
+        readBlobAsB64(objFile.url),
+        currentTextureUrl
+          ? currentTextureUrl.startsWith("data:")
+            ? Promise.resolve(currentTextureUrl)
+            : readBlobAsB64(currentTextureUrl)
+          : readBlobAsB64(texFile!.url),
+      ]);
       navigate("/painel/upload", {
         state: {
           mode: "ugc",
           mesh: objData,
           meshName: objFile.name,
           texture: texData,
-          textureName: texFile.name,
+          textureName: hashMutated ? "texture_mutated.png" : (texFile?.name || "texture.png"),
           name: result.name,
           accessoryType: result.type,
           meshId: result.meshId,
@@ -386,10 +481,11 @@ export function CopyPage() {
 
                 <LiquidMetalButton
                   href={result.zipUrl}
-                  download
-                  width={195}
-                  icon={<FolderArchive className="w-4 h-4 text-blue-400" />}
-                  label="Baixar Pacote .ZIP"
+                  download={`${result.name.replace(/[^a-zA-Z0-9_-]/g, "_")}${hashMutated ? "_mutated" : ""}.zip`}
+                  width={hashMutated ? 230 : 195}
+                  icon={hashMutated ? <ShieldCheck className="w-4 h-4 text-emerald-400" /> : <FolderArchive className="w-4 h-4 text-blue-400" />}
+                  label={hashMutated ? "Baixar Pacote .ZIP (Mutado)" : "Baixar Pacote .ZIP"}
+                  textColor={hashMutated ? "#34d399" : "#ffffff"}
                 />
               </div>
             </div>
@@ -441,30 +537,65 @@ export function CopyPage() {
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-white/60 shrink-0">
                         {file.type === "obj" && <Box className="w-4 h-4 text-amber-400" />}
-                        {file.type === "texture" && <ImageIcon className="w-4 h-4 text-blue-400" />}
+                        {file.type === "texture" && <ImageIcon className={`w-4 h-4 ${hashMutated ? "text-emerald-400" : "text-blue-400"}`} />}
                         {file.type === "mtl" && <Layers className="w-4 h-4 text-blue-400" />}
                         {file.type === "mesh" && <Box className="w-4 h-4 text-blue-400" />}
                         {file.type === "zip" && <FolderArchive className="w-4 h-4 text-blue-400" />}
+                        {file.type === "rbxmx" && <Box className="w-4 h-4 text-purple-400" />}
                         {file.type === "other" && <Box className="w-4 h-4 text-white/40" />}
                       </div>
                       <div className="truncate">
-                        <div className="text-xs font-medium text-white truncate">{file.name}</div>
-                        <div className="text-[10px] text-white/40 uppercase font-mono">{file.type}</div>
+                        <div className="text-xs font-medium text-white truncate flex items-center gap-2">
+                          <span className="truncate">{file.name}</span>
+                          {file.type === "texture" && hashMutated && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold shrink-0">
+                              MUTADO
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-white/40 uppercase font-mono">
+                          {file.type === "rbxmx" ? "Studio Ready (.rbxmx)" : file.type}
+                        </div>
                       </div>
                     </div>
 
-                    <a
-                      href={file.url}
-                      download={file.name}
-                      title={`Baixar ${file.name}`}
-                      className="p-1.5 rounded-lg bg-white/[0.05] hover:bg-white/10 text-white/60 hover:text-white transition-all shrink-0 cursor-pointer"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                    </a>
+                    {file.type === "texture" && currentTextureUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => downloadTextureFile(file.name)}
+                        title={`Baixar ${file.name}${hashMutated ? " (Mutado Anti-Ban)" : ""}`}
+                        className={`p-1.5 rounded-lg transition-all shrink-0 cursor-pointer ${
+                          hashMutated
+                            ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30"
+                            : "bg-white/[0.05] hover:bg-white/10 text-white/60 hover:text-white"
+                        }`}
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
+                    ) : (
+                      <a
+                        href={file.url}
+                        download={file.name}
+                        title={`Baixar ${file.name}`}
+                        className="p-1.5 rounded-lg bg-white/[0.05] hover:bg-white/10 text-white/60 hover:text-white transition-all shrink-0 cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </a>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
+
+            {/* Mutated Anti-Ban SHA-256 Verification Pill */}
+            {hashMutated && mutatedHash && (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2.5 text-xs text-emerald-300 font-mono">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="truncate">
+                  Hash SHA-256 Mutado: <strong>{mutatedHash}</strong> (Textura e ZIP 100% inéditos para a moderação)
+                </span>
+              </div>
+            )}
 
             {/* Quick Actions Footer & Direct Pipeline Buttons */}
             <div className="pt-4 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-4">
@@ -509,6 +640,47 @@ export function CopyPage() {
                       <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
                     )}
                     <span>{hashMutated ? "✓ Hash Mutado (Anti-Ban)" : "Mutação Anti-Ban (Hash)"}</span>
+                  </button>
+                )}
+
+                {/* Direct Download Mutated Package Button */}
+                <button
+                  type="button"
+                  onClick={handleDownloadMutatedZip}
+                  disabled={mutating}
+                  className={`px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md ${
+                    hashMutated
+                      ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-400/40 text-white shadow-emerald-500/20"
+                      : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 border-purple-400/40 text-white shadow-purple-500/20"
+                  }`}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>{hashMutated ? "Baixar Pacote .ZIP (Mutado)" : "Baixar com Mutação (.ZIP)"}</span>
+                </button>
+
+                {/* Direct Download Texture Button */}
+                {currentTextureUrl && (
+                  <button
+                    type="button"
+                    onClick={() => downloadTextureFile("texture.png")}
+                    className="px-3 py-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-white/90 flex items-center gap-1.5 transition-all cursor-pointer"
+                    title="Baixar Textura PNG direta"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5 text-blue-400" />
+                    <span>{hashMutated ? "Textura (.PNG Mutada)" : "Textura (.PNG)"}</span>
+                  </button>
+                )}
+
+                {/* Direct Download Studio .RBXMX if available */}
+                {result.files.some((f) => f.type === "rbxmx") && (
+                  <button
+                    type="button"
+                    onClick={downloadRbxmxFile}
+                    className="px-3 py-2 rounded-xl border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-xs font-medium text-purple-300 flex items-center gap-1.5 transition-all cursor-pointer"
+                    title="Baixar Arquivo Studio-Ready .RBXMX para abrir direto no Studio"
+                  >
+                    <Box className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Studio (.RBXMX)</span>
                   </button>
                 )}
 

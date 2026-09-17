@@ -480,12 +480,25 @@ export function prepareUgcAccessory(body: {
   }).then((res) => readJson<PreparedAccessory>(res));
 }
 
-export function mutateImageHash(imageBase64: string): Promise<{ success: boolean; mutatedDataUrl: string }> {
+export interface MutateImageHashResult {
+  success: boolean;
+  mutatedDataUrl: string;
+  hash?: string;
+  zipUrl?: string;
+  mutatedZipUrl?: string;
+  textureUrl?: string;
+  mutatedTextureUrl?: string;
+}
+
+export function mutateImageHash(
+  input: string | { imageBase64: string; assetId?: string; textureUrl?: string; zipUrl?: string }
+): Promise<MutateImageHashResult> {
+  const body = typeof input === "string" ? { imageBase64: input } : input;
   return api("/api/copy/mutate-hash", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ imageBase64 }),
-  }).then((res) => readJson<{ success: boolean; mutatedDataUrl: string }>(res));
+    body: JSON.stringify(body),
+  }).then((res) => readJson<MutateImageHashResult>(res));
 }
 
 export function queueUgcAccessory(body: {
@@ -604,10 +617,11 @@ export interface UgcRipResult {
   zipUrl: string;
   textureUrl?: string;
   objUrl?: string;
+  rbxmxUrl?: string;
   files: {
     name: string;
     url: string;
-    type: "zip" | "texture" | "obj" | "mtl" | "mesh" | "other";
+    type: "zip" | "texture" | "obj" | "mtl" | "mesh" | "rbxmx" | "other";
   }[];
   logs: string[];
 }
