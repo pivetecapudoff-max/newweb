@@ -30,6 +30,7 @@ import { useNavigate } from "react-router-dom";
 import {
   ripUgcItem,
   uniqueifyUgcAsset,
+  claimAssetOwnership,
   queueUgcAccessory,
   queueUpload,
   fetchUploads,
@@ -109,6 +110,14 @@ export function CopyPage() {
     mutatedRbxmxUrl?: string;
   } | null>(null);
   const [uniqueifying, setUniqueifying] = useState(false);
+  const [claiming, setClaiming] = useState(false);
+  const [claimedOwnership, setClaimedOwnership] = useState<{
+    meshId: number | string;
+    textureId: number | string;
+    rbxmxUrl: string;
+    zipUrl: string;
+    message: string;
+  } | null>(null);
 
   // Queuing & Other state
   const [queuing, setQueuing] = useState(false);
@@ -406,8 +415,8 @@ export function CopyPage() {
         textureName: `${cleanName.replace(/[^a-zA-Z0-9_-]/g, "_")}_unique.png`,
         accessoryType: targetType,
         priceInRobux: priceOverride,
-        meshId: result.meshId || result.assetId,
-        textureId: result.textureId || result.assetId,
+        meshId: claimedOwnership?.meshId || null,
+        textureId: claimedOwnership?.textureId || null,
       });
 
       setQueuedJob(job);
@@ -423,6 +432,52 @@ export function CopyPage() {
       toastManager.error("Erro na Fila", msg);
     } finally {
       setQueuing(false);
+    }
+  };
+
+  const handleClaimOwnership = async () => {
+    if (!result) return;
+    setClaiming(true);
+    try {
+      let uRes = uniqueifiedResult;
+      if (!uRes) {
+        uRes = await executeUniqueify();
+      }
+      const targetType =
+        accessoryType === "Auto-detect from source" ? result.type : accessoryType;
+      const cleanName = (nameOverride || result.name || "Asset").replace(/[^a-zA-Z0-9_-]/g, "_");
+
+      const claimRes = await claimAssetOwnership({
+        assetId: result.assetId,
+        groupId: targetGroupId ? Number(targetGroupId) : null,
+        name: cleanName,
+        accessoryType: targetType,
+      });
+
+      setClaimedOwnership(claimRes);
+      if (uniqueifiedResult) {
+        setUniqueifiedResult({
+          ...uniqueifiedResult,
+          mutatedRbxmxUrl: claimRes.rbxmxUrl,
+          mutatedZipUrl: claimRes.zipUrl,
+        });
+      }
+
+      toastManager.success(
+        "Assets Registrados com Sucesso!",
+        `Mesh: ${claimRes.meshId} • Textura: ${claimRes.textureId}. O arquivo .RBXMX foi baixado e agora é 100% seu para publicar no site!`
+      );
+
+      const a = document.createElement("a");
+      a.href = claimRes.rbxmxUrl;
+      a.download = `${cleanName}_studio.rbxmx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err: any) {
+      toastManager.error("Erro no Registro de Propriedade", err?.message || "Falha ao registrar assets.");
+    } finally {
+      setClaiming(false);
     }
   };
 
@@ -565,6 +620,29 @@ export function CopyPage() {
               {statusLabel}
             </span>
           </div>
+
+          {/* Claim Ownership / Prepare for Site Button */}
+          {result && !result.isClothing && (
+            <button
+              type="button"
+              onClick={handleClaimOwnership}
+              disabled={claiming || loading}
+              className="h-9 px-4 rounded-md bg-[#162033] hover:bg-[#1e293b] active:bg-[#0f172a] border border-blue-500/40 text-blue-300 hover:text-white font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0"
+              title="Registra a textura e a malha no seu grupo para que o .rbxmx seja 100% seu e não dê erro de propriedade no site do Roblox"
+            >
+              {claiming ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                  <span>Registrando...</span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Sincronizar Propriedade (Site)</span>
+                </>
+              )}
+            </button>
+          )}
 
           {/* Primary Action Button: ADD TO QUEUE */}
           <button
@@ -1196,6 +1274,82 @@ export function CopyPage() {
                 <span>Original (.ZIP)</span>
               </button>
             </div>
+
+            {/* Direct Roblox Creator Dashboard (Site) Upload Ready Card */}
+            {!result.isClothing && (
+              <div className="pt-3.5 border-t border-[#231f1c] space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-blue-400" />
+                    <span className="font-mono text-xs font-bold text-blue-300 uppercase tracking-wider">
+                      Publicar no Site do Roblox (Creator Dashboard)
+                    </span>
+                  </div>
+                  {claimedOwnership && (
+                    <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/40 text-[10px] font-mono text-emerald-300 font-bold">
+                      Assets Vinculados [100% Livre de Erro]
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-[11px] text-[#91877b] font-mono leading-relaxed">
+                  Para publicar em <strong>create.roblox.com &rarr; Itens de avatar</strong> sem o erro{" "}
+                  <code className="text-rose-300 bg-rose-950/40 px-1.5 py-0.5 rounded border border-rose-800/30">
+                    Make sure all assets are owned by the current user
+                  </code>
+                  , clique abaixo. O Farol envia a malha e a textura direto pela API para a sua conta/grupo e atualiza o <code className="text-blue-300 font-bold">.rbxmx</code> com IDs legítimos.
+                </p>
+
+                {claimedOwnership ? (
+                  <div className="p-3.5 rounded-lg bg-[#0e1626] border border-blue-500/30 space-y-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+                      <div>
+                        <span className="text-[#8a99b5]">Mesh ID Próprio:</span>{" "}
+                        <span className="text-white font-bold">{claimedOwnership.meshId}</span>{" "}
+                        <span className="text-emerald-400 font-semibold">[Aprovado]</span>
+                      </div>
+                      <div>
+                        <span className="text-[#8a99b5]">Texture ID Próprio:</span>{" "}
+                        <span className="text-white font-bold">{claimedOwnership.textureId}</span>{" "}
+                        <span className="text-emerald-400 font-semibold">[Aprovado]</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-blue-900/40">
+                      <a
+                        href={claimedOwnership.rbxmxUrl}
+                        download={`${(nameOverride || result.name || "Asset").replace(/[^a-zA-Z0-9_-]/g, "_")}_studio.rbxmx`}
+                        className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Baixar .RBXMX Pronto p/ o Site (Livre de Erro)</span>
+                      </a>
+                      <span className="text-[11px] text-emerald-300 font-mono">
+                        &larr; Envie este arquivo no Creator Dashboard!
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleClaimOwnership}
+                    disabled={claiming}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-[#162033] hover:bg-[#1e293b] active:bg-[#0f172a] border border-blue-500/40 text-blue-300 hover:text-white font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50"
+                  >
+                    {claiming ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />
+                        <span>Registrando Textura e Malha no seu Grupo...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-4 h-4 text-blue-400" />
+                        <span>Registrar Propriedade dos Assets no Grupo (Evitar Erro no Site)</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
 

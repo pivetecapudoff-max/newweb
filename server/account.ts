@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { cloudConfigured, fetchCloudAccount, upsertCloudAccount } from "./cloud.js";
@@ -120,6 +120,18 @@ export function loadAccount(): StoredAccount | null {
     if (store) store.account = acc;
     return acc;
   }
+  try {
+    if (existsSync(accountsDir)) {
+      const files = readdirSync(accountsDir).filter((f) => f.endsWith(".json"));
+      if (files.length > 0) {
+        const first = loadAccountForDiscordUser(files[0].replace(".json", ""));
+        if (first?.cookie) {
+          if (store) store.account = first;
+          return first;
+        }
+      }
+    }
+  } catch {}
   return null;
 }
 

@@ -677,7 +677,7 @@ async function uploadUserAuth(
   throw new Error(errorMsg || `Asset API failed (${result.status}).`);
 }
 
-async function uploadNamedAsset(
+export async function uploadNamedAsset(
   cookie: string,
   userId: number,
   groupId: number | null,
@@ -764,7 +764,7 @@ async function uploadMeshAsset(
   );
 }
 
-async function resolveImageIdFromDecal(
+export async function resolveImageIdFromDecal(
   cookie: string,
   decalId: string | number
 ): Promise<string | null> {
@@ -942,51 +942,58 @@ async function processJob(job: UploadJob): Promise<void> {
     let meshId: string | number | null = null;
 
     if (job.meshFilePath && job.textureFilePath) {
-      // 1. Textura: Prioriza o ID real aprovado do catálogo se fornecido (evita bloqueio de permissão de grupo e moderação)
-      if (job.textureId && /^\d+$/.test(String(job.textureId).trim()) && String(job.textureId).trim() !== "0") {
-        textureId = String(job.textureId).trim();
-        console.log(`[Upload] Usando Texture ID público oficial aprovado: ${textureId}`);
-      } else {
-        try {
-          const uploadedDecalId = await uploadNamedAsset(
-            account.cookie,
-            account.userId,
-            job.groupId,
-            "Decal",
-            `${job.name} Texture`,
-            job.description,
-            readFileSync(job.textureFilePath),
-            "texture.png",
-            "image/png"
-          );
-          console.log(`[Upload] Decal criado (${uploadedDecalId}). Resolvendo Image Asset ID real...`);
-          const resolvedImageId = await resolveImageIdFromDecal(account.cookie, uploadedDecalId);
-          if (resolvedImageId) {
-            textureId = resolvedImageId;
-            console.log(`[Upload] Image Asset ID resolvido com sucesso: ${textureId}`);
-          } else {
-            textureId = uploadedDecalId;
-          }
-        } catch (texErr: any) {
-          console.warn("[Upload] Warning uploading texture decal to account:", texErr?.message);
+      // 1. Textura: Sempre envia para a conta/grupo para garantir propriedade de asset legítima (evita erro "Make sure all assets are owned by current user")
+      try {
+        const uploadedDecalId = await uploadNamedAsset(
+          account.cookie,
+          account.userId,
+          job.groupId,
+          "Decal",
+          `${job.name} Texture`,
+          job.description,
+          readFileSync(job.textureFilePath),
+          "texture.png",
+          "image/png"
+        );
+        console.log(`[Upload] Decal criado (${uploadedDecalId}). Resolvendo Image Asset ID real...`);
+        const resolvedImageId = await resolveImageIdFromDecal(account.cookie, uploadedDecalId);
+        if (resolvedImageId) {
+          textureId = resolvedImageId;
+          console.log(`[Upload] Image Asset ID resolvido com sucesso: ${textureId}`);
+        } else {
+          textureId = uploadedDecalId;
+        }
+      } catch (texErr: any) {
+        console.warn("[Upload] Warning uploading texture decal to account:", texErr?.message);
+        if (job.textureId && /^\d+$/.test(String(job.textureId).trim())) {
+          textureId = String(job.textureId).trim();
         }
       }
 
-      // 2. Malha: usa o ID fornecido (do cloner/catálogo) ou tenta upload via API
-      if (job.meshId && /^\d+$/.test(String(job.meshId).trim()) && String(job.meshId).trim() !== "0") {
-        meshId = String(job.meshId).trim();
-      } else {
-        try {
-          meshId = await uploadMeshAsset(
-            account.cookie,
-            account.userId,
-            job.groupId,
-            `${job.name} Mesh`,
-            job.description,
-            readFileSync(job.meshFilePath)
-          );
-        } catch (meshErr: any) {
-          console.warn("[Upload] Raw mesh direct upload restricted by Roblox:", meshErr?.message);
+      // 2. Malha: Envia a malha direta para a conta/grupo como Mesh (model/x-file-mesh-data)
+      try {
+        let meshBytes = readFileSync(job.meshFilePath);
+        const dir = path.dirname(job.meshFilePath);
+        const siblingMesh = path.join(dir, "model.mesh");
+        if (existsSync(siblingMesh)) {
+          meshBytes = readFileSync(siblingMesh);
+        }
+        meshId = await uploadNamedAsset(
+          account.cookie,
+          account.userId,
+          job.groupId,
+          "Mesh",
+          `${job.name} Mesh`,
+          job.description,
+          meshBytes,
+          "model.mesh",
+          "model/x-file-mesh-data"
+        );
+        console.log(`[Upload] Mesh registrada com sucesso no grupo/conta: ${meshId}`);
+      } catch (meshErr: any) {
+        console.warn("[Upload] Raw mesh direct upload restricted by Roblox:", meshErr?.message);
+        if (job.meshId && /^\d+$/.test(String(job.meshId).trim())) {
+          meshId = String(job.meshId).trim();
         }
       }
 
@@ -1007,7 +1014,7 @@ async function processJob(job: UploadJob): Promise<void> {
       bytes = Buffer.from(rbxmx, "utf8");
     }
 
-    // 4. Salva o Model montado no inventário da conta
+    // 4. Salva o Model montado no inventário da conta (com model/x-rbxm)
     let assetId: number | null = null;
     try {
       assetId = await uploadNamedAsset(
@@ -1018,9 +1025,10 @@ async function processJob(job: UploadJob): Promise<void> {
         job.name,
         job.description,
         bytes,
-        job.fileName,
-        "application/octet-stream"
+        job.fileName || "model.rbxm",
+        "model/x-rbxm"
       );
+      console.log(`[Upload] Model aprovado e salvo no inventário da conta: ${assetId}`);
     } catch (modelErr: any) {
       console.warn("[Upload] Model inventory upload notice:", modelErr?.message);
     }

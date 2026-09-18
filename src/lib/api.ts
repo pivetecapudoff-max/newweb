@@ -669,6 +669,26 @@ export function uniqueifyUgcAsset(body: {
   }).then((res) => readJson(res));
 }
 
+export function claimAssetOwnership(body: {
+  assetId: string | number;
+  groupId?: number | null;
+  name?: string;
+  accessoryType?: string;
+}): Promise<{
+  success: boolean;
+  meshId: number | string;
+  textureId: number | string;
+  rbxmxUrl: string;
+  zipUrl: string;
+  message: string;
+}> {
+  return api("/api/copy/claim-ownership", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).then((res) => readJson(res));
+}
+
 export interface GamepassAccountInfo {
   id: number;
   name: string;

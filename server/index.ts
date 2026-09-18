@@ -63,11 +63,13 @@ import {
   pumpQueue,
   removeJob,
   retryJob,
+  uploadNamedAsset,
+  resolveImageIdFromDecal,
   type ClothingKind,
 } from "./upload.js";
 import { normalizeClothingImage } from "./clothingTemplate.js";
 import { inspectAccessoryInput } from "./ugcAccessory.js";
-import { assembleUgcFromParts } from "./ugcAssembler.js";
+import { assembleUgcFromParts, buildAccessoryRbxmx } from "./ugcAssembler.js";
 import {
   debounceKey,
   isDiscordWebhook,
@@ -1118,6 +1120,143 @@ app.post("/api/copy/uniqueify", requireAuth, async (req, res) => {
     });
   } catch (err: any) {
     res.status(400).json({ error: err.message || "Falha ao aplicar uniqueification." });
+  }
+});
+
+app.post("/api/copy/claim-ownership", requireAuth, async (req, res) => {
+  try {
+    const { assetId, groupId, name, accessoryType } = req.body;
+    if (!assetId) {
+      res.status(400).json({ error: "Asset ID é obrigatório." });
+      return;
+    }
+
+    const account = await loadAccount();
+    if (!account?.cookie) {
+      res.status(400).json({ error: "Conecte sua conta Roblox com cookie na aba Account primeiro." });
+      return;
+    }
+
+    // Locate target folder in public/downloads
+    let targetFolder: string | null = null;
+    let folderBase = "";
+    const entries = fs.readdirSync(downloadsDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory() && (entry.name.endsWith(`_${assetId}`) || entry.name.includes(String(assetId)))) {
+        targetFolder = path.join(downloadsDir, entry.name);
+        folderBase = entry.name;
+        break;
+      }
+    }
+
+    if (!targetFolder || !fs.existsSync(targetFolder)) {
+      res.status(404).json({ error: "Arquivos do asset não encontrados. Busque o item novamente." });
+      return;
+    }
+
+    const cleanName = (name || folderBase || `Asset_${assetId}`).replace(/[^a-zA-Z0-9_-]/g, "_");
+    const targetGroupId = groupId && Number.isFinite(Number(groupId)) ? Number(groupId) : null;
+
+    // 1. Textura
+    let texturePath = path.join(targetFolder, "texture_mutated.png");
+    if (!fs.existsSync(texturePath)) {
+      texturePath = path.join(targetFolder, "texture.png");
+    }
+    if (!fs.existsSync(texturePath)) {
+      res.status(400).json({ error: "Arquivo de textura não encontrado na pasta." });
+      return;
+    }
+    const texBytes = fs.readFileSync(texturePath);
+
+    console.log(`[Claim Ownership] Enviando textura decal para ${targetGroupId ? `grupo ${targetGroupId}` : "conta pessoal"}...`);
+    const decalId = await uploadNamedAsset(
+      account.cookie,
+      account.userId,
+      targetGroupId,
+      "Decal",
+      `${cleanName} Texture`,
+      `Textura oficial para ${cleanName}`,
+      texBytes,
+      "texture.png",
+      "image/png"
+    );
+
+    const resolvedImageId = await resolveImageIdFromDecal(account.cookie, decalId);
+    const ownedTextureId = resolvedImageId || decalId;
+    console.log(`[Claim Ownership] Textura registrada com sucesso! Image ID: ${ownedTextureId}`);
+
+    // 2. Malha
+    let meshPath = path.join(targetFolder, "model.mesh");
+    if (!fs.existsSync(meshPath)) {
+      const meshFile = fs.readdirSync(targetFolder).find((f) => f.endsWith(".mesh"));
+      if (meshFile) meshPath = path.join(targetFolder, meshFile);
+    }
+
+    let meshBytes: Buffer | null = null;
+    if (fs.existsSync(meshPath)) {
+      meshBytes = fs.readFileSync(meshPath);
+    }
+
+    if (!meshBytes) {
+      res.status(400).json({ error: "Arquivo de malha 3D (.mesh) não encontrado. Ripe o item novamente." });
+      return;
+    }
+
+    console.log(`[Claim Ownership] Enviando malha 3D para ${targetGroupId ? `grupo ${targetGroupId}` : "conta pessoal"}...`);
+    const ownedMeshId = await uploadNamedAsset(
+      account.cookie,
+      account.userId,
+      targetGroupId,
+      "Mesh",
+      `${cleanName} Mesh`,
+      `Malha 3D para ${cleanName}`,
+      meshBytes,
+      "model.mesh",
+      "model/x-file-mesh-data"
+    );
+    console.log(`[Claim Ownership] Malha registrada com sucesso! Mesh ID: ${ownedMeshId}`);
+
+    // 3. Monta o novo .rbxmx com IDs legítimos da sua conta
+    const rbxmxContent = buildAccessoryRbxmx({
+      name: cleanName,
+      accessoryType: (accessoryType as any) || "Hat",
+      meshId: ownedMeshId,
+      textureId: ownedTextureId,
+      handle: { x: 2, y: 2, z: 2 },
+      attachY: 0.5,
+    });
+
+    const rbxmxName = `${cleanName}_mutated.rbxmx`;
+    const rbxmxPath = path.join(targetFolder, rbxmxName);
+    fs.writeFileSync(rbxmxPath, rbxmxContent, "utf-8");
+
+    // 4. Re-pack ZIP
+    const mutZipName = `${folderBase}_mutated.zip`;
+    const mutZipPath = path.join(downloadsDir, mutZipName);
+    const zip = new AdmZip();
+    const files = fs.readdirSync(targetFolder);
+    for (const file of files) {
+      const fullPath = path.join(targetFolder, file);
+      if (fs.statSync(fullPath).isFile()) {
+        zip.addLocalFile(fullPath);
+      }
+    }
+    zip.writeZip(mutZipPath);
+
+    const rbxmxUrl = `/downloads/${encodeURIComponent(folderBase)}/${encodeURIComponent(rbxmxName)}?t=${Date.now()}`;
+    const zipUrl = `/downloads/${encodeURIComponent(mutZipName)}?t=${Date.now()}`;
+
+    res.json({
+      success: true,
+      meshId: ownedMeshId,
+      textureId: ownedTextureId,
+      rbxmxUrl,
+      zipUrl,
+      message: "Propriedade sincronizada com sucesso! Textura e Malha registradas no seu grupo/conta.",
+    });
+  } catch (err: any) {
+    console.error("[Claim Ownership] Error:", err);
+    res.status(400).json({ error: err.message || "Falha ao registrar propriedade de assets." });
   }
 });
 
