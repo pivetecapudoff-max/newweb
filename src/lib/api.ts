@@ -607,6 +607,8 @@ export interface UgcRipResult {
   success: boolean;
   assetId: string;
   name: string;
+  description?: string;
+  price?: number;
   type: string;
   creator: string;
   thumbnailUrl: string;
@@ -626,12 +628,40 @@ export interface UgcRipResult {
   logs: string[];
 }
 
+export interface UniqueificationConfig {
+  uvRotation: boolean;
+  faceShuffle: boolean;
+  vertexJitter: boolean;
+  pngSalt: boolean;
+  jitterEpsilon: number;
+}
+
 export function ripUgcItem(params: { urlOrId: string; cookie?: string }): Promise<UgcRipResult> {
   return api("/api/copy/download", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),
   }).then((res) => readJson<UgcRipResult>(res));
+}
+
+export function uniqueifyUgcAsset(body: {
+  obj: string;
+  texture: string;
+  config: UniqueificationConfig;
+  assetId?: string;
+}): Promise<{
+  success: boolean;
+  obj: string;
+  objText: string;
+  texture: string;
+  hash?: string;
+  applied: string[];
+}> {
+  return api("/api/copy/uniqueify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).then((res) => readJson(res));
 }
 
 export interface GamepassAccountInfo {

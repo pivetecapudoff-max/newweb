@@ -318,6 +318,7 @@ export async function enqueueAssembledUgc(input: {
   textureName?: string;
   meshId?: string | number | null;
   textureId?: string | number | null;
+  price?: number;
 }): Promise<UploadJob> {
   if (!loadAccount()) {
     throw new Error("Conecte o cookie da sua conta Roblox em Account primeiro.");
@@ -371,7 +372,7 @@ export async function enqueueAssembledUgc(input: {
     handleY: assembled.handle.y,
     handleZ: assembled.handle.z,
     attachY: assembled.attachY,
-    price: 0,
+    price: typeof input.price === "number" && Number.isFinite(input.price) ? Math.max(0, Math.floor(input.price)) : 0,
     groupId,
     ownerDiscordId: currentOwnerKey() === "local" ? null : currentOwnerKey(),
     fileName: `${name.replace(/[^a-zA-Z0-9_-]/g, "_") || "accessory"}.rbxmx`,
@@ -397,6 +398,7 @@ export function enqueueAccessoryUpload(input: {
   groupId?: number | null;
   fileName?: string;
   file: string;
+  price?: number;
 }): UploadJob {
   if (!loadAccount()) {
     throw new Error("Conecte o cookie da sua conta Roblox em Account primeiro.");
@@ -427,7 +429,7 @@ export function enqueueAccessoryUpload(input: {
     description,
     kind: "accessory",
     accessoryType: inspected.accessoryType,
-    price: 0,
+    price: typeof input.price === "number" && Number.isFinite(input.price) ? Math.max(0, Math.floor(input.price)) : 0,
     groupId,
     ownerDiscordId: currentOwnerKey() === "local" ? null : currentOwnerKey(),
     fileName: `accessory.${ext}`,

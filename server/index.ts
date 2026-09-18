@@ -8,6 +8,7 @@ import { existsSync, readFileSync } from "node:fs";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { repackZip } from "./meshConverter.js";
+import { uniqueifyAccessory } from "./uniqueifier.js";
 import { fileURLToPath } from "node:url";
 import {
   clearAccount,
@@ -969,6 +970,41 @@ app.post("/api/copy/mutate-hash", requireAuth, async (req, res) => {
   }
 });
 
+app.post("/api/copy/uniqueify", requireAuth, async (req, res) => {
+  try {
+    const { obj, texture, config, assetId } = req.body;
+    if (!obj || !texture) {
+      throw new Error("Dados de malha (OBJ) e textura (PNG) são necessários.");
+    }
+    const rawTex = String(texture).replace(/^data:image\/[a-z]+;base64,/, "");
+    const texBuf = Buffer.from(rawTex, "base64");
+    const rawObj = String(obj).startsWith("data:")
+      ? Buffer.from(String(obj).replace(/^data:[^;]+;base64,/, ""), "base64").toString("utf-8")
+      : String(obj);
+
+    const result = await uniqueifyAccessory({
+      obj: rawObj,
+      texture: texBuf,
+      config,
+    });
+
+    const hash = crypto.createHash("sha256").update(result.texture).digest("hex");
+    const mutatedTexBase64 = `data:image/png;base64,${result.texture.toString("base64")}`;
+    const mutatedObjBase64 = `data:text/plain;base64,${Buffer.from(result.obj, "utf-8").toString("base64")}`;
+
+    res.json({
+      success: true,
+      obj: mutatedObjBase64,
+      objText: result.obj,
+      texture: mutatedTexBase64,
+      hash,
+      applied: result.applied,
+    });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || "Falha ao aplicar uniqueification." });
+  }
+});
+
 app.post("/api/uploads/ugc", requireAuth, async (req, res) => {
   try {
     const groupId = req.body?.groupId ? Number(req.body.groupId) : null;
@@ -981,12 +1017,14 @@ app.post("/api/uploads/ugc", requireAuth, async (req, res) => {
         return;
       }
     }
+    const price = typeof req.body?.priceInRobux === "number" ? req.body.priceInRobux : (typeof req.body?.price === "number" ? req.body.price : undefined);
     const job = req.body?.mesh && req.body?.texture
       ? await enqueueAssembledUgc({
           name: req.body?.name,
           description: req.body?.description,
           groupId,
           accessoryType: req.body?.accessoryType,
+          price,
           mesh: req.body.mesh,
           meshName: req.body.meshName,
           texture: req.body.texture,
@@ -998,6 +1036,7 @@ app.post("/api/uploads/ugc", requireAuth, async (req, res) => {
           name: req.body?.name,
           description: req.body?.description,
           groupId,
+          price,
           fileName: req.body?.fileName,
           file: req.body?.file,
         });

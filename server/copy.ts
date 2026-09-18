@@ -27,6 +27,8 @@ export interface UgcRipResult {
   success: boolean;
   assetId: string;
   name: string;
+  description?: string;
+  price?: number;
   type: string;
   creator: string;
   thumbnailUrl: string;
@@ -257,6 +259,8 @@ export async function ripUgcAsset(params: {
             success: true,
             assetId: d.asset_id,
             name: d.name,
+            description: d.description || "",
+            price: typeof d.price === "number" ? d.price : 0,
             type: d.type,
             creator: d.creator,
             thumbnailUrl: d.thumbnail_url,

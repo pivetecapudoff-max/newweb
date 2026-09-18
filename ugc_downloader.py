@@ -88,10 +88,14 @@ def get_item_info(asset_id: str) -> dict:
         with urllib.request.urlopen(req) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             type_id = data.get("AssetTypeId", 0)
+            price_val = data.get("PriceInRobux")
+            if price_val is None:
+                price_val = 0
             return {
                 "id": asset_id,
                 "name": data.get("Name", f"Asset_{asset_id}"),
                 "description": data.get("Description", ""),
+                "price": price_val,
                 "asset_type_id": type_id,
                 "asset_type_name": ASSET_TYPES.get(type_id, f"Tipo {type_id}"),
                 "creator": data.get("Creator", {}).get("Name", "Roblox"),
@@ -104,6 +108,7 @@ def get_item_info(asset_id: str) -> dict:
         "id": asset_id,
         "name": f"Asset_{asset_id}",
         "description": "",
+        "price": 0,
         "asset_type_id": 0,
         "asset_type_name": "Desconhecido",
         "creator": "Desconhecido",
@@ -264,6 +269,8 @@ def download_ugc_item(asset_id_or_url: str, output_dir: str = "downloads", cooki
     result = {
         "asset_id": asset_id,
         "name": info.get("name"),
+        "description": info.get("description", ""),
+        "price": info.get("price", 0),
         "type": info.get("asset_type_name"),
         "creator": info.get("creator"),
         "thumbnail_url": thumbnail_url,
