@@ -12,9 +12,7 @@ const useVite = !packaged || !existsSync(path.join(rootDir, "dist", "index.html"
 const uiPort = useVite ? 5174 : port;
 const startPath = process.env.FAROL_START || "/painel/upload";
 const uiUrl = `http://${host}:${uiPort}${startPath}`;
-const probeUrl = useVite
-  ? `http://${host}:${uiPort}/api/status`
-  : `http://${host}:${port}/api/status`;
+const probeUrl = `http://${host}:${port}/api/status`;
 
 const children = [];
 let quitting = false;
@@ -44,10 +42,21 @@ function spawnChild(command, args) {
   return child;
 }
 
-function spawnStack() {
-  spawnChild("npx", ["tsx", "server/index.ts"]);
+async function spawnStack() {
+  const backendAlive = await fetch(`http://${host}:${port}/api/status`).then(r => r.ok || r.status === 401).catch(() => false);
+  if (!backendAlive) {
+    spawnChild("npx", ["tsx", "server/index.ts"]);
+  } else {
+    console.log(`[Electron] Backend já ativo na porta ${port}. Reutilizando.`);
+  }
+
   if (useVite) {
-    spawnChild("npx", ["vite", "--host", host, "--port", String(uiPort)]);
+    const viteAlive = await fetch(`http://${host}:${uiPort}/`).then(r => r.ok || r.status < 500).catch(() => false);
+    if (!viteAlive) {
+      spawnChild("npx", ["vite", "--host", host, "--port", String(uiPort)]);
+    } else {
+      console.log(`[Electron] Vite já ativo na porta ${uiPort}. Reutilizando.`);
+    }
   }
 }
 
@@ -55,8 +64,11 @@ async function waitForReady(timeoutMs = 60000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
-      const response = await fetch(probeUrl);
-      if (response.ok || response.status === 401) return;
+      const backend = await fetch(probeUrl).catch(() => null);
+      const vite = useVite ? await fetch(`http://${host}:${uiPort}/`).catch(() => null) : { ok: true };
+      if (backend && (backend.ok || backend.status === 401) && vite && (vite.ok || vite.status < 500)) {
+        return;
+      }
     } catch {
       /* still booting */
     }
@@ -88,11 +100,34 @@ function createWindow() {
     return { action: "deny" };
   });
 
+  mainWindow.webContents.on("did-fail-load", (_e, code, desc) => {
+    console.error(`[Electron] Falha ao carregar ${uiUrl}: ${code} (${desc})`);
+    setTimeout(() => {
+      if (mainWindow) mainWindow.loadURL(uiUrl);
+    }, 1500);
+  });
+
+  mainWindow.webContents.on("did-finish-load", () => {
+    console.log(`[Electron] Página carregada com sucesso: ${uiUrl}`);
+    if (mainWindow) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+
   mainWindow.loadURL(uiUrl);
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
     mainWindow.focus();
   });
+
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  }, 3000);
+
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
@@ -111,7 +146,7 @@ function stopStack() {
 }
 
 app.whenReady().then(async () => {
-  spawnStack();
+  await spawnStack();
   try {
     await waitForReady();
     createWindow();
