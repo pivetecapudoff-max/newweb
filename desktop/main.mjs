@@ -10,7 +10,7 @@ const host = "127.0.0.1";
 const packaged = process.env.FAROL_PACKAGED === "1";
 const useVite = !packaged || !existsSync(path.join(rootDir, "dist", "index.html"));
 const uiPort = useVite ? 5174 : port;
-const startPath = process.env.FAROL_START || "/painel/upload";
+const startPath = process.env.FAROL_START || "/painel/copy";
 const uiUrl = `http://${host}:${uiPort}${startPath}`;
 const probeUrl = `http://${host}:${port}/api/status`;
 

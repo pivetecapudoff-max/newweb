@@ -32,7 +32,6 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import { DotButton } from "../components/ui/DotButton";
-import { CloudflareTurnstile } from "../components/CloudflareTurnstile";
 import { isFarolDesktop } from "../lib/desktop";
 
 export function AccountPage() {
@@ -42,7 +41,6 @@ export function AccountPage() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [groupStore, setGroupStore] = useState<GroupStore | null>(null);
   const [cookie, setCookie] = useState("");
-  const [turnstileToken, setTurnstileToken] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -87,7 +85,7 @@ export function AccountPage() {
     setBusy(true);
     setError(null);
     try {
-      const next = await connectAccount(cookie, turnstileToken);
+      const next = await connectAccount(cookie);
       setAccount(next);
       setCookie("");
       writeSession(next.displayName || next.username || "creator");
@@ -670,13 +668,6 @@ export function AccountPage() {
                 </a>
                 , onde a conexão usa seu IP residencial direto.
               </div>
-            )}
-
-            {!isFarolDesktop() && (
-              <CloudflareTurnstile
-                onSuccess={(token) => setTurnstileToken(token)}
-                onExpire={() => setTurnstileToken("")}
-              />
             )}
 
             <DotButton

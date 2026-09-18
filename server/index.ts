@@ -683,16 +683,6 @@ app.post("/api/account", async (req, res) => {
     return;
   }
 
-  // Cloudflare Turnstile anti-bot verification
-  const turnstileToken = req.body?.turnstileToken ? String(req.body.turnstileToken) : undefined;
-  const turnstileCheck = isDesktopRuntime()
-    ? { success: true as const }
-    : await verifyTurnstile(turnstileToken, req.ip);
-  if (!turnstileCheck.success) {
-    res.status(403).json({ error: turnstileCheck.error });
-    return;
-  }
-
   const cookie = cookieFromBody(req.body);
   if (!cookie || cookie.length < 20) {
     res.status(400).json({ error: "Paste your own .ROBLOSECURITY cookie value." });

@@ -632,6 +632,17 @@ export function UploadPage() {
 
       {/* Modern Tab Switcher with Tectonic Highlight */}
       <div className="flex flex-wrap items-center gap-2 pb-3">
+        <Link
+          to="/painel/copy"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all border border-[#d96b52]/40 bg-[#d96b52]/10 text-[#d96b52] hover:bg-[#d96b52]/20 shadow-[0_0_15px_rgba(217,107,82,0.2)]"
+        >
+          <Copy className="w-3.5 h-3.5" />
+          <span>UGC Cloner (Anti-Ban)</span>
+          <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full bg-[#d96b52] text-white font-mono">
+            Novo
+          </span>
+        </Link>
+
         <button
           onClick={() => setActiveTab("ugc")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${
@@ -985,6 +996,16 @@ export function UploadPage() {
                 <p className="text-xs text-white/60 mt-1 max-w-2xl leading-relaxed">
                   Ingestão de geometria, validação local Pre-Flight, Auto-Repair de triângulos, rigging de attachment e fee ledger — publique acessórios e Limiteds sem abrir o Roblox Studio.
                 </p>
+                <div className="mt-2.5">
+                  <Link
+                    to="/painel/copy"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#d96b52]/15 border border-[#d96b52]/30 text-[#d96b52] text-[11px] font-mono font-bold hover:bg-[#d96b52]/25 transition-all"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Abrir UGC Cloner (Anti-Ban, Rotação UV 90°, Jitter &amp; Salt)</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </div>
               </div>
 
               {/* 5-Stage Step Indicators */}

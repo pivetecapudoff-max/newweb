@@ -170,8 +170,13 @@ export function AppShell() {
               </NavLink>
 
               <NavLink to="/painel/copy" className={() => navItemClass("/painel/copy", true)}>
-                <Copy className="w-4 h-4" />
-                <span>Copy</span>
+                <Copy className="w-4 h-4 text-[#d96b52]" />
+                <span className="flex items-center justify-between w-full">
+                  <span>UGC Cloner</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-[#d96b52]/20 text-[#d96b52] border border-[#d96b52]/30">
+                    NOVO
+                  </span>
+                </span>
               </NavLink>
 
               <NavLink to="/painel/gamepass" className={() => navItemClass("/painel/gamepass", true)}>
