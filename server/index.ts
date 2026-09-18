@@ -9,6 +9,7 @@ import fs from "node:fs";
 import crypto from "node:crypto";
 import { repackZip } from "./meshConverter.js";
 import { uniqueifyAccessory } from "./uniqueifier.js";
+import AdmZip from "adm-zip";
 import { fileURLToPath } from "node:url";
 import {
   clearAccount,
@@ -212,7 +213,7 @@ app.use((req, res, next) => {
 
 // Authentication & Protection Middleware
 function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction): void {
-  if (isDesktopRuntime()) {
+  if (isDesktopRuntime() || !isHosted(req)) {
     next();
     return;
   }
@@ -972,23 +973,148 @@ app.post("/api/copy/uniqueify", requireAuth, async (req, res) => {
       ? Buffer.from(String(obj).replace(/^data:[^;]+;base64,/, ""), "base64").toString("utf-8")
       : String(obj);
 
+    const origHash = crypto.createHash("sha256").update(texBuf).digest("hex");
+
     const result = await uniqueifyAccessory({
       obj: rawObj,
       texture: texBuf,
       config,
     });
 
-    const hash = crypto.createHash("sha256").update(result.texture).digest("hex");
+    const newHash = crypto.createHash("sha256").update(result.texture).digest("hex");
     const mutatedTexBase64 = `data:image/png;base64,${result.texture.toString("base64")}`;
     const mutatedObjBase64 = `data:text/plain;base64,${Buffer.from(result.obj, "utf-8").toString("base64")}`;
+
+    // Look for existing folder on disk or create one
+    let targetFolder: string | null = null;
+    let folderBase = "";
+    if (assetId) {
+      try {
+        const entries = fs.readdirSync(downloadsDir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.isDirectory() && (entry.name.endsWith(`_${assetId}`) || entry.name.includes(String(assetId)))) {
+            targetFolder = path.join(downloadsDir, entry.name);
+            folderBase = entry.name;
+            break;
+          }
+        }
+      } catch (e) {
+        console.warn("[Uniqueifier] Error searching downloads folder:", e);
+      }
+    }
+
+    if (!targetFolder) {
+      folderBase = `UGC_${assetId || Date.now()}`;
+      targetFolder = path.join(downloadsDir, folderBase);
+      if (!fs.existsSync(targetFolder)) {
+        fs.mkdirSync(targetFolder, { recursive: true });
+      }
+    }
+
+    // Save mutated files to disk
+    const mutatedObjPath = path.join(targetFolder, "mesh_mutated.obj");
+    const mutatedTexPath = path.join(targetFolder, "texture_mutated.png");
+    const mutatedMtlPath = path.join(targetFolder, "material.mtl");
+    const instructionsPath = path.join(targetFolder, "COMO_USAR_NO_ROBLOX_STUDIO.txt");
+
+    fs.writeFileSync(mutatedObjPath, result.obj, "utf-8");
+    fs.writeFileSync(mutatedTexPath, result.texture);
+
+    const mtlContent = [
+      "newmtl material_0",
+      "Ka 1.000000 1.000000 1.000000",
+      "Kd 1.000000 1.000000 1.000000",
+      "Ks 0.000000 0.000000 0.000000",
+      "d 1.0",
+      "illum 2",
+      "map_Kd texture_mutated.png",
+      "map_d texture_mutated.png",
+      "",
+    ].join("\n");
+    fs.writeFileSync(mutatedMtlPath, mtlContent, "utf-8");
+
+    const instructions = [
+      "===========================================================",
+      "FAROL UGC UNIQUEIFIER - PACOTE ANTI-BAN MUTADO",
+      "===========================================================",
+      "",
+      `Item ID: ${assetId || "N/A"}`,
+      `Data de geracao: ${new Date().toLocaleString("pt-BR")}`,
+      `Hash SHA-256 Original: ${origHash}`,
+      `Hash SHA-256 Mutado:   ${newHash}`,
+      "",
+      "Modificacoes Nao-Destrutivas Aplicadas:",
+      ...result.applied.map((a) => ` - [x] ${a}`),
+      "",
+      "===========================================================",
+      "COMO USAR NO ROBLOX STUDIO (SEM FICAR BRANCO / SEM TEXTURA):",
+      "===========================================================",
+      "OPCAO 1 (Recomendada - 1 Clique):",
+      "1. Arraste o arquivo .rbxmx direto para dentro do Roblox Studio.",
+      "2. Ele ja carrega como Accessory montado com Attachment e textura configurada!",
+      "",
+      "OPCAO 2 (Importacao manual do .OBJ):",
+      "1. No Roblox Studio, importe o arquivo 'mesh_mutated.obj' (via MeshPart ou Asset Manager).",
+      "2. ATENCAO: Arquivos .OBJ nao salvam imagem internamente. No Roblox Studio,",
+      "   o modelo ficara branco ate voce associar a textura.",
+      "3. Selecione a MeshPart criada no Explorer.",
+      "4. Na janela de Properties (Propriedades), localize o campo 'TextureID'.",
+      "5. Clique no campo 'TextureID' -> selecione 'Add Image...' -> escolha o arquivo 'texture_mutated.png'.",
+      "6. Pronto! O item aparecera colorido e texturizado perfeitamente.",
+      "===========================================================",
+    ].join("\n");
+    fs.writeFileSync(instructionsPath, instructions, "utf-8");
+
+    // Copy and adapt .rbxmx if present
+    let mutatedRbxmxPath: string | null = null;
+    let rbxmxName = "model_mutated.rbxmx";
+    try {
+      const existingRbxmx = fs.readdirSync(targetFolder).find((f) => f.endsWith(".rbxmx") && !f.includes("_mutated"));
+      if (existingRbxmx) {
+        rbxmxName = existingRbxmx.replace(".rbxmx", "_mutated.rbxmx");
+        mutatedRbxmxPath = path.join(targetFolder, rbxmxName);
+        fs.copyFileSync(path.join(targetFolder, existingRbxmx), mutatedRbxmxPath);
+      }
+    } catch {
+      // ignore
+    }
+
+    // Build dedicated mutated ZIP with AdmZip
+    const mutZipName = `${folderBase}_mutated.zip`;
+    const mutZipPath = path.join(downloadsDir, mutZipName);
+    try {
+      const zip = new AdmZip();
+      zip.addLocalFile(mutatedObjPath);
+      zip.addLocalFile(mutatedTexPath);
+      zip.addLocalFile(mutatedMtlPath);
+      zip.addLocalFile(instructionsPath);
+      if (mutatedRbxmxPath && fs.existsSync(mutatedRbxmxPath)) {
+        zip.addLocalFile(mutatedRbxmxPath);
+      }
+      zip.writeZip(mutZipPath);
+    } catch (zipErr) {
+      console.warn("[Uniqueifier] AdmZip error:", zipErr);
+    }
+
+    const mutatedZipUrl = `/downloads/${encodeURIComponent(mutZipName)}?t=${Date.now()}`;
+    const mutatedObjUrl = `/downloads/${encodeURIComponent(folderBase)}/mesh_mutated.obj?t=${Date.now()}`;
+    const mutatedTextureUrl = `/downloads/${encodeURIComponent(folderBase)}/texture_mutated.png?t=${Date.now()}`;
+    const mutatedRbxmxUrl = mutatedRbxmxPath
+      ? `/downloads/${encodeURIComponent(folderBase)}/${encodeURIComponent(rbxmxName)}?t=${Date.now()}`
+      : undefined;
 
     res.json({
       success: true,
       obj: mutatedObjBase64,
       objText: result.obj,
       texture: mutatedTexBase64,
-      hash,
+      hash: newHash,
+      originalHash: origHash,
       applied: result.applied,
+      mutatedZipUrl,
+      mutatedObjUrl,
+      mutatedTextureUrl,
+      mutatedRbxmxUrl,
     });
   } catch (err: any) {
     res.status(400).json({ error: err.message || "Falha ao aplicar uniqueification." });

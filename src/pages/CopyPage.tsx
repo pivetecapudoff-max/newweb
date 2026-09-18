@@ -22,6 +22,9 @@ import {
   RotateCw,
   Shuffle,
   Sliders,
+  Copy,
+  FileCode,
+  Info,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -98,7 +101,12 @@ export function CopyPage() {
     objText: string;
     texture: string;
     hash?: string;
+    originalHash?: string;
     applied: string[];
+    mutatedZipUrl?: string;
+    mutatedObjUrl?: string;
+    mutatedTextureUrl?: string;
+    mutatedRbxmxUrl?: string;
   } | null>(null);
   const [uniqueifying, setUniqueifying] = useState(false);
 
@@ -286,6 +294,16 @@ export function CopyPage() {
     return null;
   };
 
+  // Auto-run uniqueifier on changes for 3D items
+  useEffect(() => {
+    if (result && !result.isClothing && result.files.some((f) => f.type === "obj")) {
+      const timer = setTimeout(() => {
+        executeUniqueify();
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [result, uvRotation, faceShuffle, vertexJitter, pngSalt, jitterEpsilon]);
+
   const handleAddToQueue = async () => {
     if (!result) {
       toastManager.error("Aviso", "Extraia um item UGC primeiro.");
@@ -408,26 +426,92 @@ export function CopyPage() {
     }
   };
 
-  const downloadRbxmxFile = () => {
-    const rbxmxFile = result?.files.find((f) => f.type === "rbxmx");
-    if (!rbxmxFile) {
-      toastManager.error("Aviso", "Arquivo .RBXMX não disponível.");
-      return;
+  const downloadMutatedZip = async () => {
+    let uRes = uniqueifiedResult;
+    if (!uRes?.mutatedZipUrl) {
+      uRes = await executeUniqueify();
     }
-    const a = document.createElement("a");
-    a.href = rbxmxFile.url;
-    a.download = rbxmxFile.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const targetUrl = uRes?.mutatedZipUrl || result?.zipUrl;
+    if (targetUrl) {
+      const a = document.createElement("a");
+      a.href = targetUrl;
+      const cleanName = (nameOverride || result?.name || "Asset").replace(/[^a-zA-Z0-9_-]/g, "_");
+      a.download = `${cleanName}_mutated.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toastManager.success("Download Iniciado", "Baixando pacote UGC com mutação anti-ban.");
+    } else {
+      toastManager.error("Erro", "Não foi possível gerar o pacote mutado.");
+    }
   };
 
-  const downloadZipFile = () => {
+  const downloadMutatedRbxmx = async () => {
+    let uRes = uniqueifiedResult;
+    if (!uRes?.mutatedRbxmxUrl) {
+      uRes = await executeUniqueify();
+    }
+    const targetUrl = uRes?.mutatedRbxmxUrl || result?.files.find((f) => f.type === "rbxmx")?.url;
+    if (targetUrl) {
+      const a = document.createElement("a");
+      a.href = targetUrl;
+      const cleanName = (nameOverride || result?.name || "Asset").replace(/[^a-zA-Z0-9_-]/g, "_");
+      a.download = `${cleanName}_studio.rbxmx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toastManager.success("Download Concluído", "Arquivo .RBXMX Studio-Ready baixado.");
+    } else {
+      toastManager.error("Aviso", "Arquivo .RBXMX não disponível.");
+    }
+  };
+
+  const downloadMutatedObj = async () => {
+    let uRes = uniqueifiedResult;
+    if (!uRes?.mutatedObjUrl && !uRes?.obj) {
+      uRes = await executeUniqueify();
+    }
+    const targetUrl = uRes?.mutatedObjUrl || uRes?.obj || result?.files.find((f) => f.type === "obj")?.url;
+    if (targetUrl) {
+      const a = document.createElement("a");
+      a.href = targetUrl;
+      const cleanName = (nameOverride || result?.name || "Asset").replace(/[^a-zA-Z0-9_-]/g, "_");
+      a.download = `${cleanName}_mutated.obj`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toastManager.success("Download Concluído", "Malha 3D (.OBJ) com mutação anti-ban baixada.");
+    } else {
+      toastManager.error("Aviso", "Arquivo .OBJ não disponível.");
+    }
+  };
+
+  const downloadMutatedTexture = async () => {
+    let uRes = uniqueifiedResult;
+    if (!uRes?.mutatedTextureUrl && !uRes?.texture) {
+      uRes = await executeUniqueify();
+    }
+    const targetUrl = uRes?.mutatedTextureUrl || uRes?.texture || currentTextureUrl || result?.textureUrl;
+    if (targetUrl) {
+      const a = document.createElement("a");
+      a.href = targetUrl;
+      const cleanName = (nameOverride || result?.name || "Asset").replace(/[^a-zA-Z0-9_-]/g, "_");
+      a.download = `${cleanName}_texture_mutated.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toastManager.success("Download Concluído", "Textura PNG com rotação 90° e hash único baixada.");
+    } else {
+      toastManager.error("Aviso", "Textura não disponível.");
+    }
+  };
+
+  const downloadOriginalZip = () => {
     if (!result?.zipUrl) return;
     const a = document.createElement("a");
     a.href = result.zipUrl;
     const cleanName = (nameOverride || result.name).replace(/[^a-zA-Z0-9_-]/g, "_");
-    a.download = `${cleanName}.zip`;
+    a.download = `${cleanName}_original.zip`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -666,7 +750,7 @@ export function CopyPage() {
                 {result.files.some((f) => f.type === "rbxmx") && (
                   <button
                     type="button"
-                    onClick={downloadRbxmxFile}
+                    onClick={downloadMutatedRbxmx}
                     className="px-3 py-1.5 rounded-lg bg-[#1a1715] hover:bg-[#26211e] border border-[#332c26] text-xs font-mono text-[#ded8d0] flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <Download className="w-3 h-3 text-[#d96b52]" />
@@ -676,11 +760,11 @@ export function CopyPage() {
 
                 <button
                   type="button"
-                  onClick={downloadZipFile}
+                  onClick={downloadMutatedZip}
                   className="px-3 py-1.5 rounded-lg bg-[#1a1715] hover:bg-[#26211e] border border-[#332c26] text-xs font-mono text-[#ded8d0] flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Download className="w-3 h-3 text-[#d96b52]" />
-                  <span>.ZIP Package</span>
+                  <span>.ZIP Mutado (Anti-Ban)</span>
                 </button>
 
                 <button
@@ -833,15 +917,16 @@ export function CopyPage() {
       </div>
 
       {/* Bottom Section: UNIQUEIFICATION */}
-      <div className="space-y-3">
+      <div className="space-y-4">
+        {/* Header line matching media_1789766963519.png */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#d96b52]" />
-            <span className="font-mono text-xs text-[#9c948a] uppercase tracking-widest font-semibold">
-              Uniqueification
+            <span className="w-2 h-2 rounded-full bg-[#d96b52] inline-block shadow-[0_0_8px_rgba(217,107,82,0.6)]" />
+            <span className="font-mono text-xs text-[#ede8e1] uppercase tracking-widest font-bold">
+              UNIQUEIFICATION
             </span>
           </div>
-          <span className="font-mono text-[11px] text-[#6e665d]">
+          <span className="font-mono text-[11px] text-[#8a8277]">
             Apply non-destructive algorithmic modifications to avoid duplicate mesh/texture hash detection.
           </span>
         </div>
@@ -851,145 +936,303 @@ export function CopyPage() {
           {/* Card 1: UV & TEXTURE ROTATION */}
           <div
             onClick={() => setUvRotation(!uvRotation)}
-            className={`rounded-xl border p-4 transition-all cursor-pointer select-none flex flex-col justify-between space-y-3 ${
+            className={`rounded-xl border p-4 transition-all cursor-pointer select-none flex flex-col justify-between min-h-[145px] ${
               uvRotation
-                ? "bg-[#171412] border-[#4a2e26] shadow-sm"
-                : "bg-[#141211] border-[#292421] opacity-70 hover:opacity-100"
+                ? "bg-[#161210] border-[#4a2e26] ring-1 ring-[#d96b52]/30 shadow-md"
+                : "bg-[#120f0e] border-[#26201b] opacity-60 hover:opacity-100"
             }`}
           >
             <div className="flex items-start justify-between gap-2">
-              <div className="font-mono text-xs font-bold text-[#ede8e1] tracking-wide">
+              <div className="font-mono text-xs font-bold text-[#ede8e1] tracking-wider uppercase">
                 UV &amp; TEXTURE ROTATION
               </div>
-              <input
-                type="checkbox"
-                checked={uvRotation}
-                onChange={() => {}}
-                className="w-4 h-4 rounded border-[#38312a] bg-[#1a1715] text-[#d96b52] accent-[#d96b52] focus:ring-0 cursor-pointer shrink-0 mt-0.5"
-              />
+              <div
+                className={`w-4 h-4 rounded-[4px] flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                  uvRotation ? "bg-[#d96b52]" : "border border-[#38312a] bg-[#1a1715]"
+                }`}
+              >
+                {uvRotation && (
+                  <svg className="w-3 h-3 stroke-white stroke-[2.5]" viewBox="0 0 24 24" fill="none">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </div>
             </div>
-            <div className="text-[11px] text-[#91877b] leading-relaxed">
+            <div className="text-[11px] text-[#91877b] leading-relaxed my-2">
               Lossless 90° rotation with matching UV remap
             </div>
-            <div className="pt-1 flex items-center justify-between font-mono text-[10px] text-[#6e665d]">
+            <div className="pt-1 flex items-center justify-between font-mono text-[10px]">
               <span className="text-[#d96b52] font-semibold">[90° CW]</span>
-              <span>Re-maps UV coords</span>
+              <span className="text-[#6e665d]">Re-maps UV coords</span>
             </div>
           </div>
 
           {/* Card 2: FACE SHUFFLE */}
           <div
             onClick={() => setFaceShuffle(!faceShuffle)}
-            className={`rounded-xl border p-4 transition-all cursor-pointer select-none flex flex-col justify-between space-y-3 ${
+            className={`rounded-xl border p-4 transition-all cursor-pointer select-none flex flex-col justify-between min-h-[145px] ${
               faceShuffle
-                ? "bg-[#171412] border-[#4a2e26] shadow-sm"
-                : "bg-[#141211] border-[#292421] opacity-70 hover:opacity-100"
+                ? "bg-[#161210] border-[#4a2e26] ring-1 ring-[#d96b52]/30 shadow-md"
+                : "bg-[#120f0e] border-[#26201b] opacity-60 hover:opacity-100"
             }`}
           >
             <div className="flex items-start justify-between gap-2">
-              <div className="font-mono text-xs font-bold text-[#ede8e1] tracking-wide">
+              <div className="font-mono text-xs font-bold text-[#ede8e1] tracking-wider uppercase">
                 FACE SHUFFLE
               </div>
-              <input
-                type="checkbox"
-                checked={faceShuffle}
-                onChange={() => {}}
-                className="w-4 h-4 rounded border-[#38312a] bg-[#1a1715] text-[#d96b52] accent-[#d96b52] focus:ring-0 cursor-pointer shrink-0 mt-0.5"
-              />
+              <div
+                className={`w-4 h-4 rounded-[4px] flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                  faceShuffle ? "bg-[#d96b52]" : "border border-[#38312a] bg-[#1a1715]"
+                }`}
+              >
+                {faceShuffle && (
+                  <svg className="w-3 h-3 stroke-white stroke-[2.5]" viewBox="0 0 24 24" fill="none">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </div>
             </div>
-            <div className="text-[11px] text-[#91877b] leading-relaxed">
+            <div className="text-[11px] text-[#91877b] leading-relaxed my-2">
               Permutes triangle order
             </div>
-            <div className="pt-1 flex items-center justify-between font-mono text-[10px] text-[#6e665d]">
+            <div className="pt-1 flex items-center justify-between font-mono text-[10px]">
               <span className="text-[#d96b52] font-semibold">[PRNG]</span>
-              <span>Geometry unchanged</span>
+              <span className="text-[#6e665d]">Geometry unchanged</span>
             </div>
           </div>
 
           {/* Card 3: VERTEX MICRO-JITTER */}
           <div
             onClick={() => setVertexJitter(!vertexJitter)}
-            className={`rounded-xl border p-4 transition-all cursor-pointer select-none flex flex-col justify-between space-y-3 ${
+            className={`rounded-xl border p-4 transition-all cursor-pointer select-none flex flex-col justify-between min-h-[145px] ${
               vertexJitter
-                ? "bg-[#171412] border-[#4a2e26] shadow-sm"
-                : "bg-[#141211] border-[#292421] opacity-70 hover:opacity-100"
+                ? "bg-[#161210] border-[#4a2e26] ring-1 ring-[#d96b52]/30 shadow-md"
+                : "bg-[#120f0e] border-[#26201b] opacity-60 hover:opacity-100"
             }`}
           >
             <div className="flex items-start justify-between gap-2">
-              <div className="font-mono text-xs font-bold text-[#ede8e1] tracking-wide">
+              <div className="font-mono text-xs font-bold text-[#ede8e1] tracking-wider uppercase">
                 VERTEX MICRO-JITTER
               </div>
-              <input
-                type="checkbox"
-                checked={vertexJitter}
-                onChange={() => {}}
-                className="w-4 h-4 rounded border-[#38312a] bg-[#1a1715] text-[#d96b52] accent-[#d96b52] focus:ring-0 cursor-pointer shrink-0 mt-0.5"
-              />
+              <div
+                className={`w-4 h-4 rounded-[4px] flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                  vertexJitter ? "bg-[#d96b52]" : "border border-[#38312a] bg-[#1a1715]"
+                }`}
+              >
+                {vertexJitter && (
+                  <svg className="w-3 h-3 stroke-white stroke-[2.5]" viewBox="0 0 24 24" fill="none">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </div>
             </div>
-            <div className="text-[11px] text-[#91877b] leading-relaxed">
+            <div className="text-[11px] text-[#91877b] leading-relaxed my-2">
               Sub-micron noise on vertex coordinates
             </div>
-            <div className="pt-1 flex items-center justify-between font-mono text-[10px] text-[#6e665d]">
+            <div className="pt-1 flex items-center justify-between font-mono text-[10px]">
               <span className="text-[#d96b52] font-semibold">[±EPSILON]</span>
-              <span>Changes vertex stream</span>
+              <span className="text-[#6e665d]">Changes vertex stream</span>
             </div>
           </div>
 
           {/* Card 4: PNG CHUNK SALT */}
           <div
             onClick={() => setPngSalt(!pngSalt)}
-            className={`rounded-xl border p-4 transition-all cursor-pointer select-none flex flex-col justify-between space-y-3 ${
+            className={`rounded-xl border p-4 transition-all cursor-pointer select-none flex flex-col justify-between min-h-[145px] ${
               pngSalt
-                ? "bg-[#171412] border-[#4a2e26] shadow-sm"
-                : "bg-[#141211] border-[#292421] opacity-70 hover:opacity-100"
+                ? "bg-[#161210] border-[#4a2e26] ring-1 ring-[#d96b52]/30 shadow-md"
+                : "bg-[#120f0e] border-[#26201b] opacity-60 hover:opacity-100"
             }`}
           >
             <div className="flex items-start justify-between gap-2">
-              <div className="font-mono text-xs font-bold text-[#ede8e1] tracking-wide">
+              <div className="font-mono text-xs font-bold text-[#ede8e1] tracking-wider uppercase">
                 PNG CHUNK SALT
               </div>
-              <input
-                type="checkbox"
-                checked={pngSalt}
-                onChange={() => {}}
-                className="w-4 h-4 rounded border-[#38312a] bg-[#1a1715] text-[#d96b52] accent-[#d96b52] focus:ring-0 cursor-pointer shrink-0 mt-0.5"
-              />
+              <div
+                className={`w-4 h-4 rounded-[4px] flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                  pngSalt ? "bg-[#d96b52]" : "border border-[#38312a] bg-[#1a1715]"
+                }`}
+              >
+                {pngSalt && (
+                  <svg className="w-3 h-3 stroke-white stroke-[2.5]" viewBox="0 0 24 24" fill="none">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </div>
             </div>
-            <div className="text-[11px] text-[#91877b] leading-relaxed">
+            <div className="text-[11px] text-[#91877b] leading-relaxed my-2">
               Injects random private chunk &amp; LSB noise for unique file hash
             </div>
-            <div className="pt-1 flex items-center justify-between font-mono text-[10px] text-[#6e665d]">
+            <div className="pt-1 flex items-center justify-between font-mono text-[10px]">
               <span className="text-[#d96b52] font-semibold">[SHA-256]</span>
-              <span>Unique binary hash</span>
+              <span className="text-[#6e665d]">Unique binary hash</span>
             </div>
           </div>
         </div>
 
-        {/* Jitter Epsilon Slider Box */}
-        <div className="rounded-xl bg-[#141211] border border-[#292421] p-4 space-y-3 shadow-lg">
-          <div className="flex items-center justify-between">
-            <label className="font-mono text-xs font-bold uppercase tracking-wider text-[#ded8d0]">
-              JITTER EPSILON
-            </label>
-            <div className="px-3 py-1 rounded bg-[#1c1917] border border-[#332c26] font-mono text-xs text-[#d96b52] font-bold">
-              {jitterEpsilon.toFixed(6)}
+        {/* Jitter Epsilon Slider Box (when vertexJitter is active) */}
+        {vertexJitter && (
+          <div className="rounded-xl bg-[#141211] border border-[#292421] p-4 space-y-3 shadow-lg">
+            <div className="flex items-center justify-between">
+              <label className="font-mono text-xs font-bold uppercase tracking-wider text-[#ded8d0]">
+                JITTER EPSILON
+              </label>
+              <div className="px-3 py-1 rounded bg-[#1c1917] border border-[#332c26] font-mono text-xs text-[#d96b52] font-bold">
+                {jitterEpsilon.toFixed(6)}
+              </div>
+            </div>
+
+            <input
+              type="range"
+              min={0.000005}
+              max={0.0001}
+              step={0.000005}
+              value={jitterEpsilon}
+              onChange={(e) => setJitterEpsilon(parseFloat(e.target.value))}
+              className="w-full accent-[#d96b52] cursor-pointer"
+            />
+
+            <p className="text-[11px] text-[#7d756c] font-mono leading-relaxed">
+              Controls the maximum displacement applied to vertex positions. Small values preserve visual fidelity while completely changing the vertex binary stream.
+            </p>
+          </div>
+        )}
+
+        {/* Uniqueification Results & Download Suite */}
+        {result && (
+          <div className="rounded-xl bg-[#141211] border border-[#292421] p-4 space-y-4 shadow-lg">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                <div>
+                  <div className="font-mono text-xs font-bold text-[#ede8e1] uppercase tracking-wider flex items-center gap-2">
+                    <span>Status Anti-Ban: {uniqueifiedResult ? "Mutado & Protegido" : "Pronto para Mutação"}</span>
+                    {uniqueifying && <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#d96b52]" />}
+                  </div>
+                  <div className="text-[11px] text-[#91877b] font-mono">
+                    {uniqueifiedResult?.applied?.length
+                      ? `Algoritmos ativos: ${uniqueifiedResult.applied.join(" • ")}`
+                      : "Selecione as opções de uniqueification acima para gerar hash exclusivo."}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={executeUniqueify}
+                disabled={uniqueifying}
+                className="px-3.5 py-1.5 rounded-lg bg-[#1e1a17] hover:bg-[#2c2420] border border-[#3d322b] text-xs font-mono text-[#d96b52] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{uniqueifying ? "Calculando..." : "Regerar Mutação"}</span>
+              </button>
+            </div>
+
+            {/* Hash Comparison */}
+            {uniqueifiedResult && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-[#231f1c] font-mono text-[11px]">
+                <div className="p-2.5 rounded-lg bg-[#0e0d0c] border border-[#26221f] space-y-1">
+                  <div className="text-[#7d756c] text-[10px] uppercase tracking-wider">Hash SHA-256 Original</div>
+                  <div className="text-[#a89f91] truncate font-bold">
+                    {uniqueifiedResult.originalHash || "Original Roblox Hash"}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-[#141d14] border border-[#264426] space-y-1">
+                  <div className="text-emerald-400 text-[10px] uppercase tracking-wider flex items-center gap-1">
+                    <span>Hash SHA-256 Mutado (Único)</span>
+                    <Check className="w-3 h-3" />
+                  </div>
+                  <div className="text-emerald-300 truncate font-bold">
+                    {uniqueifiedResult.hash || "Novo Hash Gerado"}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* DOWNLOAD BUTTONS */}
+            <div className="pt-3 border-t border-[#231f1c] flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={downloadMutatedZip}
+                className="px-4 py-2 rounded-lg bg-[#d96b52] hover:bg-[#c45a42] text-white text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>Baixar UGC Mutado (.ZIP Anti-Ban)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={downloadMutatedRbxmx}
+                className="px-3.5 py-2 rounded-lg bg-[#1a1715] hover:bg-[#26211e] border border-[#332c26] text-xs font-mono text-[#ded8d0] flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <FileCode className="w-3.5 h-3.5 text-[#d96b52]" />
+                <span>.RBXMX Studio-Ready</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={downloadMutatedObj}
+                className="px-3 py-2 rounded-lg bg-[#1a1715] hover:bg-[#26211e] border border-[#332c26] text-xs font-mono text-[#ded8d0] flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Box className="w-3.5 h-3.5 text-amber-400" />
+                <span>.OBJ Mutado</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={downloadMutatedTexture}
+                className="px-3 py-2 rounded-lg bg-[#1a1715] hover:bg-[#26211e] border border-[#332c26] text-xs font-mono text-[#ded8d0] flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <ImageIcon className="w-3.5 h-3.5 text-sky-400" />
+                <span>Textura .PNG</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={downloadOriginalZip}
+                className="px-3 py-2 rounded-lg bg-[#141211] hover:bg-[#1f1b18] border border-[#2b2521] text-xs font-mono text-[#8a8277] hover:text-[#ded8d0] flex items-center gap-1.5 transition-colors cursor-pointer ml-auto"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Original (.ZIP)</span>
+              </button>
             </div>
           </div>
+        )}
 
-          <input
-            type="range"
-            min={0.000005}
-            max={0.0001}
-            step={0.000005}
-            value={jitterEpsilon}
-            onChange={(e) => setJitterEpsilon(parseFloat(e.target.value))}
-            className="w-full accent-[#d96b52] cursor-pointer"
-          />
-
-          <p className="text-[11px] text-[#7d756c] font-mono leading-relaxed">
-            Controls the maximum displacement applied to vertex positions. Small values preserve visual fidelity while completely changing the vertex binary stream.
-          </p>
-        </div>
+        {/* Studio Texture Guide Card */}
+        {result && !result.isClothing && (
+          <div className="rounded-xl bg-[#0e1219] border border-[#1d273d] p-4 space-y-2.5 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Info className="w-4 h-4 text-sky-400" />
+                <span className="font-mono text-xs font-bold text-sky-300 uppercase tracking-wider">
+                  Como usar no Roblox Studio (Evitar Modelo Branco)
+                </span>
+              </div>
+              {result.textureId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`rbxassetid://${result.textureId}`);
+                    toastManager.success("Copiado!", `rbxassetid://${result.textureId} copiado.`);
+                  }}
+                  className="px-2.5 py-1 rounded bg-[#171e30] hover:bg-[#222d47] border border-[#2a3a5e] text-[10px] font-mono text-sky-300 flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span>Copiar Texture ID: {result.textureId}</span>
+                </button>
+              )}
+            </div>
+            <div className="text-[11px] text-[#93a2bd] leading-relaxed space-y-1">
+              <p>
+                &bull; <strong>Modo 1 (Recomendado):</strong> Arraste o arquivo <code className="text-sky-300 font-mono">.rbxmx</code> direto para a janela do Roblox Studio. Ele já vem configurado como Accessory oficial com textura carregada!
+              </p>
+              <p>
+                &bull; <strong>Modo 2 (Ao importar .OBJ):</strong> Arquivos .OBJ não salvam imagem internamente. No Studio, selecione a MeshPart &rarr; Propriedades &rarr; campo <code className="text-sky-300 font-mono">TextureID</code> &rarr; clique em <strong>Add Image...</strong> e escolha o arquivo <code className="text-sky-300 font-mono">texture_mutated.png</code> da pasta.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Queued Job Notification Banner */}

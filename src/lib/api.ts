@@ -655,7 +655,12 @@ export function uniqueifyUgcAsset(body: {
   objText: string;
   texture: string;
   hash?: string;
+  originalHash?: string;
   applied: string[];
+  mutatedZipUrl?: string;
+  mutatedObjUrl?: string;
+  mutatedTextureUrl?: string;
+  mutatedRbxmxUrl?: string;
 }> {
   return api("/api/copy/uniqueify", {
     method: "POST",

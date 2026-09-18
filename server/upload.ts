@@ -942,33 +942,33 @@ async function processJob(job: UploadJob): Promise<void> {
     let meshId: string | number | null = null;
 
     if (job.meshFilePath && job.textureFilePath) {
-      // 1. Textura: envia como Decal na conta/grupo do usuário e resolve o Image Asset ID real
-      try {
-        const uploadedDecalId = await uploadNamedAsset(
-          account.cookie,
-          account.userId,
-          job.groupId,
-          "Decal",
-          `${job.name} Texture`,
-          job.description,
-          readFileSync(job.textureFilePath),
-          "texture.png",
-          "image/png"
-        );
-        console.log(`[Upload] Decal criado (${uploadedDecalId}). Resolvendo Image Asset ID real...`);
-        const resolvedImageId = await resolveImageIdFromDecal(account.cookie, uploadedDecalId);
-        if (resolvedImageId) {
-          textureId = resolvedImageId;
-          console.log(`[Upload] Image Asset ID resolvido com sucesso: ${textureId}`);
-        } else if (job.textureId && /^\d+$/.test(String(job.textureId).trim()) && String(job.textureId).trim() !== "0") {
-          textureId = String(job.textureId).trim();
-        } else {
-          textureId = uploadedDecalId;
-        }
-      } catch (texErr: any) {
-        console.warn("[Upload] Warning uploading texture decal to account:", texErr?.message);
-        if (job.textureId && /^\d+$/.test(String(job.textureId).trim()) && String(job.textureId).trim() !== "0") {
-          textureId = String(job.textureId).trim();
+      // 1. Textura: Prioriza o ID real aprovado do catálogo se fornecido (evita bloqueio de permissão de grupo e moderação)
+      if (job.textureId && /^\d+$/.test(String(job.textureId).trim()) && String(job.textureId).trim() !== "0") {
+        textureId = String(job.textureId).trim();
+        console.log(`[Upload] Usando Texture ID público oficial aprovado: ${textureId}`);
+      } else {
+        try {
+          const uploadedDecalId = await uploadNamedAsset(
+            account.cookie,
+            account.userId,
+            job.groupId,
+            "Decal",
+            `${job.name} Texture`,
+            job.description,
+            readFileSync(job.textureFilePath),
+            "texture.png",
+            "image/png"
+          );
+          console.log(`[Upload] Decal criado (${uploadedDecalId}). Resolvendo Image Asset ID real...`);
+          const resolvedImageId = await resolveImageIdFromDecal(account.cookie, uploadedDecalId);
+          if (resolvedImageId) {
+            textureId = resolvedImageId;
+            console.log(`[Upload] Image Asset ID resolvido com sucesso: ${textureId}`);
+          } else {
+            textureId = uploadedDecalId;
+          }
+        } catch (texErr: any) {
+          console.warn("[Upload] Warning uploading texture decal to account:", texErr?.message);
         }
       }
 
