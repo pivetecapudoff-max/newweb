@@ -90,7 +90,7 @@ export function CopyPage() {
   const [description, setDescription] = useState("");
 
   // Uniqueification state
-  const [uvRotation, setUvRotation] = useState(true);
+  const [uvRotation, setUvRotation] = useState(false);
   const [faceShuffle, setFaceShuffle] = useState(true);
   const [vertexJitter, setVertexJitter] = useState(true);
   const [pngSalt, setPngSalt] = useState(true);
@@ -1037,7 +1037,7 @@ export function CopyPage() {
               </div>
             </div>
             <div className="text-[11px] text-[#91877b] leading-relaxed my-2">
-              Lossless 90° rotation with matching UV remap
+              Rotação 90° e remapeamento UV (desativado por padrão para preservar alinhamento da textura oficial)
             </div>
             <div className="pt-1 flex items-center justify-between font-mono text-[10px]">
               <span className="text-[#d96b52] font-semibold">[90° CW]</span>

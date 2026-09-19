@@ -10,7 +10,7 @@ export interface UniqueificationConfig {
 }
 
 export const DEFAULT_UNIQUE_CONFIG: UniqueificationConfig = {
-  uvRotation: true,
+  uvRotation: false,
   faceShuffle: true,
   vertexJitter: true,
   pngSalt: true,
