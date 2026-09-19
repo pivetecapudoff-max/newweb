@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { bumpOps, loadAccount, loadAccountForOwner } from "./account.js";
@@ -972,24 +972,42 @@ async function processJob(job: UploadJob): Promise<void> {
 
       // 2. Malha: Envia a malha direta para a conta/grupo como Mesh (model/x-file-mesh-data)
       try {
-        let meshBytes = readFileSync(job.meshFilePath);
-        const dir = path.dirname(job.meshFilePath);
-        const siblingMesh = path.join(dir, "model.mesh");
-        if (existsSync(siblingMesh)) {
-          meshBytes = readFileSync(siblingMesh);
+        let meshBytes: Buffer | null = null;
+        const downloadsFolder = path.join(rootDir, "public", "downloads");
+        if (existsSync(downloadsFolder)) {
+          const entries = readdirSync(downloadsFolder, { withFileTypes: true });
+          for (const entry of entries) {
+            if (
+              entry.isDirectory() &&
+              (entry.name.toLowerCase().includes(job.name.toLowerCase()) ||
+                (job.meshId && entry.name.includes(String(job.meshId))))
+            ) {
+              const candidate = path.join(downloadsFolder, entry.name, "model.mesh");
+              if (existsSync(candidate)) {
+                meshBytes = readFileSync(candidate);
+                break;
+              }
+            }
+          }
         }
-        meshId = await uploadNamedAsset(
-          account.cookie,
-          account.userId,
-          job.groupId,
-          "Mesh",
-          `${job.name} Mesh`,
-          job.description,
-          meshBytes,
-          "model.mesh",
-          "model/x-file-mesh-data"
-        );
-        console.log(`[Upload] Mesh registrada com sucesso no grupo/conta: ${meshId}`);
+        if (!meshBytes && job.meshFilePath && existsSync(job.meshFilePath)) {
+          meshBytes = readFileSync(job.meshFilePath);
+        }
+
+        if (meshBytes) {
+          meshId = await uploadNamedAsset(
+            account.cookie,
+            account.userId,
+            job.groupId,
+            "Mesh",
+            `${job.name} Mesh`,
+            job.description,
+            meshBytes,
+            "model.mesh",
+            "model/x-file-mesh-data"
+          );
+          console.log(`[Upload] Mesh registrada com sucesso no grupo/conta: ${meshId}`);
+        }
       } catch (meshErr: any) {
         console.warn("[Upload] Raw mesh direct upload restricted by Roblox:", meshErr?.message);
         if (job.meshId && /^\d+$/.test(String(job.meshId).trim())) {
