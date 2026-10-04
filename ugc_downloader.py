@@ -66,8 +66,46 @@ def extract_asset_id(input_str: str) -> str:
         return match.group(1)
     raise ValueError(f"Não foi possível identificar o Asset ID em: '{input_str}'. Certifique-se de colar o link do catálogo ou ID numérico.")
 
+def resolve_default_cookie(cookie: str = None) -> str:
+    """Resolve cookie automaticamente do ambiente ou dos dados salvos no Farol."""
+    if cookie and cookie.strip():
+        return cookie.strip()
+    env_c = os.getenv("ROBLOX_COOKIE")
+    if env_c and env_c.strip():
+        return env_c.strip()
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dirs = [
+        os.path.join(script_dir, "farol", "data"),
+        os.path.join(script_dir, "data"),
+        os.path.join(script_dir, "..", "farol", "data"),
+        os.path.join(script_dir, "..", "data"),
+    ]
+    for b in base_dirs:
+        d_acc = os.path.join(b, "desktop-account.json")
+        if os.path.exists(d_acc):
+            try:
+                with open(d_acc, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if data.get("cookie"):
+                        return data["cookie"]
+            except Exception:
+                pass
+        acc_dir = os.path.join(b, "accounts")
+        if os.path.exists(acc_dir):
+            try:
+                for fname in os.listdir(acc_dir):
+                    if fname.endswith(".json"):
+                        with open(os.path.join(acc_dir, fname), "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                            if data.get("cookie"):
+                                return data["cookie"]
+            except Exception:
+                pass
+    return None
+
 def fetch_bytes(url: str, cookie: str = None) -> bytes:
     """Faz requisição HTTP e descompacta GZIP se necessário."""
+    cookie = resolve_default_cookie(cookie)
     headers = dict(DEFAULT_HEADERS)
     if cookie:
         headers["Cookie"] = f".ROBLOSECURITY={cookie}"
@@ -88,14 +126,10 @@ def get_item_info(asset_id: str) -> dict:
         with urllib.request.urlopen(req) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             type_id = data.get("AssetTypeId", 0)
-            price_val = data.get("PriceInRobux")
-            if price_val is None:
-                price_val = 0
             return {
                 "id": asset_id,
                 "name": data.get("Name", f"Asset_{asset_id}"),
                 "description": data.get("Description", ""),
-                "price": price_val,
                 "asset_type_id": type_id,
                 "asset_type_name": ASSET_TYPES.get(type_id, f"Tipo {type_id}"),
                 "creator": data.get("Creator", {}).get("Name", "Roblox"),
@@ -108,7 +142,6 @@ def get_item_info(asset_id: str) -> dict:
         "id": asset_id,
         "name": f"Asset_{asset_id}",
         "description": "",
-        "price": 0,
         "asset_type_id": 0,
         "asset_type_name": "Desconhecido",
         "creator": "Desconhecido",
@@ -211,17 +244,6 @@ def convert_mesh_to_obj(data: bytes, mtl_name: str = "material.mtl") -> str:
         if draco_pos != -1:
             try:
                 import DracoPy
-            except ImportError:
-                try:
-                    import subprocess, sys
-                    print("[*] Dependência DracoPy ausente. Instalando automaticamente...")
-                    subprocess.run([sys.executable, "-m", "pip", "install", "DracoPy", "--quiet"], timeout=30)
-                    import DracoPy
-                except Exception as pip_err:
-                    print(f"[!] Não foi possível instalar DracoPy via pip: {pip_err}")
-
-            try:
-                import DracoPy
                 mesh = DracoPy.decode(data[draco_pos:])
                 obj_lines = [f"mtllib {mtl_name}", "usemtl UGC_Texture", "s 1"]
                 for pt in mesh.points:
@@ -269,8 +291,6 @@ def download_ugc_item(asset_id_or_url: str, output_dir: str = "downloads", cooki
     result = {
         "asset_id": asset_id,
         "name": info.get("name"),
-        "description": info.get("description", ""),
-        "price": info.get("price", 0),
         "type": info.get("asset_type_name"),
         "creator": info.get("creator"),
         "thumbnail_url": thumbnail_url,
@@ -355,34 +375,23 @@ def download_ugc_item(asset_id_or_url: str, output_dir: str = "downloads", cooki
 
         # Localiza IDs de Mesh e Textura no pacote
         found_ids = set()
-        explicit_mesh_id = None
-        explicit_texture_id = None
-
-        if pkg_data.startswith(b"<roblox") or b"<roblox" in pkg_data[:200]:
-            text = pkg_data.decode("utf-8", errors="ignore")
-            mesh_match = re.search(r'<Content name="MeshId">\s*<url>.*?(?:id=|\/\/)(\d+).*?</url>\s*</Content>', text, re.IGNORECASE)
-            tex_match = re.search(r'<Content name="TextureId">\s*<url>.*?(?:id=|\/\/)(\d+).*?</url>\s*</Content>', text, re.IGNORECASE)
-            if mesh_match:
-                explicit_mesh_id = mesh_match.group(1)
-                found_ids.add(explicit_mesh_id)
-            if tex_match:
-                explicit_texture_id = tex_match.group(1)
-                found_ids.add(explicit_texture_id)
-            for m in re.findall(r"<url>(.*?)</url>", text):
-                match_id = re.search(r"(\d+)", m)
-                if match_id:
-                    found_ids.add(match_id.group(1))
-
         for m in re.findall(rb"rbxassetid://(\d+)", pkg_data):
             found_ids.add(m.decode())
         for m in re.findall(rb"id=(\d+)", pkg_data):
             found_ids.add(m.decode())
 
+        if pkg_data.startswith(b"<roblox"):
+            text = pkg_data.decode("utf-8", errors="ignore")
+            for m in re.findall(r"<url>(.*?)</url>", text):
+                match_id = re.search(r"(\d+)", m)
+                if match_id:
+                    found_ids.add(match_id.group(1))
+
         found_ids.discard(asset_id)
         print(f"[*] IDs de sub-assets encontrados: {list(found_ids)}")
 
         mesh_data, texture_data = None, None
-        mesh_id, texture_id = explicit_mesh_id, explicit_texture_id
+        mesh_id, texture_id = None, None
 
         for sub_id in found_ids:
             try:
@@ -395,24 +404,6 @@ def download_ugc_item(asset_id_or_url: str, output_dir: str = "downloads", cooki
                     texture_data = sub_bytes
                     texture_id = sub_id
                     print(f"   -> [Textura detectada] ID: {sub_id} (Tamanho: {len(sub_bytes)} bytes)")
-                elif sub_bytes.startswith(b"<roblox") or sub_bytes.startswith(b"<?xml"):
-                    # Desempacota XML de Decal ou Mesh referenciado
-                    xml_str = sub_bytes.decode("utf-8", errors="ignore")
-                    nested_match = re.search(r"<url>.*?(?:id=|\/\/)(\d+).*?</url>", xml_str, re.IGNORECASE)
-                    if nested_match:
-                        nested_id = nested_match.group(1)
-                        try:
-                            nested_bytes = fetch_bytes(f"https://assetdelivery.roblox.com/v1/asset/?id={nested_id}", cookie=cookie)
-                            if nested_bytes.startswith(b"\x89PNG") or nested_bytes.startswith(b"\xff\xd8\xff"):
-                                texture_data = nested_bytes
-                                texture_id = nested_id
-                                print(f"   -> [Textura Desempacotada de Decal] ID Real da Imagem: {nested_id}")
-                            elif nested_bytes.startswith(b"version ") or b"COREMESH" in nested_bytes or b"DRACO" in nested_bytes:
-                                mesh_data = nested_bytes
-                                mesh_id = nested_id
-                                print(f"   -> [Mesh Desempacotada] ID: {nested_id}")
-                        except Exception:
-                            pass
             except Exception as e:
                 print(f"   -> Aviso: Não foi possível carregar sub-asset {sub_id}: {e}")
 
@@ -426,8 +417,8 @@ def download_ugc_item(asset_id_or_url: str, output_dir: str = "downloads", cooki
             except Exception:
                 pass
 
-        result["mesh_id"] = mesh_id or asset_id
-        result["texture_id"] = texture_id or asset_id
+        result["mesh_id"] = mesh_id
+        result["texture_id"] = texture_id
 
         # Salva textura
         tex_filename = "texture.png"
@@ -446,7 +437,6 @@ Ks 0.000 0.000 0.000
 d 1.0
 illum 1
 map_Kd {tex_filename}
-map_d {tex_filename}
 """
         mtl_path = os.path.join(item_dir, mtl_filename)
         with open(mtl_path, "w") as f:
