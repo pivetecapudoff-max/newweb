@@ -26,6 +26,7 @@ import {
   Wand2,
   Radar,
   Layers3,
+  Film,
 } from "lucide-react";
 
 // Adminly 3-dot cluster logo mark
@@ -175,6 +176,16 @@ export function AppShell() {
                   <span>UGC Cloner</span>
                   <span className="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-[#d96b52]/20 text-[#d96b52] border border-[#d96b52]/30">
                     NOVO
+                  </span>
+                </span>
+              </NavLink>
+
+              <NavLink to="/painel/mocap" className={() => navItemClass("/painel/mocap", true)}>
+                <Film className="w-4 h-4 text-sky-400" />
+                <span className="flex items-center justify-between w-full">
+                  <span>AI Mocap</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                    IA
                   </span>
                 </span>
               </NavLink>

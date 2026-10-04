@@ -115,10 +115,10 @@ export function loadAccount(): StoredAccount | null {
     if (store) store.account = acc;
     return acc;
   }
-  if (isDesktopRuntime()) {
-    const acc = loadDesktopAccount();
-    if (store) store.account = acc;
-    return acc;
+  const desktopAcc = loadDesktopAccount();
+  if (desktopAcc) {
+    if (store) store.account = desktopAcc;
+    return desktopAcc;
   }
   try {
     if (existsSync(accountsDir)) {
@@ -183,7 +183,7 @@ export async function clearAccount(): Promise<void> {
 export function publicAccount() {
   const account = loadAccount();
   const discord = currentDiscord();
-  if (!account || (!discord && !isDesktopRuntime())) {
+  if (!account) {
     return {
       connected: false,
       userId: null,

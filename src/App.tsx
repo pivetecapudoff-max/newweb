@@ -14,6 +14,7 @@ import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { CopyPage } from "./pages/CopyPage";
 import { GamepassAutoPage } from "./pages/GamepassAutoPage";
 import { MassUploadPage } from "./pages/MassUploadPage";
+import { MocapPage } from "./pages/MocapPage";
 import { SilkShaderBackground } from "./components/SilkShaderBackground";
 import { AuthGuard } from "./components/AuthGuard";
 import { LoginPage } from "./pages/LoginPage";
@@ -49,6 +50,8 @@ export function App() {
               <Route path="analytics" element={<AnalyticsPage />} />
               <Route path="consultoria" element={<AnalyticsPage />} />
               <Route path="copy" element={<CopyPage />} />
+              <Route path="mocap" element={<MocapPage />} />
+              <Route path="emotes" element={<MocapPage />} />
               <Route path="gamepass" element={<GamepassAutoPage />} />
               <Route path="market-scanner" element={<Feed />} />
               <Route path="scanner" element={<Feed />} />
